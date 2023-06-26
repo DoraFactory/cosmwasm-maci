@@ -1,0 +1,2 @@
+# cosmwasm-maci
+CosmWasm MACI
