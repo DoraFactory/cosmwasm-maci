@@ -39,6 +39,9 @@ mod test_module {
 
     fn mock_init(deps: DepsMut, parameters: MaciParameters) {
         let msg = InstantiateMsg {
+            round_id: String::from("1"),
+            round_description: String::from("HackWasm Berlin"),
+            maci_denom: String::from("token"),
             parameters,
             coordinator: PubKey {
                 x: uint256_from_decimal_string("3557592161792765812904087712812111121909518311142005886657252371904276697771"),
@@ -89,7 +92,6 @@ mod test_module {
                 vk_ic0: "1bc1a1a3444256469c07cd6f4d1cfd9f7c9ddce596a306e0af077ca9e9c0fe9602db2a9aecef76a9dc4c19bf88c0099b04fc75410cc9004f0966440825e3790a".to_string(),
                 vk_ic1: "05b8b475f2bfedba4fa04ab1972006da9764c2c3e6fb65d6dd0aac938fd298112a560e13770b06a3f709a49fddf016331ea205fa125026993f6666eff69f4def".to_string(),
             },
-            maci_denom: String::from("token")
         };
 
         let info = mock_info("creator", &coins(2, "token"));
@@ -268,14 +270,15 @@ mod test_module {
                 };
 
                 let balance = uint256_from_decimal_string(&data.current_state_leaves[i][2]);
-
+                println!("---------- signup ---------- {:?}", i);
+                println!("pubkey {:?}", pubkey);
+                println!("blance {:?}\n", balance);
                 batch_mock_sign_up(
                     deps.as_mut(),
                     pubkey,
                     &[coin(balance.to_string().parse().unwrap(), "token")],
                 );
             }
-
             let message = Message {
                 data: [
                     uint256_from_decimal_string(&data.msgs[i][0]),
@@ -293,6 +296,9 @@ mod test_module {
                 y: uint256_from_decimal_string(&data.enc_pub_keys[i][1]),
             };
 
+            println!("------------- publish message -------------");
+            println!("message {:?}", message);
+            println!("enc_pub {:?}\n", enc_pub);
             batch_publish_message(deps.as_mut(), message, enc_pub, &[]);
         }
         mock_stop_voting(deps.as_mut(), &[]);
@@ -302,6 +308,11 @@ mod test_module {
             b: "213a21f9042d926a01116583e90a956264e368fabdc26e49638d7faaa09ee9f20ff0eb1a87dd3fc412cedb749823d2f97c0247ae4df89003e0dacd5bc195c990107b7a645d618143c91d78b6a456c71c690f469ea5b0b808e89a3228f92147b2108008e3de0fa8b1ff576cfc92047be60bd7a43e76d1e651bba1b494d58c6170".to_string(),
             c: "2385dc34f583a5d34bea5f9083e4788326b7b07054dc85a414fd07fba31c1e76068f86ff1d85f70c55bb4737d1f77744ee73c41d6d4cbc727b624e09ef5fffa0".to_string()
         };
+        println!("process_message proof {:?}", proof);
+        println!(
+            "process_message new state commitment {:?}",
+            new_state_commitment
+        );
 
         assert_ne!(
             mock_process_message(deps.as_mut(), new_state_commitment, proof, &[]),

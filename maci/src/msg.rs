@@ -1,15 +1,17 @@
-use crate::state::{MaciParameters, Message, Period, PubKey, QuinaryTreeRoot};
+use crate::state::{Config, MaciParameters, Message, Period, PubKey, QuinaryTreeRoot};
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Addr, Uint256};
 
 #[cw_serde]
 pub struct InstantiateMsg {
+    pub round_id: String,          // this round's id
+    pub round_description: String, // this round's description
+    pub maci_denom: String,        // supported denom
     pub parameters: MaciParameters,
     pub coordinator: PubKey,
     pub process_vkey: VKeyType,
     pub qtr_lib: QuinaryTreeRoot,
     pub tally_vkey: VKeyType,
-    pub maci_denom: String,
 }
 
 #[cw_serde]
@@ -65,6 +67,9 @@ pub enum ExecuteMsg {
 #[cw_serde]
 #[derive(QueryResponses)]
 pub enum QueryMsg {
+    #[returns(Config)]
+    GetConfig {},
+
     #[returns(Period)]
     GetPeriod {},
 

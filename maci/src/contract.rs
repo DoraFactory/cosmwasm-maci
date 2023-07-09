@@ -38,6 +38,8 @@ pub fn instantiate(
 
     // Create a config struct with the maci_denom value from the message
     let config = Config {
+        round_id: msg.round_id,
+        round_description: msg.round_description,
         maci_denom: msg.maci_denom,
     };
 
@@ -293,7 +295,8 @@ pub fn execute_sign_up(
 
     Ok(Response::new()
         .add_attribute("action", "sign_up")
-        .add_attribute("state_idx", state_index.to_string()))
+        .add_attribute("state_idx", state_index.to_string())
+        .add_attribute("amount", amount.to_string()))
 }
 
 pub fn execute_publish_message(
@@ -503,7 +506,9 @@ pub fn execute_process_message(
     processed_msg_count += batch_end_index - batch_start_index;
     PROCESSED_MSG_COUNT.save(deps.storage, &processed_msg_count)?;
 
-    Ok(Response::new().add_attribute("action", "process_message"))
+    Ok(Response::new()
+        .add_attribute("action", "process_message")
+        .add_attribute("zk_verify", is_passed.to_string()))
 }
 
 pub fn execute_stop_processing_period(
@@ -527,7 +532,9 @@ pub fn execute_stop_processing_period(
         };
         PERIOD.save(deps.storage, &period)?;
 
-        Ok(Response::new().add_attribute("action", "stop_processing_period"))
+        Ok(Response::new()
+            .add_attribute("action", "stop_processing_period")
+            .add_attribute("period", "Tallying"))
     }
 }
 
@@ -626,7 +633,9 @@ pub fn execute_process_tally(
         .save(deps.storage, &processed_user_count)
         .unwrap();
 
-    Ok(Response::new().add_attribute("action", "process_tally"))
+    Ok(Response::new()
+        .add_attribute("action", "process_tally")
+        .add_attribute("zk_verify", is_passed.to_string()))
 }
 
 fn execute_stop_tallying_period(
@@ -813,6 +822,7 @@ fn can_execute(deps: Deps, sender: &str) -> StdResult<bool> {
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
+        QueryMsg::GetConfig {} => to_binary::<Config>(&CONFIG.load(deps.storage).unwrap()),
         QueryMsg::GetPeriod {} => to_binary::<Period>(&PERIOD.load(deps.storage).unwrap()),
         QueryMsg::GetMsgChainLength {} => {
             to_binary::<Uint256>(&MSG_CHAIN_LENGTH.load(deps.storage).unwrap())
@@ -823,7 +833,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
                 .unwrap(),
         ),
         QueryMsg::GetAllResult {} => {
-            to_binary::<Uint256>(&MSG_CHAIN_LENGTH.load(deps.storage).unwrap())
+            to_binary::<Uint256>(&TOTAL_RESULT.load(deps.storage).unwrap())
         }
         QueryMsg::GetStateIdxInc { address } => {
             to_binary::<Uint256>(&STATEIDXINC.load(deps.storage, &address).unwrap())
