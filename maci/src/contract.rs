@@ -2,16 +2,16 @@ use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, ProofType, QueryMsg};
 use crate::parser::{parse_proof, parse_vkey};
 use crate::state::{
-    Admin, Config, Message, Period, PeriodStatus, ProofStr, PubKey, StateLeaf, VkeyStr, ADMIN,
-    CONFIG, COORDINATORHASH, CURRENT_STATE_COMMITMENT, CURRENT_TALLY_COMMITMENT, LEAF_IDX_0,
+    Admin, Config, Message, Period, PeriodStatus, ProofStr, PubKey, StateLeaf, VkeyStr, Whitelist,
+    ADMIN, CONFIG, COORDINATORHASH, CURRENT_STATE_COMMITMENT, CURRENT_TALLY_COMMITMENT, LEAF_IDX_0,
     MACIPARAMETERS, MAX_LEAVES_COUNT, MAX_VOTE_OPTIONS, MSG_CHAIN_LENGTH, MSG_HASHES, NODES,
     NUMSIGNUPS, PERIOD, PROCESSED_MSG_COUNT, PROCESSED_USER_COUNT, PROCESS_VKEYS, QTR_LIB, RESULT,
-    STATEIDXINC, TALLY_VKEYS, TOTAL_RESULT, VOICECREDITBALANCE, ZEROS,
+    STATEIDXINC, TALLY_VKEYS, TOTAL_RESULT, VOICECREDITBALANCE, WHITELIST, ZEROS,
 };
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, Uint128, Uint256,
+    to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, Uint256,
 };
 
 use crate::utils::{hash2, hash5, hash_256_uint256_list, uint256_from_hex_string};
@@ -40,7 +40,6 @@ pub fn instantiate(
     let config = Config {
         round_id: msg.round_id,
         round_description: msg.round_description,
-        maci_denom: msg.maci_denom,
     };
 
     CONFIG.save(deps.storage, &config)?;
@@ -98,37 +97,21 @@ pub fn instantiate(
     // Define an array of zero values
     let zeros: [Uint256; 8] = [
         uint256_from_hex_string("2066be41bebe6caf7e079360abe14fbf9118c62eabc42e2fe75e342b160a95bc"),
-        uint256_from_hex_string("2a956d37d8e73692877b104630a08cc6840036f235f2134b0606769a369d85c1"),
-        uint256_from_hex_string("2f9791ba036a4148ff026c074e713a4824415530dec0f0b16c5115aa00e4b825"),
-        uint256_from_hex_string("2c41a7294c7ef5c9c5950dc627c55a00adb6712548bcbd6cd8569b1f2e5acc2a"),
-        uint256_from_hex_string("2594ba68eb0f314eabbeea1d847374cc2be7965944dec513746606a1f2fadf2e"),
-        uint256_from_hex_string("5c697158c9032bfd7041223a7dba696396388129118ae8f867266eb64fe7636"),
-        uint256_from_hex_string("272b3425fcc3b2c45015559b9941fde27527aab5226045bf9b0a6c1fe902d601"),
-        uint256_from_hex_string("268d82cc07023a1d5e7c987cbd0328b34762c9ea21369bea418f08b71b16846a"),
-        // uint256_from_decimal_string(
         //     "14655542659562014735865511769057053982292279840403315552050801315682099828156",
-        // ),
-        // uint256_from_decimal_string(
+        uint256_from_hex_string("2a956d37d8e73692877b104630a08cc6840036f235f2134b0606769a369d85c1"),
         //     "19261153649140605024552417994922546473530072875902678653210025980873274131905",
-        // ),
-        // uint256_from_decimal_string(
+        uint256_from_hex_string("2f9791ba036a4148ff026c074e713a4824415530dec0f0b16c5115aa00e4b825"),
         //     "21526503558325068664033192388586640128492121680588893182274749683522508994597",
-        // ),
-        // uint256_from_decimal_string(
+        uint256_from_hex_string("2c41a7294c7ef5c9c5950dc627c55a00adb6712548bcbd6cd8569b1f2e5acc2a"),
         //     "20017764101928005973906869479218555869286328459998999367935018992260318153770",
-        // ),
-        // uint256_from_decimal_string(
+        uint256_from_hex_string("2594ba68eb0f314eabbeea1d847374cc2be7965944dec513746606a1f2fadf2e"),
         //     "16998355316577652097112514691750893516081130026395813155204269482715045879598",
-        // ),
-        // uint256_from_decimal_string(
+        uint256_from_hex_string("5c697158c9032bfd7041223a7dba696396388129118ae8f867266eb64fe7636"),
         //     "2612442706402737973181840577010736087708621987282725873936541279764292204086",
-        // ),
-        // uint256_from_decimal_string(
+        uint256_from_hex_string("272b3425fcc3b2c45015559b9941fde27527aab5226045bf9b0a6c1fe902d601"),
         //     "17716535433480122581515618850811568065658392066947958324371350481921422579201",
-        // ),
-        // uint256_from_decimal_string(
+        uint256_from_hex_string("268d82cc07023a1d5e7c987cbd0328b34762c9ea21369bea418f08b71b16846a"),
         //     "17437916409890180001398333108882255895598851862997171508841759030332444017770",
-        // ),
     ];
     ZEROS.save(deps.storage, &zeros)?;
 
@@ -144,6 +127,7 @@ pub fn instantiate(
     CURRENT_TALLY_COMMITMENT.save(deps.storage, &Uint256::from_u128(0u128))?;
     PROCESSED_USER_COUNT.save(deps.storage, &Uint256::from_u128(0u128))?;
     NUMSIGNUPS.save(deps.storage, &Uint256::from_u128(0u128))?;
+    WHITELIST.save(deps.storage, &msg.whitelist)?;
 
     // Create a period struct with the initial status set to Voting
     let period = Period {
@@ -231,6 +215,11 @@ pub fn execute_sign_up(
     info: MessageInfo,
     pubkey: PubKey,
 ) -> Result<Response, ContractError> {
+    let user_balance = user_balance_of(deps.as_ref(), info.sender.as_ref())?;
+    if user_balance == Uint256::from_u128(0u128) {
+        return Err(ContractError::Unauthorized {});
+    }
+
     let period = PERIOD.load(deps.storage)?;
     // Check if the period status is Voting
     if period.status != PeriodStatus::Voting {
@@ -256,22 +245,20 @@ pub fn execute_sign_up(
         "MACI: pubkey values should be less than the snark scalar field"
     );
 
-    let config = CONFIG.load(deps.storage)?;
-
-    let mut amount: Uint128 = Uint128::new(0);
-
-    // Iterate through the funds and find the amount with the MACI denomination
-    info.funds.iter().for_each(|fund| {
-        if fund.denom == config.maci_denom {
-            amount = fund.amount;
-        }
-    });
+    // let config = CONFIG.load(deps.storage)?;
+    // let mut amount: Uint128 = Uint128::new(0);
+    // // Iterate through the funds and find the amount with the MACI denomination
+    // info.funds.iter().for_each(|fund| {
+    //     if fund.denom == config.maci_denom {
+    //         amount = fund.amount;
+    //     }
+    // });
 
     // Create a state leaf with the provided pubkey and amount
     let state_leaf = StateLeaf {
         pub_key: pubkey,
-        // voice_credit_balance: uint256_from_decimal_string(&amount.to_string()),
-        voice_credit_balance: Uint256::from_uint128(amount),
+        // voice_credit_balance: Uint256::from_uint128(amount),
+        voice_credit_balance: user_balance,
         vote_option_tree_root: Uint256::from_u128(0),
         nonce: Uint256::from_u128(0),
     }
@@ -289,14 +276,19 @@ pub fn execute_sign_up(
     VOICECREDITBALANCE.save(
         deps.storage,
         state_index.to_be_bytes().to_vec(),
-        &Uint256::from_u128(0u128),
+        // &Uint256::from_u128(0u128),
+        &user_balance,
     )?;
     NUMSIGNUPS.save(deps.storage, &num_sign_ups)?;
+
+    let mut white_curr = WHITELIST.load(deps.storage)?;
+    white_curr.register(info.sender);
+    WHITELIST.save(deps.storage, &white_curr)?;
 
     Ok(Response::new()
         .add_attribute("action", "sign_up")
         .add_attribute("state_idx", state_index.to_string())
-        .add_attribute("amount", amount.to_string()))
+        .add_attribute("amount", user_balance.to_string()))
 }
 
 pub fn execute_publish_message(
@@ -458,9 +450,7 @@ pub fn execute_process_message(
     // Load the scalar field value
     let snark_scalar_field =
         uint256_from_hex_string("30644e72e131a029b85045b68181585d2833e84879b9709143e1f593f0000001");
-    // let snark_scalar_field = uint256_from_decimal_string(
     //     "21888242871839275222246405745257275088548364400416034343698204186575808495617",
-    // );
 
     // Compute the hash of the input values
     let input_hash = uint256_from_hex_string(&hash_256_uint256_list(&input)) % snark_scalar_field; // input hash
@@ -701,6 +691,21 @@ fn execute_stop_tallying_period(
     Ok(Response::new().add_attribute("action", "stop_tallying_period"))
 }
 
+fn can_sign_up(deps: Deps, sender: &str) -> StdResult<bool> {
+    let cfg = WHITELIST.load(deps.storage)?;
+    let can = cfg.is_whitelist(&sender);
+    Ok(can)
+}
+
+fn user_balance_of(deps: Deps, sender: &str) -> StdResult<Uint256> {
+    let cfg = WHITELIST.load(deps.storage)?;
+    let balance = cfg.balance_of(&sender);
+    Ok(balance)
+}
+
+// fn user_register(deps: DepsMut, sender: &str) {
+// }
+
 // Load the root node of the state tree
 fn state_root(deps: Deps) -> Uint256 {
     let root = NODES
@@ -843,7 +848,27 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
                 .load(deps.storage, index.to_be_bytes().to_vec())
                 .unwrap(),
         ),
+        QueryMsg::WhiteList {} => to_binary::<Whitelist>(&query_white_list(deps)?),
+        QueryMsg::IsWhiteList { sender } => to_binary::<bool>(&query_can_sign_up(deps, sender)?),
+        QueryMsg::WhiteBalanceOf { sender } => {
+            to_binary::<Uint256>(&query_user_balance_of(deps, sender)?)
+        }
     }
+}
+
+pub fn query_white_list(deps: Deps) -> StdResult<Whitelist> {
+    let cfg = WHITELIST.load(deps.storage)?;
+    Ok(Whitelist {
+        users: cfg.users.into_iter().map(|a| a.into()).collect(),
+    })
+}
+
+pub fn query_can_sign_up(deps: Deps, sender: String) -> StdResult<bool> {
+    Ok(can_sign_up(deps, &sender)?)
+}
+
+pub fn query_user_balance_of(deps: Deps, sender: String) -> StdResult<Uint256> {
+    Ok(user_balance_of(deps, &sender)?)
 }
 
 #[cfg(test)]

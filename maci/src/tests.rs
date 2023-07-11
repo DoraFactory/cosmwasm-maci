@@ -2,7 +2,7 @@
 mod test_module {
     use crate::error::ContractError;
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
-    use cosmwasm_std::{coin, coins, from_binary, Coin, Deps, DepsMut, Response, Uint256};
+    use cosmwasm_std::{from_binary, Coin, Deps, DepsMut, MessageInfo, Response, Uint256};
     use num_bigint::BigUint;
     use serde::{Deserialize, Serialize};
     use serde_json;
@@ -13,7 +13,10 @@ mod test_module {
     use crate::msg::{ExecuteMsg, InstantiateMsg, ProofType, QueryMsg};
 
     use crate::msg::VKeyType;
-    use crate::state::{MaciParameters, Message, Period, PeriodStatus, PubKey, QuinaryTreeRoot};
+    use crate::state::{
+        MaciParameters, Message, Period, PeriodStatus, PubKey, QuinaryTreeRoot, Whitelist,
+        WhitelistConfig,
+    };
     use crate::utils::uint256_from_hex_string;
 
     pub fn uint256_from_decimal_string(decimal_string: &str) -> Uint256 {
@@ -38,10 +41,12 @@ mod test_module {
     }
 
     fn mock_init(deps: DepsMut, parameters: MaciParameters) {
+        let user_1 = mock_info(&0usize.to_string(), &[]);
+        let user_2 = mock_info(&1usize.to_string(), &[]);
+
         let msg = InstantiateMsg {
             round_id: String::from("1"),
             round_description: String::from("HackWasm Berlin"),
-            maci_denom: String::from("token"),
             parameters,
             coordinator: PubKey {
                 x: uint256_from_decimal_string("3557592161792765812904087712812111121909518311142005886657252371904276697771"),
@@ -92,9 +97,21 @@ mod test_module {
                 vk_ic0: "1bc1a1a3444256469c07cd6f4d1cfd9f7c9ddce596a306e0af077ca9e9c0fe9602db2a9aecef76a9dc4c19bf88c0099b04fc75410cc9004f0966440825e3790a".to_string(),
                 vk_ic1: "05b8b475f2bfedba4fa04ab1972006da9764c2c3e6fb65d6dd0aac938fd298112a560e13770b06a3f709a49fddf016331ea205fa125026993f6666eff69f4def".to_string(),
             },
+            whitelist: Whitelist {
+                users: vec![
+                    WhitelistConfig {
+                        addr: user_1.sender.to_string(),
+                        balance: Uint256::from_u128(100u128),
+                    },
+                    WhitelistConfig {
+                        addr: user_2.sender.to_string(),
+                        balance: Uint256::from_u128(80u128),
+                    },
+                ]
+            }
         };
 
-        let info = mock_info("creator", &coins(2, "token"));
+        let info = mock_info("creator", &[]);
         let _res = instantiate(deps, mock_env(), info, msg)
             .expect("contract successfully handles InstantiateMsg");
     }
@@ -119,9 +136,7 @@ mod test_module {
         );
     }
 
-    fn batch_mock_sign_up(deps: DepsMut, pubkey: PubKey, sent: &[Coin]) {
-        let info = mock_info("alice_key", sent);
-
+    fn batch_mock_sign_up(deps: DepsMut, pubkey: PubKey, info: MessageInfo) {
         let msg = ExecuteMsg::SignUp { pubkey };
         let _res =
             execute(deps, mock_env(), info, msg).expect("contract handles set zkeys parameters");
@@ -264,6 +279,8 @@ mod test_module {
 
         for i in 0..data.msgs.len() {
             if i < parameters.state_tree_depth.to_string().parse().unwrap() {
+                let user = mock_info(&i.to_string(), &[]);
+
                 let pubkey = PubKey {
                     x: uint256_from_decimal_string(&data.current_state_leaves[i][0]),
                     y: uint256_from_decimal_string(&data.current_state_leaves[i][1]),
@@ -271,12 +288,13 @@ mod test_module {
 
                 let balance = uint256_from_decimal_string(&data.current_state_leaves[i][2]);
                 println!("---------- signup ---------- {:?}", i);
+                println!("user {:?}", user.sender.to_string());
                 println!("pubkey {:?}", pubkey);
                 println!("blance {:?}\n", balance);
                 batch_mock_sign_up(
                     deps.as_mut(),
                     pubkey,
-                    &[coin(balance.to_string().parse().unwrap(), "token")],
+                    user, // &[coin(balance.to_string().parse().unwrap(), "token")],
                 );
             }
             let message = Message {

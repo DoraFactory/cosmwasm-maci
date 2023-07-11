@@ -3,14 +3,10 @@
   "title": "Config",
   "type": "object",
   "required": [
-    "maci_denom",
     "round_description",
     "round_id"
   ],
   "properties": {
-    "maci_denom": {
-      "type": "string"
-    },
     "round_description": {
       "type": "string"
     },

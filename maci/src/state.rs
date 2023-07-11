@@ -8,7 +8,6 @@ use cw_storage_plus::{Item, Map};
 pub struct Config {
     pub round_id: String,
     pub round_description: String,
-    pub maci_denom: String,
 }
 
 pub const CONFIG: Item<Config> = Item::new("config");
@@ -207,6 +206,51 @@ pub const PROVERINFO: Map<&Addr, ProofInfo> = Map::new("prover_info");
 pub const PROVERLIST: Map<(&Addr, &Addr), ProofInfo> = Map::new("prover_list");
 pub const PROCESS_VKEYS: Item<VkeyStr> = Item::new("process_vkeys");
 pub const TALLY_VKEYS: Item<VkeyStr> = Item::new("tally_vkeys");
+
+#[cw_serde]
+pub struct WhitelistConfig {
+    pub addr: String,
+    pub balance: Uint256,
+}
+
+#[cw_serde]
+pub struct Whitelist {
+    pub users: Vec<WhitelistConfig>,
+}
+
+impl Whitelist {
+    pub fn is_whitelist(&self, addr: impl AsRef<str>) -> bool {
+        let addr = addr.as_ref();
+        self.users.iter().any(|a| a.addr == addr)
+    }
+
+    pub fn register(&mut self, addr: impl AsRef<str>) {
+        let addr = addr.as_ref();
+        self.users = self
+            .users
+            .clone()
+            .into_iter()
+            .map(|mut user| {
+                if user.addr == addr {
+                    user.balance = Uint256::from_u128(0u128);
+                }
+                user
+            })
+            .collect();
+    }
+
+    pub fn balance_of(&self, addr: impl AsRef<str>) -> Uint256 {
+        let addr = addr.as_ref();
+
+        let user = self.users.iter().find(|a| a.addr == addr);
+        match user {
+            Some(user) => user.balance,
+            None => Uint256::from_u128(0u128),
+        }
+    }
+}
+
+pub const WHITELIST: Item<Whitelist> = Item::new("whitelist");
 
 #[cfg(test)]
 mod tests {

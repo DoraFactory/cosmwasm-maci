@@ -116,6 +116,62 @@
         }
       },
       "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "white_list"
+      ],
+      "properties": {
+        "white_list": {
+          "type": "object",
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Checks permissions of the caller on this proxy. If CanExecute returns true then a call to `Execute` with the same message, before any further state changes, should also succeed.",
+      "type": "object",
+      "required": [
+        "is_white_list"
+      ],
+      "properties": {
+        "is_white_list": {
+          "type": "object",
+          "required": [
+            "sender"
+          ],
+          "properties": {
+            "sender": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "white_balance_of"
+      ],
+      "properties": {
+        "white_balance_of": {
+          "type": "object",
+          "required": [
+            "sender"
+          ],
+          "properties": {
+            "sender": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
     }
   ],
   "definitions": {

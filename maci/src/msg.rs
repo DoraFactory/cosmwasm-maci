@@ -1,4 +1,4 @@
-use crate::state::{Config, MaciParameters, Message, Period, PubKey, QuinaryTreeRoot};
+use crate::state::{Config, MaciParameters, Message, Period, PubKey, QuinaryTreeRoot, Whitelist};
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Addr, Uint256};
 
@@ -6,12 +6,12 @@ use cosmwasm_std::{Addr, Uint256};
 pub struct InstantiateMsg {
     pub round_id: String,          // this round's id
     pub round_description: String, // this round's description
-    pub maci_denom: String,        // supported denom
     pub parameters: MaciParameters,
     pub coordinator: PubKey,
     pub process_vkey: VKeyType,
     pub qtr_lib: QuinaryTreeRoot,
     pub tally_vkey: VKeyType,
+    pub whitelist: Whitelist,
 }
 
 #[cw_serde]
@@ -87,4 +87,15 @@ pub enum QueryMsg {
 
     #[returns(Uint256)]
     GetVoiceCreditBalance { index: Uint256 },
+
+    #[returns(Whitelist)]
+    WhiteList {},
+    /// Checks permissions of the caller on this proxy.
+    /// If CanExecute returns true then a call to `Execute` with the same message,
+    /// before any further state changes, should also succeed.
+    #[returns(bool)]
+    IsWhiteList { sender: String },
+
+    #[returns(Uint256)]
+    WhiteBalanceOf { sender: String },
 }
