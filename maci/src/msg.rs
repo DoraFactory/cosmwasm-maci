@@ -4,7 +4,6 @@ use cosmwasm_std::{Addr, Uint256};
 
 #[cw_serde]
 pub struct InstantiateMsg {
-    pub round_id: String,          // this round's id
     pub round_description: String, // this round's description
     pub parameters: MaciParameters,
     pub coordinator: PubKey,

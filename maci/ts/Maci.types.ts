@@ -11,7 +11,6 @@ export interface InstantiateMsg {
   process_vkey: VKeyType;
   qtr_lib: QuinaryTreeRoot;
   round_description: string;
-  round_id: string;
   tally_vkey: VKeyType;
   whitelist: Whitelist;
 }
@@ -123,7 +122,6 @@ export type QueryMsg = {
 export type Addr = string;
 export interface Config {
   round_description: string;
-  round_id: string;
 }
 export type PeriodStatus = "pending" | "voting" | "processing" | "tallying" | "ended";
 export interface Period {

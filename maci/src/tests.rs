@@ -45,7 +45,6 @@ mod test_module {
         let user_2 = mock_info(&1usize.to_string(), &[]);
 
         let msg = InstantiateMsg {
-            round_id: String::from("1"),
             round_description: String::from("HackWasm Berlin"),
             parameters,
             coordinator: PubKey {

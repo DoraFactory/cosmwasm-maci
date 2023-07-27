@@ -8,7 +8,6 @@
     "process_vkey",
     "qtr_lib",
     "round_description",
-    "round_id",
     "tally_vkey",
     "whitelist"
   ],
@@ -26,9 +25,6 @@
       "$ref": "#/definitions/QuinaryTreeRoot"
     },
     "round_description": {
-      "type": "string"
-    },
-    "round_id": {
       "type": "string"
     },
     "tally_vkey": {

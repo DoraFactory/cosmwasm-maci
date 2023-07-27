@@ -38,7 +38,6 @@ pub fn instantiate(
 
     // Create a config struct with the maci_denom value from the message
     let config = Config {
-        round_id: msg.round_id,
         round_description: msg.round_description,
     };
 

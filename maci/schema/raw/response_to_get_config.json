@@ -3,14 +3,10 @@
   "title": "Config",
   "type": "object",
   "required": [
-    "round_description",
-    "round_id"
+    "round_description"
   ],
   "properties": {
     "round_description": {
-      "type": "string"
-    },
-    "round_id": {
       "type": "string"
     }
   },

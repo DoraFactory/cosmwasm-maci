@@ -6,7 +6,6 @@ use cw_storage_plus::{Item, Map};
 
 #[cw_serde]
 pub struct Config {
-    pub round_id: String,
     pub round_description: String,
 }
 
