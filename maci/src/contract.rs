@@ -255,7 +255,7 @@ pub fn execute_sign_up(
 
     // Create a state leaf with the provided pubkey and amount
     let state_leaf = StateLeaf {
-        pub_key: pubkey,
+        pub_key: pubkey.clone(),
         // voice_credit_balance: Uint256::from_uint128(amount),
         voice_credit_balance: user_balance,
         vote_option_tree_root: Uint256::from_u128(0),
@@ -287,7 +287,11 @@ pub fn execute_sign_up(
     Ok(Response::new()
         .add_attribute("action", "sign_up")
         .add_attribute("state_idx", state_index.to_string())
-        .add_attribute("amount", user_balance.to_string()))
+        .add_attribute(
+            "pubkey",
+            format!("{:?},{:?}", pubkey.x.to_string(), pubkey.y.to_string()),
+        )
+        .add_attribute("balance", user_balance.to_string()))
 }
 
 pub fn execute_publish_message(
@@ -327,9 +331,10 @@ pub fn execute_publish_message(
             (msg_chain_length + Uint256::from_u128(1u128))
                 .to_be_bytes()
                 .to_vec(),
-            &hash_message_and_enc_pub_key(message, enc_pub_key, old_msg_hashes),
+            &hash_message_and_enc_pub_key(message.clone(), enc_pub_key.clone(), old_msg_hashes),
         )?;
 
+        let old_chain_length = msg_chain_length;
         // Update the message chain length
         msg_chain_length += Uint256::from_u128(1u128);
         MSG_CHAIN_LENGTH.save(deps.storage, &msg_chain_length)?;
@@ -337,7 +342,16 @@ pub fn execute_publish_message(
         // Return a success response
         Ok(Response::new()
             .add_attribute("action", "publish_message")
-            .add_attribute("event", "success publish message"))
+            .add_attribute("msg_chain_length", old_chain_length.to_string())
+            .add_attribute("message", format!("{:?}", message.data))
+            .add_attribute(
+                "enc_pub_key",
+                format!(
+                    "{:?},{:?}",
+                    enc_pub_key.x.to_string(),
+                    enc_pub_key.y.to_string()
+                ),
+            ))
     } else {
         // Return an error response for invalid user or encrypted public key
         Ok(Response::new()
