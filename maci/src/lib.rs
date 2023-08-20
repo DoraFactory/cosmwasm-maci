@@ -5,7 +5,10 @@ pub mod parser;
 pub mod state;
 pub mod utils;
 
+// #[cfg(test)]
+// mod tests;
+
 #[cfg(test)]
-mod tests;
+pub mod multitest;
 
 pub use crate::error::ContractError;

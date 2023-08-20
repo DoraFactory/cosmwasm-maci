@@ -48,6 +48,10 @@ pub enum ExecuteMsg {
         message: Message,
         enc_pub_key: PubKey,
     },
+    BatchPublishMessage {
+        messages: Vec<Message>,
+        enc_pub_keys: Vec<PubKey>,
+    },
     ProcessMessage {
         new_state_commitment: Uint256,
         proof: ProofType,
@@ -71,6 +75,9 @@ pub enum QueryMsg {
 
     #[returns(Period)]
     GetPeriod {},
+
+    #[returns(Uint256)]
+    GetNumSignUp {},
 
     #[returns(Uint256)]
     GetMsgChainLength {},

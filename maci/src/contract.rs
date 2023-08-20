@@ -11,7 +11,8 @@ use crate::state::{
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, Uint256,
+    to_binary, Binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Response, StdResult, Uint256,
+    WasmMsg,
 };
 
 use crate::utils::{hash2, hash5, hash_256_uint256_list, uint256_from_hex_string};
@@ -169,6 +170,10 @@ pub fn execute(
             message,
             enc_pub_key,
         } => execute_publish_message(deps, env, info, message, enc_pub_key),
+        ExecuteMsg::BatchPublishMessage {
+            messages,
+            enc_pub_keys,
+        } => execute_batch_publish_message(deps, env, info, messages, enc_pub_keys),
         ExecuteMsg::ProcessMessage {
             new_state_commitment,
             proof,
@@ -243,15 +248,6 @@ pub fn execute_sign_up(
         pubkey.x < snark_scalar_field && pubkey.y < snark_scalar_field,
         "MACI: pubkey values should be less than the snark scalar field"
     );
-
-    // let config = CONFIG.load(deps.storage)?;
-    // let mut amount: Uint128 = Uint128::new(0);
-    // // Iterate through the funds and find the amount with the MACI denomination
-    // info.funds.iter().for_each(|fund| {
-    //     if fund.denom == config.maci_denom {
-    //         amount = fund.amount;
-    //     }
-    // });
 
     // Create a state leaf with the provided pubkey and amount
     let state_leaf = StateLeaf {
@@ -338,7 +334,7 @@ pub fn execute_publish_message(
         // Update the message chain length
         msg_chain_length += Uint256::from_u128(1u128);
         MSG_CHAIN_LENGTH.save(deps.storage, &msg_chain_length)?;
-
+        println!("---------- 1 publish message");
         // Return a success response
         Ok(Response::new()
             .add_attribute("action", "publish_message")
@@ -353,11 +349,42 @@ pub fn execute_publish_message(
                 ),
             ))
     } else {
+        println!("---------- 2 publish message");
+
         // Return an error response for invalid user or encrypted public key
         Ok(Response::new()
             .add_attribute("action", "publish_message")
             .add_attribute("event", "error user."))
     }
+}
+
+pub fn execute_batch_publish_message(
+    _deps: DepsMut,
+    env: Env,
+    _info: MessageInfo,
+    messages: Vec<Message>,
+    enc_pub_keys: Vec<PubKey>,
+) -> Result<Response, ContractError> {
+    assert!(messages.len() == enc_pub_keys.len());
+
+    let mut msgs = vec![];
+    for i in 0..messages.len() {
+        let publish_message = ExecuteMsg::PublishMessage {
+            message: messages[i].clone(),
+            enc_pub_key: enc_pub_keys[i].clone(),
+        };
+
+        let msg = CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: env.contract.address.to_string(),
+            msg: to_binary(&publish_message)?,
+            funds: vec![],
+        });
+        msgs.push(msg);
+    }
+
+    Ok(Response::new()
+        .add_messages(msgs)
+        .add_attribute("action", "batch_publish_message"))
 }
 
 pub fn execute_stop_voting_period(
@@ -467,8 +494,7 @@ pub fn execute_process_message(
 
     // Compute the hash of the input values
     let input_hash = uint256_from_hex_string(&hash_256_uint256_list(&input)) % snark_scalar_field; // input hash
-    println!("input: {:?}", input);
-    println!("input_hash: {:?}", input_hash);
+
     // Load the process verification keys
     let process_vkeys_str = PROCESS_VKEYS.load(deps.storage)?;
 
@@ -500,7 +526,7 @@ pub fn execute_process_message(
             step: String::from("Process"),
         });
     }
-
+    println!("process message verify: {:?}", is_passed);
     // Proof verify success
     // Update the current state commitment
     CURRENT_STATE_COMMITMENT.save(deps.storage, &new_state_commitment)?;
@@ -842,6 +868,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::GetConfig {} => to_binary::<Config>(&CONFIG.load(deps.storage).unwrap()),
         QueryMsg::GetPeriod {} => to_binary::<Period>(&PERIOD.load(deps.storage).unwrap()),
+        QueryMsg::GetNumSignUp {} => to_binary::<Uint256>(&NUMSIGNUPS.load(deps.storage).unwrap()),
         QueryMsg::GetMsgChainLength {} => {
             to_binary::<Uint256>(&MSG_CHAIN_LENGTH.load(deps.storage).unwrap())
         }
