@@ -11,8 +11,8 @@ use crate::state::{
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_binary, Binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Response, StdResult, Uint256,
-    WasmMsg,
+    attr, to_binary, Attribute, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult,
+    Uint256,
 };
 
 use crate::utils::{hash2, hash5, hash_256_uint256_list, uint256_from_hex_string};
@@ -291,7 +291,7 @@ pub fn execute_sign_up(
 }
 
 pub fn execute_publish_message(
-    deps: DepsMut,
+    mut deps: DepsMut,
     _env: Env,
     _info: MessageInfo,
     message: Message,
@@ -302,7 +302,15 @@ pub fn execute_publish_message(
     if period.status != PeriodStatus::Voting {
         return Err(ContractError::PeriodError {});
     }
+    let attr = publish_message(&mut deps, message, enc_pub_key);
+    Ok(Response::new().add_attributes(attr.unwrap()))
+}
 
+fn publish_message(
+    deps: &mut DepsMut,
+    message: Message,
+    enc_pub_key: PubKey,
+) -> Result<Vec<Attribute>, ContractError> {
     // Load the scalar field value
     let snark_scalar_field =
         uint256_from_hex_string("30644e72e131a029b85045b68181585d2833e84879b9709143e1f593f0000001");
@@ -336,55 +344,51 @@ pub fn execute_publish_message(
         MSG_CHAIN_LENGTH.save(deps.storage, &msg_chain_length)?;
         println!("---------- 1 publish message");
         // Return a success response
-        Ok(Response::new()
-            .add_attribute("action", "publish_message")
-            .add_attribute("msg_chain_length", old_chain_length.to_string())
-            .add_attribute("message", format!("{:?}", message.data))
-            .add_attribute(
+        let attrs = vec![
+            attr("action", "publish_message"),
+            attr("msg_chain_length", old_chain_length.to_string()),
+            attr("message", format!("{:?}", message.data)),
+            attr(
                 "enc_pub_key",
                 format!(
                     "{:?},{:?}",
                     enc_pub_key.x.to_string(),
                     enc_pub_key.y.to_string()
                 ),
-            ))
+            ),
+        ];
+        Ok(attrs)
     } else {
         println!("---------- 2 publish message");
 
         // Return an error response for invalid user or encrypted public key
-        Ok(Response::new()
-            .add_attribute("action", "publish_message")
-            .add_attribute("event", "error user."))
+        let attrs = vec![
+            attr("action", "publish_message"),
+            attr("event", "error user."),
+        ];
+        Ok(attrs)
     }
 }
 
 pub fn execute_batch_publish_message(
-    _deps: DepsMut,
-    env: Env,
+    mut deps: DepsMut,
+    _env: Env,
     _info: MessageInfo,
     messages: Vec<Message>,
     enc_pub_keys: Vec<PubKey>,
 ) -> Result<Response, ContractError> {
     assert!(messages.len() == enc_pub_keys.len());
 
-    let mut msgs = vec![];
+    let mut attrs: Vec<Attribute> = Vec::new();
     for i in 0..messages.len() {
-        let publish_message = ExecuteMsg::PublishMessage {
-            message: messages[i].clone(),
-            enc_pub_key: enc_pub_keys[i].clone(),
-        };
-
-        let msg = CosmosMsg::Wasm(WasmMsg::Execute {
-            contract_addr: env.contract.address.to_string(),
-            msg: to_binary(&publish_message)?,
-            funds: vec![],
-        });
-        msgs.push(msg);
+        let attr =
+            publish_message(&mut deps, messages[i].clone(), enc_pub_keys[i].clone()).unwrap();
+        attrs.extend(attr);
     }
 
     Ok(Response::new()
-        .add_messages(msgs)
-        .add_attribute("action", "batch_publish_message"))
+        .add_attribute("action", "batch_publish_message")
+        .add_attributes(attrs))
 }
 
 pub fn execute_stop_voting_period(
