@@ -31,6 +31,19 @@
     {
       "type": "object",
       "required": [
+        "get_num_sign_up"
+      ],
+      "properties": {
+        "get_num_sign_up": {
+          "type": "object",
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
         "get_msg_chain_length"
       ],
       "properties": {

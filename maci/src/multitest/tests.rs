@@ -75,8 +75,6 @@ mod test {
 
         let data: MsgData = serde_json::from_str(&msg_content).expect("Failed to parse JSON");
 
-        let mut msgs = vec![];
-        let mut encpubs = vec![];
         for i in 0..data.msgs.len() {
             if i < Uint256::from_u128(2u128).to_string().parse().unwrap() {
                 let pubkey = PubKey {
@@ -103,15 +101,8 @@ mod test {
                 x: uint256_from_decimal_string(&data.enc_pub_keys[i][0]),
                 y: uint256_from_decimal_string(&data.enc_pub_keys[i][1]),
             };
-            msgs.push(message);
-            encpubs.push(enc_pub);
+            _ = contract.publish_message(&mut app, user2(), message, enc_pub);
         }
-        println!("------ batch publish message ------");
-        println!("messages: {:?}", msgs.clone());
-        println!("encpubs: {:?}", encpubs.clone());
-        _ = contract.batch_publish_message(&mut app, user2(), msgs, encpubs);
-        println!("-------------batch publish end-----------------------");
-
         assert_eq!(
             contract.num_sign_up(&app).unwrap(),
             Uint256::from_u128(2u128)

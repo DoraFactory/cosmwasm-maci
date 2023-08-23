@@ -11,6 +11,7 @@ export interface MaciReadOnlyInterface {
   contractAddress: string;
   getConfig: () => Promise<Config>;
   getPeriod: () => Promise<Period>;
+  getNumSignUp: () => Promise<Uint256>;
   getMsgChainLength: () => Promise<Uint256>;
   getResult: ({
     index
@@ -49,6 +50,7 @@ export class MaciQueryClient implements MaciReadOnlyInterface {
     this.contractAddress = contractAddress;
     this.getConfig = this.getConfig.bind(this);
     this.getPeriod = this.getPeriod.bind(this);
+    this.getNumSignUp = this.getNumSignUp.bind(this);
     this.getMsgChainLength = this.getMsgChainLength.bind(this);
     this.getResult = this.getResult.bind(this);
     this.getAllResult = this.getAllResult.bind(this);
@@ -67,6 +69,11 @@ export class MaciQueryClient implements MaciReadOnlyInterface {
   getPeriod = async (): Promise<Period> => {
     return this.client.queryContractSmart(this.contractAddress, {
       get_period: {}
+    });
+  };
+  getNumSignUp = async (): Promise<Uint256> => {
+    return this.client.queryContractSmart(this.contractAddress, {
+      get_num_sign_up: {}
     });
   };
   getMsgChainLength = async (): Promise<Uint256> => {

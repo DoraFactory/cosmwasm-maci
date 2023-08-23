@@ -14,7 +14,6 @@ exclude = [
 
 [lib]
 crate-type = ["cdylib", "rlib"]
-library = []
 
 [profile.release]
 opt-level = 3

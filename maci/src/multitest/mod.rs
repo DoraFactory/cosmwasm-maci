@@ -188,25 +188,6 @@ impl MaciContract {
     }
 
     #[track_caller]
-    pub fn batch_publish_message(
-        &self,
-        app: &mut App,
-        sender: Addr,
-        messages: Vec<Message>,
-        enc_pub_keys: Vec<PubKey>,
-    ) -> AnyResult<AppResponse> {
-        app.execute_contract(
-            sender,
-            self.addr(),
-            &ExecuteMsg::BatchPublishMessage {
-                messages,
-                enc_pub_keys,
-            },
-            &[],
-        )
-    }
-
-    #[track_caller]
     pub fn stop_voting(&self, app: &mut App, sender: Addr) -> AnyResult<AppResponse> {
         app.execute_contract(
             sender,

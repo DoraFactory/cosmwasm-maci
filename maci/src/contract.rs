@@ -11,8 +11,7 @@ use crate::state::{
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_binary, Binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Response, StdResult, Uint256,
-    WasmMsg,
+    to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, Uint256,
 };
 
 use crate::utils::{hash2, hash5, hash_256_uint256_list, uint256_from_hex_string};
@@ -170,10 +169,6 @@ pub fn execute(
             message,
             enc_pub_key,
         } => execute_publish_message(deps, env, info, message, enc_pub_key),
-        ExecuteMsg::BatchPublishMessage {
-            messages,
-            enc_pub_keys,
-        } => execute_batch_publish_message(deps, env, info, messages, enc_pub_keys),
         ExecuteMsg::ProcessMessage {
             new_state_commitment,
             proof,
@@ -334,7 +329,6 @@ pub fn execute_publish_message(
         // Update the message chain length
         msg_chain_length += Uint256::from_u128(1u128);
         MSG_CHAIN_LENGTH.save(deps.storage, &msg_chain_length)?;
-        println!("---------- 1 publish message");
         // Return a success response
         Ok(Response::new()
             .add_attribute("action", "publish_message")
@@ -349,42 +343,11 @@ pub fn execute_publish_message(
                 ),
             ))
     } else {
-        println!("---------- 2 publish message");
-
         // Return an error response for invalid user or encrypted public key
         Ok(Response::new()
             .add_attribute("action", "publish_message")
             .add_attribute("event", "error user."))
     }
-}
-
-pub fn execute_batch_publish_message(
-    _deps: DepsMut,
-    env: Env,
-    _info: MessageInfo,
-    messages: Vec<Message>,
-    enc_pub_keys: Vec<PubKey>,
-) -> Result<Response, ContractError> {
-    assert!(messages.len() == enc_pub_keys.len());
-
-    let mut msgs = vec![];
-    for i in 0..messages.len() {
-        let publish_message = ExecuteMsg::PublishMessage {
-            message: messages[i].clone(),
-            enc_pub_key: enc_pub_keys[i].clone(),
-        };
-
-        let msg = CosmosMsg::Wasm(WasmMsg::Execute {
-            contract_addr: env.contract.address.to_string(),
-            msg: to_binary(&publish_message)?,
-            funds: vec![],
-        });
-        msgs.push(msg);
-    }
-
-    Ok(Response::new()
-        .add_messages(msgs)
-        .add_attribute("action", "batch_publish_message"))
 }
 
 pub fn execute_stop_voting_period(
@@ -526,7 +489,6 @@ pub fn execute_process_message(
             step: String::from("Process"),
         });
     }
-    println!("process message verify: {:?}", is_passed);
     // Proof verify success
     // Update the current state commitment
     CURRENT_STATE_COMMITMENT.save(deps.storage, &new_state_commitment)?;

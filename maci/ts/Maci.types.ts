@@ -93,6 +93,8 @@ export type QueryMsg = {
 } | {
   get_period: {};
 } | {
+  get_num_sign_up: {};
+} | {
   get_msg_chain_length: {};
 } | {
   get_result: {
