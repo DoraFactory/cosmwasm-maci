@@ -44,4 +44,10 @@ pub enum ContractError {
 
     #[error("Invalid proof, step {step} verify failed")]
     InvalidProof { step: String },
+
+    #[error("whitelist already exist")]
+    AlreadySetWhitelist {},
+
+    #[error("already set {time_name} time")]
+    AlreadySetVotingTime { time_name: String },
 }

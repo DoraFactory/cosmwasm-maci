@@ -1,15 +1,35 @@
 use crate::utils::hash5;
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::Addr;
+use cosmwasm_std::Timestamp;
 use cosmwasm_std::Uint256;
 use cw_storage_plus::{Item, Map};
 
 #[cw_serde]
-pub struct Config {
-    pub round_description: String,
+pub struct RoundInfo {
+    pub title: Option<String>,
+    pub description: Option<String>,
+    pub link: Option<String>,
 }
 
-pub const CONFIG: Item<Config> = Item::new("config");
+pub const ROUNDINFO: Item<RoundInfo> = Item::new("round_info");
+
+#[cw_serde]
+pub struct VotingTime {
+    pub start_time: Option<Timestamp>,
+    pub end_time: Option<Timestamp>,
+}
+
+pub const VOTINGTIME: Item<VotingTime> = Item::new("voting_time");
+
+// #[cw_serde]
+
+// #[cw_serde]
+// pub struct VoteOptionMap {
+//     pub option: Vec<String>,
+// }
+
+pub const VOTEOPTIONMAP: Item<Vec<String>> = Item::new("vote_option_map");
 
 #[cw_serde]
 pub struct Admin {
