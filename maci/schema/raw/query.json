@@ -5,10 +5,23 @@
     {
       "type": "object",
       "required": [
-        "get_config"
+        "get_round_info"
       ],
       "properties": {
-        "get_config": {
+        "get_round_info": {
+          "type": "object",
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "get_voting_time"
+      ],
+      "properties": {
+        "get_voting_time": {
           "type": "object",
           "additionalProperties": false
         }

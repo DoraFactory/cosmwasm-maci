@@ -220,8 +220,6 @@ pub fn execute_start_voting_period(
     info: MessageInfo,
 ) -> Result<Response, ContractError> {
     let period = PERIOD.load(deps.storage)?;
-    println!("==================== {:?} start voting", period);
-    println!("start voting period time: {:?}", env.block.time);
 
     if VOTINGTIME.exists(deps.storage) {
         let voting_time = VOTINGTIME.load(deps.storage)?;
@@ -256,7 +254,6 @@ pub fn execute_start_voting_period(
             return Err(ContractError::PeriodError {});
         }
     }
-    println!("{:?} start voting", period);
     // Check if the sender is authorized to execute the function
     if !can_execute(deps.as_ref(), info.sender.as_ref())? {
         Err(ContractError::Unauthorized {})
@@ -269,7 +266,6 @@ pub fn execute_start_voting_period(
         // let voting_time = VOTINGTIME.may_load(deps.storage)?;
         match VOTINGTIME.may_load(deps.storage)? {
             Some(time) => {
-                println!("start_voting ----------------- {:?}", time);
                 let votingtime = VotingTime {
                     start_time: Some(env.block.time),
                     end_time: time.end_time,
@@ -421,7 +417,6 @@ pub fn execute_set_vote_options_map(
         VOTEOPTIONMAP.save(deps.storage, &vote_option_map)?;
         // Save the maximum vote options
         MAX_VOTE_OPTIONS.save(deps.storage, &Uint256::from_u128(max_vote_options))?;
-        println!("========= success set vote option map =========");
         let res = Response::new()
             .add_attribute("action", "set_vote_option")
             .add_attribute("vote_option_map", format!("{:?}", vote_option_map))
@@ -438,8 +433,6 @@ pub fn execute_sign_up(
     pubkey: PubKey,
 ) -> Result<Response, ContractError> {
     let period = PERIOD.load(deps.storage)?;
-    println!("{:?}", period);
-    println!("============ {:?}", info.sender.as_str());
     if VOTINGTIME.exists(deps.storage) {
         let voting_time = VOTINGTIME.load(deps.storage)?;
         check_voting_time(env, Some(voting_time), period.status)?;
@@ -496,7 +489,6 @@ pub fn execute_sign_up(
         // &Uint256::from_u128(0u128),
         &user_balance,
     )?;
-    println!("num sign up: {:?}", num_sign_ups);
     NUMSIGNUPS.save(deps.storage, &num_sign_ups)?;
 
     let mut white_curr = WHITELIST.load(deps.storage)?;
@@ -588,12 +580,10 @@ pub fn execute_stop_voting_period(
     info: MessageInfo,
     // max_vote_options: Uint256,
 ) -> Result<Response, ContractError> {
-    println!("stop voting period time: {:?}", env.block.time);
     let period = PERIOD.load(deps.storage)?;
 
     if VOTINGTIME.exists(deps.storage) {
         let voting_time = VOTINGTIME.load(deps.storage)?;
-        println!("---------- 0");
 
         // if let Some(start_time) = voting_time.start_time {
         if let Some(_) = voting_time.end_time {
@@ -638,24 +628,18 @@ pub fn execute_stop_voting_period(
             return Err(ContractError::PeriodError {});
         }
     }
-    println!("---------- 0");
     // Check if the sender is authorized to execute the function
     if !can_execute(deps.as_ref(), info.sender.as_ref())? {
         Err(ContractError::Unauthorized {})
     } else {
-        println!("---------- 1");
-
         // let voting_time = VOTINGTIME.may_load(deps.storage)?;
         match VOTINGTIME.may_load(deps.storage)? {
             Some(time) => {
-                println!("---------- 2");
-
                 let votingtime = VotingTime {
                     start_time: time.start_time,
                     end_time: Some(env.block.time),
                 };
                 VOTINGTIME.save(deps.storage, &votingtime)?;
-                println!("---------- 3");
             }
             None => {
                 // let votingtime = VotingTime {
@@ -665,7 +649,6 @@ pub fn execute_stop_voting_period(
                 // VOTINGTIME.save(deps.storage, &votingtime)?;
             }
         }
-        println!("success stop period");
         // let votingtime = VotingTime {
         //     start_time: voting_time.start_time,
         //     end_time: Some(env.block.height),
@@ -832,7 +815,6 @@ pub fn execute_process_message(
     // Update the count of processed messages
     processed_msg_count += batch_end_index - batch_start_index;
     PROCESSED_MSG_COUNT.save(deps.storage, &processed_msg_count)?;
-    println!("success process message ==============");
     Ok(Response::new()
         .add_attribute("action", "process_message")
         .add_attribute("zk_verify", is_passed.to_string()))
@@ -1128,51 +1110,6 @@ fn state_update_at(deps: &mut DepsMut, index: Uint256) -> Result<bool, ContractE
     Ok(true)
 }
 
-fn check_voting_time1(
-    env: Env,
-    voting_time: Option<VotingTime>,
-    period_status: PeriodStatus,
-) -> Result<(), ContractError> {
-    match voting_time {
-        Some(vt) => {
-            if let Some(start_time) = vt.start_time {
-                println!("-------- start check");
-                if env.block.time < start_time {
-                    println!("1 -------- start check");
-
-                    return Err(ContractError::PeriodError {});
-                }
-                println!("2 -------- start check");
-            } else if period_status != PeriodStatus::Voting {
-                return Err(ContractError::PeriodError {});
-            }
-            println!("3 -------- start check");
-
-            if let Some(end_time) = vt.end_time {
-                println!("---------------");
-                println!("---------------");
-                println!("---------------");
-                println!("{:?}", end_time);
-                println!("{:?}", env.block.time);
-                println!("{:?}", env.block.time > end_time);
-                if env.block.time > end_time {
-                    return Err(ContractError::PeriodError {});
-                }
-            } else if period_status != PeriodStatus::Voting {
-                println!("======= check in");
-                return Err(ContractError::PeriodError {});
-            }
-        }
-        None => {
-            if period_status != PeriodStatus::Voting {
-                return Err(ContractError::PeriodError {});
-            }
-        }
-    }
-
-    Ok(())
-}
-
 fn check_voting_time(
     env: Env,
     voting_time: Option<VotingTime>,
@@ -1185,10 +1122,6 @@ fn check_voting_time(
                     return Err(ContractError::PeriodError {});
                 }
                 if let Some(end_time) = vt.end_time {
-                    println!("---------------");
-                    println!("end block time: {:?}", env.block.time);
-                    println!("end_time: {:?}", end_time);
-                    println!("end_time: {:?}", env.block.time > end_time);
                     if env.block.time >= end_time {
                         return Err(ContractError::PeriodError {});
                         // } else {

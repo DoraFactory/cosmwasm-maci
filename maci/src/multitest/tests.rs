@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod test {
-    use cosmwasm_std::{Addr, Event, Uint256};
+    use cosmwasm_std::{Addr, Uint256};
     use cw_multi_test::{next_block, App};
 
     use crate::error::ContractError;
@@ -52,7 +52,7 @@ mod test {
         new_results_root_salt: String,
     }
 
-    // #[test]
+    #[test]
     fn instantiate_with_no_voting_time_should_works() {
         let msg_file_path = "./src/test/msg_test.json";
 
@@ -166,7 +166,6 @@ mod test {
         );
 
         // Stop Voting Period
-        // app.update_block(next_block);
         _ = contract.stop_voting(&mut app, owner());
 
         let sign_up_after_voting_end_error = contract
@@ -244,7 +243,7 @@ mod test {
         println!("all_result: {:?}", all_result);
     }
 
-    // #[test]
+    #[test]
     fn instantiate_with_voting_time_should_works() {
         let msg_file_path = "./src/test/msg_test.json";
 
@@ -436,7 +435,7 @@ mod test {
         println!("all_result: {:?}", all_result);
     }
 
-    // #[test]
+    #[test]
     fn instantiate_with_start_time_should_works() {
         let msg_file_path = "./src/test/msg_test.json";
 

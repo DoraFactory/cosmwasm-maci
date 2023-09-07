@@ -13,9 +13,7 @@ use crate::{
     contract::{execute, instantiate, query},
     msg::*,
 };
-use cosmwasm_std::{
-    Addr, BlockInfo, ContractInfo, Env, StdResult, Timestamp, TransactionInfo, Uint256,
-};
+use cosmwasm_std::{Addr, StdResult, Timestamp, Uint256};
 use cw_multi_test::{App, AppResponse, ContractWrapper, Executor};
 use num_bigint::BigUint;
 
