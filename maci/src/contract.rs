@@ -237,7 +237,7 @@ pub fn execute_start_voting_period(
         }
 
         if let Some(end_time) = voting_time.end_time {
-            if env.block.time > end_time {
+            if env.block.time >= end_time {
                 // 如果设置了 end time, 我需要判断当前是否是end time之前，如果大于end time，则意味已经不是voting环节。
                 // if in end time period. you can execute start round.
                 return Err(ContractError::PeriodError {});
@@ -263,18 +263,19 @@ pub fn execute_start_voting_period(
             status: PeriodStatus::Voting,
         };
         PERIOD.save(deps.storage, &period)?;
+        let start_time = env.block.time;
         // let voting_time = VOTINGTIME.may_load(deps.storage)?;
         match VOTINGTIME.may_load(deps.storage)? {
             Some(time) => {
                 let votingtime = VotingTime {
-                    start_time: Some(env.block.time),
+                    start_time: Some(start_time),
                     end_time: time.end_time,
                 };
                 VOTINGTIME.save(deps.storage, &votingtime)?;
             }
             None => {
                 let votingtime = VotingTime {
-                    start_time: Some(env.block.time),
+                    start_time: Some(start_time),
                     end_time: None,
                 };
                 VOTINGTIME.save(deps.storage, &votingtime)?;
@@ -282,7 +283,9 @@ pub fn execute_start_voting_period(
         }
 
         // Return a success response
-        Ok(Response::new().add_attribute("action", "start_voting_period"))
+        Ok(Response::new()
+            .add_attribute("action", "start_voting_period")
+            .add_attribute("start_time", format!("{:?}", start_time)))
     }
 }
 
@@ -319,22 +322,25 @@ pub fn execute_set_round_info(
     if !can_execute(deps.as_ref(), info.sender.as_ref())? {
         Err(ContractError::Unauthorized {})
     } else {
-        let mut cfg = ROUNDINFO.load(deps.storage)?;
-        if let Some(title) = round_info.title {
-            cfg.title = Some(title);
-        }
+        // let mut cfg = ROUNDINFO.load(deps.storage)?;
+        // if let Some(title) = round_info.title {
+        //     cfg.title = Some(title);
+        // }
 
-        if let Some(description) = round_info.description {
-            cfg.description = Some(description);
-        }
+        // if let Some(description) = round_info.description {
+        //     cfg.description = Some(description);
+        // }
 
-        if let Some(link) = round_info.link {
-            cfg.link = Some(link);
-        }
+        // if let Some(link) = round_info.link {
+        //     cfg.link = Some(link);
+        // }
+        ROUNDINFO.save(deps.storage, &round_info)?;
 
-        ROUNDINFO.save(deps.storage, &cfg)?;
-        let res = Response::new().add_attribute("action", "set_round_info");
-        Ok(res)
+        Ok(Response::new()
+            .add_attribute("action", "set_round_info")
+            .add_attribute("title", round_info.title.unwrap())
+            .add_attribute("description", round_info.description.unwrap())
+            .add_attribute("link", round_info.link.unwrap()))
     }
 }
 
@@ -474,15 +480,14 @@ pub fn execute_sign_up(
     }
     .hash_state_leaf();
 
+    let state_index = num_sign_ups;
     // Enqueue the state leaf
     state_enqueue(&mut deps, state_leaf)?;
-
     num_sign_ups += Uint256::from_u128(1u128);
 
-    let state_index = num_sign_ups;
-
     // Save the updated state index, voice credit balance, and number of sign-ups
-    STATEIDXINC.save(deps.storage, &info.sender, &state_index)?;
+    // STATEIDXINC.save(deps.storage, &info.sender, &num_sign_ups)?;
+    STATEIDXINC.save(deps.storage, &info.sender, &num_sign_ups)?;
     VOICECREDITBALANCE.save(
         deps.storage,
         state_index.to_be_bytes().to_vec(), // TODO: state_index need equal num_sign_ups
@@ -590,38 +595,13 @@ pub fn execute_stop_voting_period(
             return Err(ContractError::AlreadySetVotingTime {
                 time_name: String::from("end_time"),
             });
-            // if env.block.time > end_time {
-            //     return Err(ContractError::PeriodError {});
-            // } else {
-
-            // }
-            // } else {
-            // if env.block.time < start_time {
-            //     return Err(ContractError::PeriodError {});
-            // }
         }
-        // } else {
-        //     return Err(ContractError::PeriodError {});
-        // }
 
         if let Some(start_time) = voting_time.start_time {
             if env.block.time <= start_time {
                 return Err(ContractError::PeriodError {});
             }
         }
-        // } else {
-        //     if period.status != PeriodStatus::Voting {
-        //         return Err(ContractError::PeriodError {});
-        //     }
-        // }
-
-        // if let Some(_) = voting_time.end_time {
-        //     return Err(ContractError::AlreadyHaveVotingTime {}); // 拥有投票时间的round，不需要手动stop
-        // } else {
-        //     if period.status != PeriodStatus::Voting {
-        //         return Err(ContractError::PeriodError {});
-        //     }
-        // }
     } else {
         // Check if the period status is Voting
         if period.status != PeriodStatus::Voting {
@@ -632,31 +612,22 @@ pub fn execute_stop_voting_period(
     if !can_execute(deps.as_ref(), info.sender.as_ref())? {
         Err(ContractError::Unauthorized {})
     } else {
-        // let voting_time = VOTINGTIME.may_load(deps.storage)?;
+        let end_time = env.block.time;
         match VOTINGTIME.may_load(deps.storage)? {
             Some(time) => {
                 let votingtime = VotingTime {
                     start_time: time.start_time,
-                    end_time: Some(env.block.time),
+                    end_time: Some(end_time),
                 };
                 VOTINGTIME.save(deps.storage, &votingtime)?;
             }
-            None => {
-                // let votingtime = VotingTime {
-                //     start_time: None,
-                //     end_time: Some(env.block.time),
-                // };
-                // VOTINGTIME.save(deps.storage, &votingtime)?;
-            }
+            None => {}
         }
-        // let votingtime = VotingTime {
-        //     start_time: voting_time.start_time,
-        //     end_time: Some(env.block.height),
-        // };
-        // VOTINGTIME.save(deps.storage, &votingtime)?;
 
         // Return a success response
-        Ok(Response::new().add_attribute("action", "stop_voting_period"))
+        Ok(Response::new()
+            .add_attribute("action", "stop_voting_period")
+            .add_attribute("end_time", end_time.to_string()))
     }
 }
 
@@ -793,6 +764,7 @@ pub fn execute_process_message(
     // Parse the proof and prepare for verification
     let pof = parse_proof::<Bn256>(proof_str.clone())?;
 
+    println!("----- process message {:?}", input_hash.to_string());
     // Verify the SNARK proof using the input hash
     let is_passed = verify_proof(
         &pvk,
