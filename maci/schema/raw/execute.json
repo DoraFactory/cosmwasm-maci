@@ -334,6 +334,9 @@
     },
     "RoundInfo": {
       "type": "object",
+      "required": [
+        "title"
+      ],
       "properties": {
         "description": {
           "type": [
@@ -348,10 +351,7 @@
           ]
         },
         "title": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": "string"
         }
       },
       "additionalProperties": false

@@ -7,7 +7,7 @@ use cw_storage_plus::{Item, Map};
 
 #[cw_serde]
 pub struct RoundInfo {
-    pub title: Option<String>,
+    pub title: String,
     pub description: Option<String>,
     pub link: Option<String>,
 }
@@ -21,13 +21,6 @@ pub struct VotingTime {
 }
 
 pub const VOTINGTIME: Item<VotingTime> = Item::new("voting_time");
-
-// #[cw_serde]
-
-// #[cw_serde]
-// pub struct VoteOptionMap {
-//     pub option: Vec<String>,
-// }
 
 pub const VOTEOPTIONMAP: Item<Vec<String>> = Item::new("vote_option_map");
 

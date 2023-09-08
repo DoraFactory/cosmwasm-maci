@@ -13,7 +13,7 @@ pub struct InstantiateMsg {
     pub tally_vkey: VKeyType,
     pub max_vote_options: Uint256,
 
-    pub round_info: Option<RoundInfo>,
+    pub round_info: RoundInfo,
     pub voting_time: Option<VotingTime>,
     pub whitelist: Option<Whitelist>,
 }
@@ -117,4 +117,10 @@ pub enum QueryMsg {
 
     #[returns(Uint256)]
     WhiteBalanceOf { sender: String },
+
+    #[returns(Vec<String>)]
+    VoteOptionMap {},
+
+    #[returns(Uint256)]
+    MaxVoteOptions {},
 }

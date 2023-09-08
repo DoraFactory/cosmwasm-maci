@@ -8,6 +8,7 @@
     "parameters",
     "process_vkey",
     "qtr_lib",
+    "round_info",
     "tally_vkey"
   ],
   "properties": {
@@ -27,14 +28,7 @@
       "$ref": "#/definitions/QuinaryTreeRoot"
     },
     "round_info": {
-      "anyOf": [
-        {
-          "$ref": "#/definitions/RoundInfo"
-        },
-        {
-          "type": "null"
-        }
-      ]
+      "$ref": "#/definitions/RoundInfo"
     },
     "tally_vkey": {
       "$ref": "#/definitions/VKeyType"
@@ -121,6 +115,9 @@
     },
     "RoundInfo": {
       "type": "object",
+      "required": [
+        "title"
+      ],
       "properties": {
         "description": {
           "type": [
@@ -135,10 +132,7 @@
           ]
         },
         "title": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": "string"
         }
       },
       "additionalProperties": false

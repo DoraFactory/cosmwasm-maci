@@ -101,6 +101,12 @@ mod test {
         _ = contract.start_voting(&mut app, owner());
         app.update_block(next_block);
 
+        let set_whitelist_only_in_pending = contract.set_whitelist(&mut app, owner()).unwrap_err();
+        assert_eq!(
+            // 注册之后不能再进行注册
+            ContractError::PeriodError {},
+            set_whitelist_only_in_pending.downcast().unwrap()
+        );
         let msg_file_path = "./src/test/msg_test.json";
 
         let mut msg_file = fs::File::open(msg_file_path).expect("Failed to open file");
@@ -275,6 +281,24 @@ mod test {
         let num_sign_up = contract.num_sign_up(&app).unwrap();
         assert_eq!(num_sign_up, Uint256::from_u128(0u128));
 
+        let vote_option_map = contract.vote_option_map(&app).unwrap();
+        let max_vote_options = contract.max_vote_options(&app).unwrap();
+        assert_eq!(vote_option_map, vec!["", "", "", "", ""]);
+        assert_eq!(max_vote_options, Uint256::from_u128(5u128));
+        _ = contract.set_vote_option_map(&mut app, owner());
+        let new_vote_option_map = contract.vote_option_map(&app).unwrap();
+        assert_eq!(
+            new_vote_option_map,
+            vec![
+                String::from("did_not_vote"),
+                String::from("yes"),
+                String::from("no"),
+                String::from("no_with_veto"),
+                String::from("abstain"),
+            ]
+        );
+        // assert_eq!(num_sign_up, Uint256::from_u128(0u128));
+
         let test_pubkey = PubKey {
             x: uint256_from_decimal_string(&data.current_state_leaves[0][0]),
             y: uint256_from_decimal_string(&data.current_state_leaves[0][1]),
@@ -294,6 +318,12 @@ mod test {
         _ = contract.set_vote_option_map(&mut app, owner());
 
         app.update_block(next_block); // Start Voting
+        let set_whitelist_only_in_pending = contract.set_whitelist(&mut app, owner()).unwrap_err();
+        assert_eq!(
+            // 注册之后不能再进行注册
+            ContractError::PeriodError {},
+            set_whitelist_only_in_pending.downcast().unwrap()
+        );
         let set_vote_option_map_error =
             contract.set_vote_option_map(&mut app, owner()).unwrap_err();
 
@@ -838,5 +868,19 @@ mod test {
 
         let all_result = contract.get_all_result(&app);
         println!("all_result: {:?}", all_result);
+    }
+
+    #[test]
+    fn instantiate_with_wrong_voting_time_error() {
+        let mut app = App::default();
+        let code_id = MaciCodeId::store_code(&mut app);
+        let label = "Group";
+        let contract = code_id
+            .instantiate_with_wrong_voting_time(&mut app, owner(), user1(), user2(), label)
+            .unwrap_err();
+
+        // let start_voting_error = contract.start_voting(&mut app, owner()).unwrap_err();
+
+        assert_eq!(ContractError::WrongTimeSet {}, contract.downcast().unwrap());
     }
 }

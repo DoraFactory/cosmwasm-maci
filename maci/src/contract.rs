@@ -127,16 +127,7 @@ pub fn instantiate(
         vote_option_map.push(String::new());
     }
     VOTEOPTIONMAP.save(deps.storage, &vote_option_map)?;
-
-    match msg.round_info {
-        Some(content) => ROUNDINFO.save(deps.storage, &content)?,
-        None => {}
-    }
-
-    // match msg.round_info {
-    //     Some(content) => ROUNDINFO.save(deps.storage, &content)?,
-    //     None => {}
-    // }
+    ROUNDINFO.save(deps.storage, &msg.round_info)?;
 
     match msg.whitelist {
         Some(content) => WHITELIST.save(deps.storage, &content)?,
@@ -144,10 +135,19 @@ pub fn instantiate(
     }
 
     match msg.voting_time {
-        Some(content) => VOTINGTIME.save(deps.storage, &content)?,
+        Some(content) => {
+            if let (Some(start_time), Some(end_time)) = (content.start_time, content.end_time) {
+                if start_time >= end_time {
+                    return Err(ContractError::WrongTimeSet {});
+                }
+
+                VOTINGTIME.save(deps.storage, &content)?;
+            } else {
+                VOTINGTIME.save(deps.storage, &content)?;
+            }
+        }
         None => {}
     }
-    // WHITELIST.save(deps.storage, &msg.whitelist)?;
 
     // Create a period struct with the initial status set to Voting
     let period = Period {
@@ -225,12 +225,12 @@ pub fn execute_start_voting_period(
         let voting_time = VOTINGTIME.load(deps.storage)?;
 
         if let Some(_) = voting_time.start_time {
-            // 如果设置了start time，则不需要admin手动开始round
+            // if start_time exist，admin can't start round with this command.
             return Err(ContractError::AlreadySetVotingTime {
                 time_name: String::from("start_time"),
             });
         } else {
-            // 如果没设置 start time，则意味着需要admin手动开启round，此时需要判断当前的period是否是pending环节
+            // if start_time isn't exist，admin need start round with this command. (in Pending period can execute)
             if period.status != PeriodStatus::Pending {
                 return Err(ContractError::PeriodError {});
             }
@@ -238,13 +238,14 @@ pub fn execute_start_voting_period(
 
         if let Some(end_time) = voting_time.end_time {
             if env.block.time >= end_time {
-                // 如果设置了 end time, 我需要判断当前是否是end time之前，如果大于end time，则意味已经不是voting环节。
-                // if in end time period. you can execute start round.
+                // If the end time is set,
+                // I need to determine if the current time is before the end time,
+                // if it is greater than the end time, it means it is no longer a voting session.
                 return Err(ContractError::PeriodError {});
             }
         } else {
             if period.status != PeriodStatus::Pending {
-                // 如果没设置 end time，我需要判断当前的period
+                // If I don't set an end time, I need to determine the current period.
                 return Err(ContractError::PeriodError {});
             }
         }
@@ -322,23 +323,11 @@ pub fn execute_set_round_info(
     if !can_execute(deps.as_ref(), info.sender.as_ref())? {
         Err(ContractError::Unauthorized {})
     } else {
-        // let mut cfg = ROUNDINFO.load(deps.storage)?;
-        // if let Some(title) = round_info.title {
-        //     cfg.title = Some(title);
-        // }
-
-        // if let Some(description) = round_info.description {
-        //     cfg.description = Some(description);
-        // }
-
-        // if let Some(link) = round_info.link {
-        //     cfg.link = Some(link);
-        // }
         ROUNDINFO.save(deps.storage, &round_info)?;
 
         Ok(Response::new()
             .add_attribute("action", "set_round_info")
-            .add_attribute("title", round_info.title.unwrap())
+            .add_attribute("title", round_info.title)
             .add_attribute("description", round_info.description.unwrap())
             .add_attribute("link", round_info.link.unwrap()))
     }
@@ -358,12 +347,9 @@ pub fn execute_set_whitelists(
 
         if let Some(start_time) = voting_time.start_time {
             if env.block.time >= start_time {
-                // 如果设置了 start time, 我需要判断当前是否是 start time之前，如果大于 start time，则意味已经不是 Pending 环节。
-                // if in end time period. you can execute start round.
                 return Err(ContractError::PeriodError {});
             }
         } else {
-            // 如果没设置 start time，则意味着需要admin 还没有手动开启round。所以直接报错。
             return Err(ContractError::PeriodError {});
         }
     } else {
@@ -401,12 +387,9 @@ pub fn execute_set_vote_options_map(
 
         if let Some(start_time) = voting_time.start_time {
             if env.block.time >= start_time {
-                // 如果设置了 start time, 我需要判断当前是否是 start time之前，如果大于 start time，则意味已经不是 Pending 环节。
-                // if in end time period. you can execute start round.
                 return Err(ContractError::PeriodError {});
             }
         } else {
-            // 如果没设置 start time，则意味着需要admin 还没有手动开启round。所以直接报错。
             return Err(ContractError::PeriodError {});
         }
     } else {
@@ -764,7 +747,6 @@ pub fn execute_process_message(
     // Parse the proof and prepare for verification
     let pof = parse_proof::<Bn256>(proof_str.clone())?;
 
-    println!("----- process message {:?}", input_hash.to_string());
     // Verify the SNARK proof using the input hash
     let is_passed = verify_proof(
         &pvk,
@@ -1096,35 +1078,11 @@ fn check_voting_time(
                 if let Some(end_time) = vt.end_time {
                     if env.block.time >= end_time {
                         return Err(ContractError::PeriodError {});
-                        // } else {
-                        //     if env.block.time <= start_time {
-                        //         return Err(ContractError::PeriodError {});
-                        //     }
                     }
-                    // } else {
-                    // if env.block.time <= start_time {
-                    //     return Err(ContractError::PeriodError {});
-                    // }
                 }
             } else {
                 return Err(ContractError::PeriodError {});
             }
-
-            // if let Some(end_time) = vt.end_time {
-            //     println!("---------------");
-            //     println!("end block time: {:?}", env.block.time);
-            //     println!("end_time: {:?}", end_time);
-            //     println!("end_time: {:?}", env.block.time > end_time);
-            //     if env.block.time > end_time {
-            //         return Err(ContractError::PeriodError {});
-            //     }
-
-            //     if let Some(start_time) = vt.start_time {
-            //         if env.block.time < start_time {
-            //             return Err(ContractError::PeriodError {});
-            //         }
-            //     }
-            // }
         }
         None => {
             if period_status != PeriodStatus::Voting {
@@ -1201,6 +1159,12 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::IsWhiteList { sender } => to_binary::<bool>(&query_can_sign_up(deps, sender)?),
         QueryMsg::WhiteBalanceOf { sender } => {
             to_binary::<Uint256>(&query_user_balance_of(deps, sender)?)
+        }
+        QueryMsg::VoteOptionMap {} => {
+            to_binary::<Vec<String>>(&VOTEOPTIONMAP.load(deps.storage).unwrap())
+        }
+        QueryMsg::MaxVoteOptions {} => {
+            to_binary::<Uint256>(&MAX_VOTE_OPTIONS.load(deps.storage).unwrap())
         }
     }
 }

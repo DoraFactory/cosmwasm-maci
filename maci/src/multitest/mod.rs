@@ -56,7 +56,12 @@ impl MaciCodeId {
         // voting_time: Option<VotingTime>,
         label: &str,
     ) -> AnyResult<MaciContract> {
-        MaciContract::instantiate(app, self, sender, None, None, None, label)
+        let round_info = RoundInfo {
+            title: String::from("test_round"),
+            description: None,
+            link: None,
+        };
+        MaciContract::instantiate(app, self, sender, round_info, None, None, label)
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -68,11 +73,11 @@ impl MaciCodeId {
         user2: Addr,
         label: &str,
     ) -> AnyResult<MaciContract> {
-        let round_info = Some(RoundInfo {
-            title: Some(String::from("HackWasm Berlin")),
+        let round_info = RoundInfo {
+            title: String::from("HackWasm Berlin"),
             description: Some(String::from("Hack In Brelin")),
             link: Some(String::from("https://baidu.com")),
-        });
+        };
         let whitelist = Some(Whitelist {
             users: vec![
                 WhitelistConfig {
@@ -93,6 +98,39 @@ impl MaciCodeId {
     }
 
     #[allow(clippy::too_many_arguments)]
+    pub fn instantiate_with_wrong_voting_time(
+        self,
+        app: &mut App,
+        sender: Addr,
+        user1: Addr,
+        user2: Addr,
+        label: &str,
+    ) -> AnyResult<MaciContract> {
+        let round_info = RoundInfo {
+            title: String::from("HackWasm Berlin"),
+            description: Some(String::from("Hack In Brelin")),
+            link: Some(String::from("https://baidu.com")),
+        };
+        let whitelist = Some(Whitelist {
+            users: vec![
+                WhitelistConfig {
+                    addr: user1.to_string(),
+                    balance: Uint256::from_u128(100u128),
+                },
+                WhitelistConfig {
+                    addr: user2.to_string(),
+                    balance: Uint256::from_u128(80u128),
+                },
+            ],
+        });
+        let voting_time = Some(VotingTime {
+            start_time: Some(Timestamp::from_nanos(1571797429879300000)),
+            end_time: Some(Timestamp::from_nanos(1571797424879000000)),
+        });
+        MaciContract::instantiate(app, self, sender, round_info, whitelist, voting_time, label)
+    }
+
+    #[allow(clippy::too_many_arguments)]
     pub fn instantiate_with_start_time(
         self,
         app: &mut App,
@@ -101,11 +139,11 @@ impl MaciCodeId {
         user2: Addr,
         label: &str,
     ) -> AnyResult<MaciContract> {
-        let round_info = Some(RoundInfo {
-            title: Some(String::from("HackWasm Berlin")),
+        let round_info = RoundInfo {
+            title: String::from("HackWasm Berlin"),
             description: Some(String::from("Hack In Brelin")),
             link: Some(String::from("https://baidu.com")),
-        });
+        };
         let whitelist = Some(Whitelist {
             users: vec![
                 WhitelistConfig {
@@ -134,11 +172,11 @@ impl MaciCodeId {
         user2: Addr,
         label: &str,
     ) -> AnyResult<MaciContract> {
-        let round_info = Some(RoundInfo {
-            title: Some(String::from("HackWasm Berlin")),
+        let round_info = RoundInfo {
+            title: String::from("HackWasm Berlin"),
             description: Some(String::from("Hack In Brelin")),
             link: Some(String::from("https://baidu.com")),
-        });
+        };
         let whitelist = Some(Whitelist {
             users: vec![
                 WhitelistConfig {
@@ -366,7 +404,7 @@ impl MaciContract {
         app: &mut App,
         code_id: MaciCodeId,
         sender: Addr,
-        round_info: Option<RoundInfo>,
+        round_info: RoundInfo,
         whitelist: Option<Whitelist>,
         voting_time: Option<VotingTime>,
         label: &str,
@@ -603,6 +641,16 @@ impl MaciContract {
     pub fn num_sign_up(&self, app: &App) -> StdResult<Uint256> {
         app.wrap()
             .query_wasm_smart(self.addr(), &QueryMsg::GetNumSignUp {})
+    }
+
+    pub fn vote_option_map(&self, app: &App) -> StdResult<Vec<String>> {
+        app.wrap()
+            .query_wasm_smart(self.addr(), &QueryMsg::VoteOptionMap {})
+    }
+
+    pub fn max_vote_options(&self, app: &App) -> StdResult<Uint256> {
+        app.wrap()
+            .query_wasm_smart(self.addr(), &QueryMsg::MaxVoteOptions {})
     }
 
     pub fn get_all_result(&self, app: &App) -> StdResult<Uint256> {

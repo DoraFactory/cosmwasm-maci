@@ -50,4 +50,7 @@ pub enum ContractError {
 
     #[error("already set {time_name} time")]
     AlreadySetVotingTime { time_name: String },
+
+    #[error("end_time must big than start_time")]
+    WrongTimeSet {},
 }

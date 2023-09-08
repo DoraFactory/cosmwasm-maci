@@ -6,7 +6,7 @@
 
 import { CosmWasmClient, SigningCosmWasmClient, ExecuteResult } from "@cosmjs/cosmwasm-stargate";
 import { Coin, StdFee } from "@cosmjs/amino";
-import { Uint256, Timestamp, Uint64, InstantiateMsg, PubKey, MaciParameters, VKeyType, QuinaryTreeRoot, RoundInfo, VotingTime, Whitelist, WhitelistConfig, ExecuteMsg, Message, ProofType, QueryMsg, Addr, PeriodStatus, Period, Boolean } from "./Maci.types";
+import { Uint256, Timestamp, Uint64, InstantiateMsg, PubKey, MaciParameters, VKeyType, QuinaryTreeRoot, RoundInfo, VotingTime, Whitelist, WhitelistConfig, ExecuteMsg, Message, ProofType, QueryMsg, Addr, PeriodStatus, Period, Boolean, ArrayOfString } from "./Maci.types";
 export interface MaciReadOnlyInterface {
   contractAddress: string;
   getRoundInfo: () => Promise<RoundInfo>;
@@ -41,6 +41,8 @@ export interface MaciReadOnlyInterface {
   }: {
     sender: string;
   }) => Promise<Uint256>;
+  voteOptionMap: () => Promise<ArrayOfString>;
+  maxVoteOptions: () => Promise<Uint256>;
 }
 export class MaciQueryClient implements MaciReadOnlyInterface {
   client: CosmWasmClient;
@@ -61,6 +63,8 @@ export class MaciQueryClient implements MaciReadOnlyInterface {
     this.whiteList = this.whiteList.bind(this);
     this.isWhiteList = this.isWhiteList.bind(this);
     this.whiteBalanceOf = this.whiteBalanceOf.bind(this);
+    this.voteOptionMap = this.voteOptionMap.bind(this);
+    this.maxVoteOptions = this.maxVoteOptions.bind(this);
   }
 
   getRoundInfo = async (): Promise<RoundInfo> => {
@@ -151,6 +155,16 @@ export class MaciQueryClient implements MaciReadOnlyInterface {
       white_balance_of: {
         sender
       }
+    });
+  };
+  voteOptionMap = async (): Promise<ArrayOfString> => {
+    return this.client.queryContractSmart(this.contractAddress, {
+      vote_option_map: {}
+    });
+  };
+  maxVoteOptions = async (): Promise<Uint256> => {
+    return this.client.queryContractSmart(this.contractAddress, {
+      max_vote_options: {}
     });
   };
 }
