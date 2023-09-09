@@ -328,8 +328,8 @@ pub fn execute_set_round_info(
         Ok(Response::new()
             .add_attribute("action", "set_round_info")
             .add_attribute("title", round_info.title)
-            .add_attribute("description", round_info.description.unwrap())
-            .add_attribute("link", round_info.link.unwrap()))
+            .add_attribute("description", round_info.description)
+            .add_attribute("link", round_info.link))
     }
 }
 

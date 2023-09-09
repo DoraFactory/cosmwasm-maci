@@ -247,6 +247,9 @@ mod test {
 
         let all_result = contract.get_all_result(&app);
         println!("all_result: {:?}", all_result);
+
+        let set_round_res = contract.set_round_info(&mut app, owner());
+        println!("{:?}", set_round_res)
     }
 
     #[test]

@@ -58,8 +58,8 @@ impl MaciCodeId {
     ) -> AnyResult<MaciContract> {
         let round_info = RoundInfo {
             title: String::from("test_round"),
-            description: None,
-            link: None,
+            description: "".to_string(),
+            link: "".to_string(),
         };
         MaciContract::instantiate(app, self, sender, round_info, None, None, label)
     }
@@ -75,8 +75,8 @@ impl MaciCodeId {
     ) -> AnyResult<MaciContract> {
         let round_info = RoundInfo {
             title: String::from("HackWasm Berlin"),
-            description: Some(String::from("Hack In Brelin")),
-            link: Some(String::from("https://baidu.com")),
+            description: String::from("Hack In Brelin"),
+            link: String::from("https://baidu.com"),
         };
         let whitelist = Some(Whitelist {
             users: vec![
@@ -108,8 +108,8 @@ impl MaciCodeId {
     ) -> AnyResult<MaciContract> {
         let round_info = RoundInfo {
             title: String::from("HackWasm Berlin"),
-            description: Some(String::from("Hack In Brelin")),
-            link: Some(String::from("https://baidu.com")),
+            description: String::from("Hack In Brelin"),
+            link: String::from("https://baidu.com"),
         };
         let whitelist = Some(Whitelist {
             users: vec![
@@ -141,8 +141,8 @@ impl MaciCodeId {
     ) -> AnyResult<MaciContract> {
         let round_info = RoundInfo {
             title: String::from("HackWasm Berlin"),
-            description: Some(String::from("Hack In Brelin")),
-            link: Some(String::from("https://baidu.com")),
+            description: String::from("Hack In Brelin"),
+            link: String::from("https://baidu.com"),
         };
         let whitelist = Some(Whitelist {
             users: vec![
@@ -174,8 +174,8 @@ impl MaciCodeId {
     ) -> AnyResult<MaciContract> {
         let round_info = RoundInfo {
             title: String::from("HackWasm Berlin"),
-            description: Some(String::from("Hack In Brelin")),
-            link: Some(String::from("https://baidu.com")),
+            description: String::from("Hack In Brelin"),
+            link: String::from("https://baidu.com"),
         };
         let whitelist = Some(Whitelist {
             users: vec![
@@ -502,6 +502,22 @@ impl MaciContract {
             &ExecuteMsg::PublishMessage {
                 message,
                 enc_pub_key,
+            },
+            &[],
+        )
+    }
+
+    #[track_caller]
+    pub fn set_round_info(&self, app: &mut App, sender: Addr) -> AnyResult<AppResponse> {
+        app.execute_contract(
+            sender,
+            self.addr(),
+            &ExecuteMsg::SetRoundInfo {
+                round_info: RoundInfo {
+                    title: String::from("TestRound2"),
+                    description: "".to_string(),
+                    link: "".to_string(),
+                },
             },
             &[],
         )

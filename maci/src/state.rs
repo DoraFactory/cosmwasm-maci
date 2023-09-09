@@ -8,8 +8,8 @@ use cw_storage_plus::{Item, Map};
 #[cw_serde]
 pub struct RoundInfo {
     pub title: String,
-    pub description: Option<String>,
-    pub link: Option<String>,
+    pub description: String,
+    pub link: String,
 }
 
 pub const ROUNDINFO: Item<RoundInfo> = Item::new("round_info");
