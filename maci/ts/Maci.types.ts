@@ -40,8 +40,8 @@ export interface QuinaryTreeRoot {
   zeros: [Uint256, Uint256, Uint256, Uint256, Uint256, Uint256, Uint256, Uint256, Uint256];
 }
 export interface RoundInfo {
-  description?: string | null;
-  link?: string | null;
+  description: string;
+  link: string;
   title: string;
 }
 export interface VotingTime {

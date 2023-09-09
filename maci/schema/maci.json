@@ -120,20 +120,16 @@
       "RoundInfo": {
         "type": "object",
         "required": [
+          "description",
+          "link",
           "title"
         ],
         "properties": {
           "description": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": "string"
           },
           "link": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": "string"
           },
           "title": {
             "type": "string"
@@ -585,20 +581,16 @@
       "RoundInfo": {
         "type": "object",
         "required": [
+          "description",
+          "link",
           "title"
         ],
         "properties": {
           "description": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": "string"
           },
           "link": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": "string"
           },
           "title": {
             "type": "string"
@@ -940,20 +932,16 @@
       "title": "RoundInfo",
       "type": "object",
       "required": [
+        "description",
+        "link",
         "title"
       ],
       "properties": {
         "description": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": "string"
         },
         "link": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": "string"
         },
         "title": {
           "type": "string"
