@@ -6,7 +6,7 @@ mod test {
     use crate::error::ContractError;
     use crate::msg::ProofType;
     use crate::multitest::{owner, uint256_from_decimal_string, user1, user2, MaciCodeId};
-    use crate::state::{Message, PubKey};
+    use crate::state::{Message, PubKey, RoundInfo};
     use serde::{Deserialize, Serialize};
     use serde_json;
     use std::fs;
@@ -248,8 +248,31 @@ mod test {
         let all_result = contract.get_all_result(&app);
         println!("all_result: {:?}", all_result);
 
-        let set_round_res = contract.set_round_info(&mut app, owner());
-        println!("{:?}", set_round_res)
+        _ = contract.set_round_info(&mut app, owner());
+
+        let new_round_info = contract.get_round_info(&app).unwrap();
+        assert_eq!(
+            new_round_info,
+            RoundInfo {
+                title: String::from("TestRound2"),
+                description: String::from(""),
+                link: String::from("https://github.com"),
+            }
+        );
+
+        let error_set_empty_round_info = contract
+            .set_empty_round_info(&mut app, owner())
+            .unwrap_err();
+        assert_eq!(
+            ContractError::TitleIsEmpty {},
+            error_set_empty_round_info.downcast().unwrap()
+        );
+
+        let error_no_admin_set_round_info = contract.set_round_info(&mut app, user1()).unwrap_err();
+        assert_eq!(
+            ContractError::Unauthorized {},
+            error_no_admin_set_round_info.downcast().unwrap()
+        );
     }
 
     #[test]

@@ -12,7 +12,7 @@ use crate::state::{
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, Uint256,
+    attr, to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, Uint256,
 };
 
 use crate::utils::{hash2, hash5, hash_256_uint256_list, uint256_from_hex_string};
@@ -157,7 +157,7 @@ pub fn instantiate(
     // Save the initial period to storage
     PERIOD.save(deps.storage, &period)?;
 
-    Ok(Response::default())
+    Ok(Response::default().add_attribute("action", "instantiate"))
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -323,13 +323,24 @@ pub fn execute_set_round_info(
     if !can_execute(deps.as_ref(), info.sender.as_ref())? {
         Err(ContractError::Unauthorized {})
     } else {
+        if round_info.title == "" {
+            return Err(ContractError::TitleIsEmpty {});
+        }
+
         ROUNDINFO.save(deps.storage, &round_info)?;
 
-        Ok(Response::new()
-            .add_attribute("action", "set_round_info")
-            .add_attribute("title", round_info.title)
-            .add_attribute("description", round_info.description)
-            .add_attribute("link", round_info.link))
+        let mut attributes = vec![];
+        attributes.push(attr("title", round_info.title));
+
+        if round_info.description != "" {
+            attributes.push(attr("description", round_info.description))
+        }
+
+        if round_info.link != "" {
+            attributes.push(attr("link", round_info.link))
+        }
+
+        Ok(Response::new().add_attributes(attributes))
     }
 }
 
@@ -735,9 +746,9 @@ pub fn execute_process_message(
 
     // Parse the SNARK proof
     let proof_str = ProofStr {
-        pi_a: hex::decode(proof.a).map_err(|_| ContractError::HexDecodingError {})?,
-        pi_b: hex::decode(proof.b).map_err(|_| ContractError::HexDecodingError {})?,
-        pi_c: hex::decode(proof.c).map_err(|_| ContractError::HexDecodingError {})?,
+        pi_a: hex::decode(proof.a.clone()).map_err(|_| ContractError::HexDecodingError {})?,
+        pi_b: hex::decode(proof.b.clone()).map_err(|_| ContractError::HexDecodingError {})?,
+        pi_c: hex::decode(proof.c.clone()).map_err(|_| ContractError::HexDecodingError {})?,
     };
 
     // Parse the verification key and prepare for verification
@@ -771,7 +782,10 @@ pub fn execute_process_message(
     PROCESSED_MSG_COUNT.save(deps.storage, &processed_msg_count)?;
     Ok(Response::new()
         .add_attribute("action", "process_message")
-        .add_attribute("zk_verify", is_passed.to_string()))
+        .add_attribute("zk_verify", is_passed.to_string())
+        .add_attribute("pi_a", proof.a)
+        .add_attribute("pi_b", proof.b)
+        .add_attribute("pi_c", proof.c))
 }
 
 pub fn execute_stop_processing_period(
@@ -857,9 +871,9 @@ pub fn execute_process_tally(
 
     // Parse the SNARK proof
     let proof_str = ProofStr {
-        pi_a: hex::decode(proof.a).map_err(|_| ContractError::HexDecodingError {})?,
-        pi_b: hex::decode(proof.b).map_err(|_| ContractError::HexDecodingError {})?,
-        pi_c: hex::decode(proof.c).map_err(|_| ContractError::HexDecodingError {})?,
+        pi_a: hex::decode(proof.a.clone()).map_err(|_| ContractError::HexDecodingError {})?,
+        pi_b: hex::decode(proof.b.clone()).map_err(|_| ContractError::HexDecodingError {})?,
+        pi_c: hex::decode(proof.c.clone()).map_err(|_| ContractError::HexDecodingError {})?,
     };
 
     // Parse the verification key and prepare for verification
@@ -898,7 +912,10 @@ pub fn execute_process_tally(
 
     Ok(Response::new()
         .add_attribute("action", "process_tally")
-        .add_attribute("zk_verify", is_passed.to_string()))
+        .add_attribute("zk_verify", is_passed.to_string())
+        .add_attribute("pi_a", proof.a)
+        .add_attribute("pi_b", proof.b)
+        .add_attribute("pi_c", proof.c))
 }
 
 fn execute_stop_tallying_period(

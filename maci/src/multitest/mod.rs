@@ -32,7 +32,6 @@ pub fn uint256_from_decimal_string(decimal_string: &str) -> Uint256 {
     uint256_from_hex_string(&hex_string)
 }
 pub const MOCK_CONTRACT_ADDR: &str = "cosmos2contract";
-
 // pub const ARCH_DEMON: &str = "aconst";
 // pub const ARCH_DECIMALS: u8 = 18;
 
@@ -515,8 +514,24 @@ impl MaciContract {
             &ExecuteMsg::SetRoundInfo {
                 round_info: RoundInfo {
                     title: String::from("TestRound2"),
-                    description: "".to_string(),
-                    link: "".to_string(),
+                    description: String::from(""),
+                    link: String::from("https://github.com"),
+                },
+            },
+            &[],
+        )
+    }
+
+    #[track_caller]
+    pub fn set_empty_round_info(&self, app: &mut App, sender: Addr) -> AnyResult<AppResponse> {
+        app.execute_contract(
+            sender,
+            self.addr(),
+            &ExecuteMsg::SetRoundInfo {
+                round_info: RoundInfo {
+                    title: String::from(""),
+                    description: String::from("Hello"),
+                    link: String::from("https://github.com"),
                 },
             },
             &[],
@@ -683,14 +698,11 @@ impl MaciContract {
         app.wrap()
             .query_wasm_smart(self.addr(), &QueryMsg::GetPeriod {})
     }
-    // pub fn player_info(&self, app: &App, address: &str) -> StdResult<PlayInfoResp> {
-    //     app.wrap().query_wasm_smart(
-    //         self.addr(),
-    //         &QueryMsg::PlayInfo {
-    //             address: address.into(),
-    //         },
-    //     )
-    // }
+
+    pub fn get_round_info(&self, app: &App) -> StdResult<RoundInfo> {
+        app.wrap()
+            .query_wasm_smart(self.addr(), &QueryMsg::GetRoundInfo {})
+    }
 }
 
 impl From<Addr> for MaciContract {

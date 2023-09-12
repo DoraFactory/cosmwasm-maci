@@ -53,4 +53,7 @@ pub enum ContractError {
 
     #[error("end_time must big than start_time")]
     WrongTimeSet {},
+
+    #[error("round title can not be empty")]
+    TitleIsEmpty,
 }
