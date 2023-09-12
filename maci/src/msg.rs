@@ -1,5 +1,6 @@
 use crate::state::{
-    MaciParameters, Message, Period, PubKey, QuinaryTreeRoot, RoundInfo, VotingTime, Whitelist,
+    MaciParameters, Message, PeriodStatus, PubKey, QuinaryTreeRoot, RoundInfo, VotingTime,
+    Whitelist,
 };
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Addr, Uint256};
@@ -75,6 +76,11 @@ pub enum ExecuteMsg {
         results: Vec<Uint256>,
         salt: Uint256,
     },
+}
+
+#[cw_serde]
+pub struct Period {
+    pub status: PeriodStatus,
 }
 
 #[cw_serde]
