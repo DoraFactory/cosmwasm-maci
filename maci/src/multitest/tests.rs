@@ -6,7 +6,7 @@ mod test {
     use crate::error::ContractError;
     use crate::msg::ProofType;
     use crate::multitest::{owner, uint256_from_decimal_string, user1, user2, MaciCodeId};
-    use crate::state::{Message, PubKey, RoundInfo};
+    use crate::state::{Message, Period, PeriodStatus, PubKey, RoundInfo};
     use serde::{Deserialize, Serialize};
     use serde_json;
     use std::fs;
@@ -195,8 +195,20 @@ mod test {
             },
             stop_voting_after_voting_end_error.downcast().unwrap()
         );
+        app.update_block(next_block);
 
         _ = contract.start_process(&mut app, owner());
+        println!(
+            "after start process: {:?}",
+            contract.get_period(&app).unwrap()
+        );
+        assert_eq!(
+            Period {
+                status: PeriodStatus::Processing
+            },
+            contract.get_period(&app).unwrap()
+        );
+
         app.update_block(next_block);
 
         let new_state_commitment = uint256_from_decimal_string(&data.new_state_commitment);
@@ -352,10 +364,21 @@ mod test {
         );
         let set_vote_option_map_error =
             contract.set_vote_option_map(&mut app, owner()).unwrap_err();
-
         assert_eq!(
             ContractError::PeriodError {},
             set_vote_option_map_error.downcast().unwrap()
+        );
+
+        let error_start_process_in_voting = contract.start_process(&mut app, owner()).unwrap_err();
+        assert_eq!(
+            ContractError::PeriodError {},
+            error_start_process_in_voting.downcast().unwrap()
+        );
+        assert_eq!(
+            Period {
+                status: PeriodStatus::Pending
+            },
+            contract.get_period(&app).unwrap()
         );
 
         for i in 0..data.msgs.len() {
@@ -433,8 +456,16 @@ mod test {
             },
             stop_voting_error.downcast().unwrap()
         );
+        app.update_block(next_block);
 
         _ = contract.start_process(&mut app, owner());
+        assert_eq!(
+            Period {
+                status: PeriodStatus::Processing
+            },
+            contract.get_period(&app).unwrap()
+        );
+
         println!(
             "after start process: {:?}",
             contract.get_period(&app).unwrap()
@@ -456,6 +487,18 @@ mod test {
         _ = contract.stop_processing(&mut app, owner());
         println!(
             "after stop process: {:?}",
+            contract.get_period(&app).unwrap()
+        );
+
+        let error_start_process_in_talling = contract.start_process(&mut app, owner()).unwrap_err();
+        assert_eq!(
+            ContractError::PeriodError {},
+            error_start_process_in_talling.downcast().unwrap()
+        );
+        assert_eq!(
+            Period {
+                status: PeriodStatus::Tallying
+            },
             contract.get_period(&app).unwrap()
         );
         let tally_path = "./src/test/tally_test.json";
@@ -489,6 +532,18 @@ mod test {
 
         let all_result = contract.get_all_result(&app);
         println!("all_result: {:?}", all_result);
+        let error_start_process = contract.start_process(&mut app, owner()).unwrap_err();
+        assert_eq!(
+            ContractError::PeriodError {},
+            error_start_process.downcast().unwrap()
+        );
+
+        assert_eq!(
+            Period {
+                status: PeriodStatus::Ended
+            },
+            contract.get_period(&app).unwrap()
+        );
     }
 
     #[test]
@@ -635,6 +690,7 @@ mod test {
             stop_voting_after_voting_end_error.downcast().unwrap()
         );
 
+        app.update_block(next_block);
         _ = contract.start_process(&mut app, owner());
         println!(
             "after start process: {:?}",
@@ -838,6 +894,7 @@ mod test {
             },
             stop_voting_after_voting_end_error.downcast().unwrap()
         );
+        app.update_block(next_block);
 
         _ = contract.start_process(&mut app, owner());
         println!(

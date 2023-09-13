@@ -630,15 +630,22 @@ pub fn execute_start_process_period(
     env: Env,
     info: MessageInfo,
 ) -> Result<Response, ContractError> {
-    // let period = PERIOD.load(deps.storage)?;
+    let period = PERIOD.load(deps.storage)?;
     let voting_time = VOTINGTIME.may_load(deps.storage)?;
 
     if let Some(voting_time) = voting_time {
         if let Some(end_time) = voting_time.end_time {
             // 如果 end time 还为空，则代表没有设置 end time，如果没有设置 end time 就意味着是手动环节，也就是还没手动结束 voting 环节
-            if env.block.time < end_time {
+            if env.block.time <= end_time {
                 // 如果还在 end time 内，则代表 round 还没结束，就不能开始 process 环节
                 return Err(ContractError::PeriodError {});
+            } else {
+                if period.status == PeriodStatus::Ended
+                    || period.status == PeriodStatus::Processing
+                    || period.status == PeriodStatus::Tallying
+                {
+                    return Err(ContractError::PeriodError {});
+                }
             }
         } else {
             return Err(ContractError::PeriodError {});
