@@ -329,7 +329,7 @@ pub fn execute_set_round_info(
 
         ROUNDINFO.save(deps.storage, &round_info)?;
 
-        let mut attributes = vec![];
+        let mut attributes = vec![attr("action", "set_round_info")];
         attributes.push(attr("title", round_info.title));
 
         if round_info.description != "" {
