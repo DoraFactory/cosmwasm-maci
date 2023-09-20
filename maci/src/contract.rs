@@ -467,7 +467,6 @@ pub fn execute_sign_up(
     // Create a state leaf with the provided pubkey and amount
     let state_leaf = StateLeaf {
         pub_key: pubkey.clone(),
-        // voice_credit_balance: Uint256::from_uint128(amount),
         voice_credit_balance: user_balance,
         vote_option_tree_root: Uint256::from_u128(0),
         nonce: Uint256::from_u128(0),
@@ -485,7 +484,6 @@ pub fn execute_sign_up(
     VOICECREDITBALANCE.save(
         deps.storage,
         state_index.to_be_bytes().to_vec(), // TODO: state_index need equal num_sign_ups
-        // &Uint256::from_u128(0u128),
         &user_balance,
     )?;
     NUMSIGNUPS.save(deps.storage, &num_sign_ups)?;
@@ -987,7 +985,19 @@ fn execute_stop_tallying_period(
     };
     PERIOD.save(deps.storage, &period)?;
 
-    Ok(Response::new().add_attribute("action", "stop_tallying_period"))
+    Ok(Response::new()
+        .add_attribute("action", "stop_tallying_period")
+        .add_attribute(
+            "results",
+            format!(
+                "{:?}",
+                results
+                    .iter()
+                    .map(|x| x.to_string())
+                    .collect::<Vec<String>>()
+            ),
+        )
+        .add_attribute("all_result", sum.to_string()))
 }
 
 fn can_sign_up(deps: Deps, sender: &str) -> StdResult<bool> {
