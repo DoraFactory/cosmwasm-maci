@@ -5,10 +5,23 @@
     {
       "type": "object",
       "required": [
-        "get_config"
+        "get_round_info"
       ],
       "properties": {
-        "get_config": {
+        "get_round_info": {
+          "type": "object",
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "get_voting_time"
+      ],
+      "properties": {
+        "get_voting_time": {
           "type": "object",
           "additionalProperties": false
         }
@@ -181,6 +194,32 @@
               "type": "string"
             }
           },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "vote_option_map"
+      ],
+      "properties": {
+        "vote_option_map": {
+          "type": "object",
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "max_vote_options"
+      ],
+      "properties": {
+        "max_vote_options": {
+          "type": "object",
           "additionalProperties": false
         }
       },

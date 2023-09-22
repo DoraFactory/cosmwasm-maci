@@ -1,16 +1,22 @@
-use crate::state::{Config, MaciParameters, Message, Period, PubKey, QuinaryTreeRoot, Whitelist};
+use crate::state::{
+    MaciParameters, Message, PeriodStatus, PubKey, QuinaryTreeRoot, RoundInfo, VotingTime,
+    Whitelist,
+};
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Addr, Uint256};
 
 #[cw_serde]
 pub struct InstantiateMsg {
-    pub round_description: String, // this round's description
     pub parameters: MaciParameters,
     pub coordinator: PubKey,
     pub process_vkey: VKeyType,
     pub qtr_lib: QuinaryTreeRoot,
     pub tally_vkey: VKeyType,
-    pub whitelist: Whitelist,
+    pub max_vote_options: Uint256,
+
+    pub round_info: RoundInfo,
+    pub voting_time: Option<VotingTime>,
+    pub whitelist: Option<Whitelist>,
 }
 
 #[cw_serde]
@@ -38,12 +44,21 @@ pub enum ExecuteMsg {
         message_batch_size: Uint256,
         vote_option_tree_depth: Uint256,
     },
+    SetRoundInfo {
+        round_info: RoundInfo,
+    },
+    SetWhitelists {
+        whitelists: Whitelist,
+    },
+    SetVoteOptionsMap {
+        vote_option_map: Vec<String>,
+    },
+    StartVotingPeriod {},
     SignUp {
         pubkey: PubKey, // user's pubkey
     },
-    StopVotingPeriod {
-        max_vote_options: Uint256,
-    },
+    StartProcessPeriod {},
+    StopVotingPeriod {},
     PublishMessage {
         message: Message,
         enc_pub_key: PubKey,
@@ -64,10 +79,18 @@ pub enum ExecuteMsg {
 }
 
 #[cw_serde]
+pub struct Period {
+    pub status: PeriodStatus,
+}
+
+#[cw_serde]
 #[derive(QueryResponses)]
 pub enum QueryMsg {
-    #[returns(Config)]
-    GetConfig {},
+    #[returns(RoundInfo)]
+    GetRoundInfo {},
+
+    #[returns(VotingTime)]
+    GetVotingTime {},
 
     #[returns(Period)]
     GetPeriod {},
@@ -100,4 +123,10 @@ pub enum QueryMsg {
 
     #[returns(Uint256)]
     WhiteBalanceOf { sender: String },
+
+    #[returns(Vec<String>)]
+    VoteOptionMap {},
+
+    #[returns(Uint256)]
+    MaxVoteOptions {},
 }

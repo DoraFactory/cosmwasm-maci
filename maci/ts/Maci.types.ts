@@ -5,14 +5,18 @@
 */
 
 export type Uint256 = string;
+export type Timestamp = Uint64;
+export type Uint64 = string;
 export interface InstantiateMsg {
   coordinator: PubKey;
+  max_vote_options: Uint256;
   parameters: MaciParameters;
   process_vkey: VKeyType;
   qtr_lib: QuinaryTreeRoot;
-  round_description: string;
+  round_info: RoundInfo;
   tally_vkey: VKeyType;
-  whitelist: Whitelist;
+  voting_time?: VotingTime | null;
+  whitelist?: Whitelist | null;
 }
 export interface PubKey {
   x: Uint256;
@@ -35,6 +39,15 @@ export interface VKeyType {
 export interface QuinaryTreeRoot {
   zeros: [Uint256, Uint256, Uint256, Uint256, Uint256, Uint256, Uint256, Uint256, Uint256];
 }
+export interface RoundInfo {
+  description: string;
+  link: string;
+  title: string;
+}
+export interface VotingTime {
+  end_time?: Timestamp | null;
+  start_time?: Timestamp | null;
+}
 export interface Whitelist {
   users: WhitelistConfig[];
 }
@@ -50,13 +63,27 @@ export type ExecuteMsg = {
     vote_option_tree_depth: Uint256;
   };
 } | {
+  set_round_info: {
+    round_info: RoundInfo;
+  };
+} | {
+  set_whitelists: {
+    whitelists: Whitelist;
+  };
+} | {
+  set_vote_options_map: {
+    vote_option_map: string[];
+  };
+} | {
+  start_voting_period: {};
+} | {
   sign_up: {
     pubkey: PubKey;
   };
 } | {
-  stop_voting_period: {
-    max_vote_options: Uint256;
-  };
+  start_process_period: {};
+} | {
+  stop_voting_period: {};
 } | {
   publish_message: {
     enc_pub_key: PubKey;
@@ -89,7 +116,9 @@ export interface ProofType {
   c: string;
 }
 export type QueryMsg = {
-  get_config: {};
+  get_round_info: {};
+} | {
+  get_voting_time: {};
 } | {
   get_period: {};
 } | {
@@ -120,13 +149,15 @@ export type QueryMsg = {
   white_balance_of: {
     sender: string;
   };
+} | {
+  vote_option_map: {};
+} | {
+  max_vote_options: {};
 };
 export type Addr = string;
-export interface Config {
-  round_description: string;
-}
 export type PeriodStatus = "pending" | "voting" | "processing" | "tallying" | "ended";
 export interface Period {
   status: PeriodStatus;
 }
 export type Boolean = boolean;
+export type ArrayOfString = string[];

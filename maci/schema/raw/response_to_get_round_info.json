@@ -1,0 +1,22 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "RoundInfo",
+  "type": "object",
+  "required": [
+    "description",
+    "link",
+    "title"
+  ],
+  "properties": {
+    "description": {
+      "type": "string"
+    },
+    "link": {
+      "type": "string"
+    },
+    "title": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": false
+}

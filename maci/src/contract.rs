@@ -2,16 +2,17 @@ use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, ProofType, QueryMsg};
 use crate::parser::{parse_proof, parse_vkey};
 use crate::state::{
-    Admin, Config, Message, Period, PeriodStatus, ProofStr, PubKey, StateLeaf, VkeyStr, Whitelist,
-    ADMIN, CONFIG, COORDINATORHASH, CURRENT_STATE_COMMITMENT, CURRENT_TALLY_COMMITMENT, LEAF_IDX_0,
-    MACIPARAMETERS, MAX_LEAVES_COUNT, MAX_VOTE_OPTIONS, MSG_CHAIN_LENGTH, MSG_HASHES, NODES,
-    NUMSIGNUPS, PERIOD, PROCESSED_MSG_COUNT, PROCESSED_USER_COUNT, PROCESS_VKEYS, QTR_LIB, RESULT,
-    STATEIDXINC, TALLY_VKEYS, TOTAL_RESULT, VOICECREDITBALANCE, WHITELIST, ZEROS,
+    Admin, Message, Period, PeriodStatus, ProofStr, PubKey, RoundInfo, StateLeaf, VkeyStr,
+    VotingTime, Whitelist, ADMIN, COORDINATORHASH, CURRENT_STATE_COMMITMENT,
+    CURRENT_TALLY_COMMITMENT, LEAF_IDX_0, MACIPARAMETERS, MAX_LEAVES_COUNT, MAX_VOTE_OPTIONS,
+    MSG_CHAIN_LENGTH, MSG_HASHES, NODES, NUMSIGNUPS, PERIOD, PROCESSED_MSG_COUNT,
+    PROCESSED_USER_COUNT, PROCESS_VKEYS, QTR_LIB, RESULT, ROUNDINFO, STATEIDXINC, TALLY_VKEYS,
+    TOTAL_RESULT, VOICECREDITBALANCE, VOTEOPTIONMAP, VOTINGTIME, WHITELIST, ZEROS,
 };
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, Uint256,
+    attr, to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, Uint256,
 };
 
 use crate::utils::{hash2, hash5, hash_256_uint256_list, uint256_from_hex_string};
@@ -35,13 +36,6 @@ pub fn instantiate(
 
     // Save the MACI parameters to storage
     MACIPARAMETERS.save(deps.storage, &msg.parameters)?;
-
-    // Create a config struct with the maci_denom value from the message
-    let config = Config {
-        round_description: msg.round_description,
-    };
-
-    CONFIG.save(deps.storage, &config)?;
 
     // Save the qtr_lib value to storage
     QTR_LIB.save(deps.storage, &msg.qtr_lib)?;
@@ -126,17 +120,44 @@ pub fn instantiate(
     CURRENT_TALLY_COMMITMENT.save(deps.storage, &Uint256::from_u128(0u128))?;
     PROCESSED_USER_COUNT.save(deps.storage, &Uint256::from_u128(0u128))?;
     NUMSIGNUPS.save(deps.storage, &Uint256::from_u128(0u128))?;
-    WHITELIST.save(deps.storage, &msg.whitelist)?;
+    MAX_VOTE_OPTIONS.save(deps.storage, &msg.max_vote_options)?;
+
+    let mut vote_option_map: Vec<String> = Vec::new();
+    for _ in 0..msg.max_vote_options.to_string().parse().unwrap() {
+        vote_option_map.push(String::new());
+    }
+    VOTEOPTIONMAP.save(deps.storage, &vote_option_map)?;
+    ROUNDINFO.save(deps.storage, &msg.round_info)?;
+
+    match msg.whitelist {
+        Some(content) => WHITELIST.save(deps.storage, &content)?,
+        None => {}
+    }
+
+    match msg.voting_time {
+        Some(content) => {
+            if let (Some(start_time), Some(end_time)) = (content.start_time, content.end_time) {
+                if start_time >= end_time {
+                    return Err(ContractError::WrongTimeSet {});
+                }
+
+                VOTINGTIME.save(deps.storage, &content)?;
+            } else {
+                VOTINGTIME.save(deps.storage, &content)?;
+            }
+        }
+        None => {}
+    }
 
     // Create a period struct with the initial status set to Voting
     let period = Period {
-        status: PeriodStatus::Voting,
+        status: PeriodStatus::Pending,
     };
 
     // Save the initial period to storage
     PERIOD.save(deps.storage, &period)?;
 
-    Ok(Response::default())
+    Ok(Response::default().add_attribute("action", "instantiate"))
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -161,14 +182,23 @@ pub fn execute(
             message_batch_size,
             vote_option_tree_depth,
         ),
-        ExecuteMsg::SignUp { pubkey } => execute_sign_up(deps, env, info, pubkey),
-        ExecuteMsg::StopVotingPeriod { max_vote_options } => {
-            execute_stop_voting_period(deps, env, info, max_vote_options)
+        ExecuteMsg::SetRoundInfo { round_info } => {
+            execute_set_round_info(deps, env, info, round_info)
         }
+        ExecuteMsg::SetWhitelists { whitelists } => {
+            execute_set_whitelists(deps, env, info, whitelists)
+        }
+        ExecuteMsg::SetVoteOptionsMap { vote_option_map } => {
+            execute_set_vote_options_map(deps, env, info, vote_option_map)
+        }
+        ExecuteMsg::StartVotingPeriod {} => execute_start_voting_period(deps, env, info),
+        ExecuteMsg::SignUp { pubkey } => execute_sign_up(deps, env, info, pubkey),
+        ExecuteMsg::StopVotingPeriod {} => execute_stop_voting_period(deps, env, info),
         ExecuteMsg::PublishMessage {
             message,
             enc_pub_key,
         } => execute_publish_message(deps, env, info, message, enc_pub_key),
+        ExecuteMsg::StartProcessPeriod {} => execute_start_process_period(deps, env, info),
         ExecuteMsg::ProcessMessage {
             new_state_commitment,
             proof,
@@ -181,6 +211,82 @@ pub fn execute(
         ExecuteMsg::StopTallyingPeriod { results, salt } => {
             execute_stop_tallying_period(deps, env, info, results, salt)
         }
+    }
+}
+
+pub fn execute_start_voting_period(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+) -> Result<Response, ContractError> {
+    let period = PERIOD.load(deps.storage)?;
+
+    if VOTINGTIME.exists(deps.storage) {
+        let voting_time = VOTINGTIME.load(deps.storage)?;
+
+        if let Some(_) = voting_time.start_time {
+            // if start_time exist，admin can't start round with this command.
+            return Err(ContractError::AlreadySetVotingTime {
+                time_name: String::from("start_time"),
+            });
+        } else {
+            // if start_time isn't exist，admin need start round with this command. (in Pending period can execute)
+            if period.status != PeriodStatus::Pending {
+                return Err(ContractError::PeriodError {});
+            }
+        }
+
+        if let Some(end_time) = voting_time.end_time {
+            if env.block.time >= end_time {
+                // If the end time is set,
+                // I need to determine if the current time is before the end time,
+                // if it is greater than the end time, it means it is no longer a voting session.
+                return Err(ContractError::PeriodError {});
+            }
+        } else {
+            if period.status != PeriodStatus::Pending {
+                // If I don't set an end time, I need to determine the current period.
+                return Err(ContractError::PeriodError {});
+            }
+        }
+    } else {
+        // Check if the period status is Voting
+        if period.status != PeriodStatus::Pending {
+            return Err(ContractError::PeriodError {});
+        }
+    }
+    // Check if the sender is authorized to execute the function
+    if !can_execute(deps.as_ref(), info.sender.as_ref())? {
+        Err(ContractError::Unauthorized {})
+    } else {
+        // Update the period status to Processing
+        let period = Period {
+            status: PeriodStatus::Voting,
+        };
+        PERIOD.save(deps.storage, &period)?;
+        let start_time = env.block.time;
+        // let voting_time = VOTINGTIME.may_load(deps.storage)?;
+        match VOTINGTIME.may_load(deps.storage)? {
+            Some(time) => {
+                let votingtime = VotingTime {
+                    start_time: Some(start_time),
+                    end_time: time.end_time,
+                };
+                VOTINGTIME.save(deps.storage, &votingtime)?;
+            }
+            None => {
+                let votingtime = VotingTime {
+                    start_time: Some(start_time),
+                    end_time: None,
+                };
+                VOTINGTIME.save(deps.storage, &votingtime)?;
+            }
+        }
+
+        // Return a success response
+        Ok(Response::new()
+            .add_attribute("action", "start_voting_period")
+            .add_attribute("start_time", format!("{:?}", start_time)))
     }
 }
 
@@ -208,21 +314,135 @@ pub fn execute_set_parameters(
     }
 }
 
+pub fn execute_set_round_info(
+    deps: DepsMut,
+    _env: Env,
+    info: MessageInfo,
+    round_info: RoundInfo,
+) -> Result<Response, ContractError> {
+    if !can_execute(deps.as_ref(), info.sender.as_ref())? {
+        Err(ContractError::Unauthorized {})
+    } else {
+        if round_info.title == "" {
+            return Err(ContractError::TitleIsEmpty {});
+        }
+
+        ROUNDINFO.save(deps.storage, &round_info)?;
+
+        let mut attributes = vec![attr("action", "set_round_info")];
+        attributes.push(attr("title", round_info.title));
+
+        if round_info.description != "" {
+            attributes.push(attr("description", round_info.description))
+        }
+
+        if round_info.link != "" {
+            attributes.push(attr("link", round_info.link))
+        }
+
+        Ok(Response::new().add_attributes(attributes))
+    }
+}
+
+// in pending
+pub fn execute_set_whitelists(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    whitelists: Whitelist,
+) -> Result<Response, ContractError> {
+    let period = PERIOD.load(deps.storage)?;
+
+    if VOTINGTIME.exists(deps.storage) {
+        let voting_time = VOTINGTIME.load(deps.storage)?;
+
+        if let Some(start_time) = voting_time.start_time {
+            if env.block.time >= start_time {
+                return Err(ContractError::PeriodError {});
+            }
+        } else {
+            return Err(ContractError::PeriodError {});
+        }
+    } else {
+        // Check if the period status is Pending
+        if period.status != PeriodStatus::Pending {
+            return Err(ContractError::PeriodError {});
+        }
+    }
+
+    // if WHITELIST.exists(deps.storage) {
+    //     return Err(ContractError::AlreadyHaveWhitelist {});
+    // }
+
+    if !can_execute(deps.as_ref(), info.sender.as_ref())? {
+        Err(ContractError::Unauthorized {})
+    } else {
+        WHITELIST.save(deps.storage, &whitelists)?;
+        let res = Response::new().add_attribute("action", "set_whitelists");
+        Ok(res)
+    }
+}
+
+// in pending
+// TODO: check runing period(all/pending)，这个需要全局时间都能进行设置，因为如果他在投票结束的时候没设置这个vote option，后面都没法运行。
+pub fn execute_set_vote_options_map(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    vote_option_map: Vec<String>,
+) -> Result<Response, ContractError> {
+    let period = PERIOD.load(deps.storage)?;
+
+    if VOTINGTIME.exists(deps.storage) {
+        let voting_time = VOTINGTIME.load(deps.storage)?;
+
+        if let Some(start_time) = voting_time.start_time {
+            if env.block.time >= start_time {
+                return Err(ContractError::PeriodError {});
+            }
+        } else {
+            return Err(ContractError::PeriodError {});
+        }
+    } else {
+        // Check if the period status is Pending
+        if period.status != PeriodStatus::Pending {
+            return Err(ContractError::PeriodError {});
+        }
+    }
+
+    if !can_execute(deps.as_ref(), info.sender.as_ref())? {
+        Err(ContractError::Unauthorized {})
+    } else {
+        let max_vote_options = vote_option_map.len() as u128;
+        VOTEOPTIONMAP.save(deps.storage, &vote_option_map)?;
+        // Save the maximum vote options
+        MAX_VOTE_OPTIONS.save(deps.storage, &Uint256::from_u128(max_vote_options))?;
+        let res = Response::new()
+            .add_attribute("action", "set_vote_option")
+            .add_attribute("vote_option_map", format!("{:?}", vote_option_map))
+            .add_attribute("max_vote_options", max_vote_options.to_string());
+        Ok(res)
+    }
+}
+
+// in voting
 pub fn execute_sign_up(
     mut deps: DepsMut,
-    _env: Env,
+    env: Env,
     info: MessageInfo,
     pubkey: PubKey,
 ) -> Result<Response, ContractError> {
+    let period = PERIOD.load(deps.storage)?;
+    if VOTINGTIME.exists(deps.storage) {
+        let voting_time = VOTINGTIME.load(deps.storage)?;
+        check_voting_time(env, Some(voting_time), period.status)?;
+    } else {
+        check_voting_time(env, None, period.status)?;
+    }
+
     let user_balance = user_balance_of(deps.as_ref(), info.sender.as_ref())?;
     if user_balance == Uint256::from_u128(0u128) {
         return Err(ContractError::Unauthorized {});
-    }
-
-    let period = PERIOD.load(deps.storage)?;
-    // Check if the period status is Voting
-    if period.status != PeriodStatus::Voting {
-        return Err(ContractError::PeriodError {});
     }
 
     let mut num_sign_ups = NUMSIGNUPS.load(deps.storage)?;
@@ -247,7 +467,6 @@ pub fn execute_sign_up(
     // Create a state leaf with the provided pubkey and amount
     let state_leaf = StateLeaf {
         pub_key: pubkey.clone(),
-        // voice_credit_balance: Uint256::from_uint128(amount),
         voice_credit_balance: user_balance,
         vote_option_tree_root: Uint256::from_u128(0),
         nonce: Uint256::from_u128(0),
@@ -255,18 +474,16 @@ pub fn execute_sign_up(
     .hash_state_leaf();
 
     let state_index = num_sign_ups;
-
     // Enqueue the state leaf
     state_enqueue(&mut deps, state_leaf)?;
-
     num_sign_ups += Uint256::from_u128(1u128);
 
     // Save the updated state index, voice credit balance, and number of sign-ups
+    // STATEIDXINC.save(deps.storage, &info.sender, &num_sign_ups)?;
     STATEIDXINC.save(deps.storage, &info.sender, &num_sign_ups)?;
     VOICECREDITBALANCE.save(
         deps.storage,
-        state_index.to_be_bytes().to_vec(),
-        // &Uint256::from_u128(0u128),
+        state_index.to_be_bytes().to_vec(), // TODO: state_index need equal num_sign_ups
         &user_balance,
     )?;
     NUMSIGNUPS.save(deps.storage, &num_sign_ups)?;
@@ -285,17 +502,21 @@ pub fn execute_sign_up(
         .add_attribute("balance", user_balance.to_string()))
 }
 
+// in voting
 pub fn execute_publish_message(
     deps: DepsMut,
-    _env: Env,
+    env: Env,
     _info: MessageInfo,
     message: Message,
     enc_pub_key: PubKey,
 ) -> Result<Response, ContractError> {
     let period = PERIOD.load(deps.storage)?;
     // Check if the period status is Voting
-    if period.status != PeriodStatus::Voting {
-        return Err(ContractError::PeriodError {});
+    if VOTINGTIME.exists(deps.storage) {
+        let voting_time = VOTINGTIME.load(deps.storage)?;
+        check_voting_time(env, Some(voting_time), period.status)?;
+    } else {
+        check_voting_time(env, None, period.status)?;
     }
 
     // Load the scalar field value
@@ -352,13 +573,83 @@ pub fn execute_publish_message(
 
 pub fn execute_stop_voting_period(
     deps: DepsMut,
-    _env: Env,
+    env: Env,
     info: MessageInfo,
-    max_vote_options: Uint256,
+    // max_vote_options: Uint256,
 ) -> Result<Response, ContractError> {
     let period = PERIOD.load(deps.storage)?;
-    // Check if the period status is Voting
-    if period.status != PeriodStatus::Voting {
+
+    if VOTINGTIME.exists(deps.storage) {
+        let voting_time = VOTINGTIME.load(deps.storage)?;
+
+        // if let Some(start_time) = voting_time.start_time {
+        if let Some(_) = voting_time.end_time {
+            return Err(ContractError::AlreadySetVotingTime {
+                time_name: String::from("end_time"),
+            });
+        }
+
+        if let Some(start_time) = voting_time.start_time {
+            if env.block.time <= start_time {
+                return Err(ContractError::PeriodError {});
+            }
+        }
+    } else {
+        // Check if the period status is Voting
+        if period.status != PeriodStatus::Voting {
+            return Err(ContractError::PeriodError {});
+        }
+    }
+    // Check if the sender is authorized to execute the function
+    if !can_execute(deps.as_ref(), info.sender.as_ref())? {
+        Err(ContractError::Unauthorized {})
+    } else {
+        let end_time = env.block.time;
+        match VOTINGTIME.may_load(deps.storage)? {
+            Some(time) => {
+                let votingtime = VotingTime {
+                    start_time: time.start_time,
+                    end_time: Some(end_time),
+                };
+                VOTINGTIME.save(deps.storage, &votingtime)?;
+            }
+            None => {}
+        }
+
+        // Return a success response
+        Ok(Response::new()
+            .add_attribute("action", "stop_voting_period")
+            .add_attribute("end_time", end_time.to_string()))
+    }
+}
+
+pub fn execute_start_process_period(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+) -> Result<Response, ContractError> {
+    let period = PERIOD.load(deps.storage)?;
+    let voting_time = VOTINGTIME.may_load(deps.storage)?;
+
+    if let Some(voting_time) = voting_time {
+        if let Some(end_time) = voting_time.end_time {
+            // 如果 end time 还为空，则代表没有设置 end time，如果没有设置 end time 就意味着是手动环节，也就是还没手动结束 voting 环节
+            if env.block.time <= end_time {
+                // 如果还在 end time 内，则代表 round 还没结束，就不能开始 process 环节
+                return Err(ContractError::PeriodError {});
+            } else {
+                if period.status == PeriodStatus::Ended
+                    || period.status == PeriodStatus::Processing
+                    || period.status == PeriodStatus::Tallying
+                {
+                    return Err(ContractError::PeriodError {});
+                }
+            }
+        } else {
+            return Err(ContractError::PeriodError {});
+        }
+    } else {
+        // 如果 VOTINGTIME 没有数据，则意味着是手动环节，并且还没手动结束
         return Err(ContractError::PeriodError {});
     }
 
@@ -366,15 +657,11 @@ pub fn execute_stop_voting_period(
     if !can_execute(deps.as_ref(), info.sender.as_ref())? {
         Err(ContractError::Unauthorized {})
     } else {
-        // Save the maximum vote options
-        MAX_VOTE_OPTIONS.save(deps.storage, &max_vote_options)?;
-
         // Update the period status to Processing
         let period = Period {
             status: PeriodStatus::Processing,
         };
         PERIOD.save(deps.storage, &period)?;
-
         // Compute the state root
         let state_root = state_root(deps.as_ref());
 
@@ -385,7 +672,7 @@ pub fn execute_stop_voting_period(
         )?;
 
         // Return a success response
-        Ok(Response::new().add_attribute("action", "stop_voting_period"))
+        Ok(Response::new().add_attribute("action", "start_process_period"))
     }
 }
 
@@ -401,9 +688,9 @@ pub fn execute_process_message(
     if period.status != PeriodStatus::Processing {
         return Err(ContractError::PeriodError {});
     }
-
     let mut processed_msg_count = PROCESSED_MSG_COUNT.load(deps.storage)?;
     let msg_chain_length = MSG_CHAIN_LENGTH.load(deps.storage)?;
+
     // Check that all messages have not been processed yet
     assert!(
         processed_msg_count < msg_chain_length,
@@ -415,6 +702,7 @@ pub fn execute_process_message(
 
     let num_sign_ups = NUMSIGNUPS.load(deps.storage)?;
     let max_vote_options = MAX_VOTE_OPTIONS.load(deps.storage)?;
+
     input[0] = (num_sign_ups << 32) + max_vote_options; // packedVals
 
     // Load the coordinator's public key hash
@@ -463,9 +751,9 @@ pub fn execute_process_message(
 
     // Parse the SNARK proof
     let proof_str = ProofStr {
-        pi_a: hex::decode(proof.a).map_err(|_| ContractError::HexDecodingError {})?,
-        pi_b: hex::decode(proof.b).map_err(|_| ContractError::HexDecodingError {})?,
-        pi_c: hex::decode(proof.c).map_err(|_| ContractError::HexDecodingError {})?,
+        pi_a: hex::decode(proof.a.clone()).map_err(|_| ContractError::HexDecodingError {})?,
+        pi_b: hex::decode(proof.b.clone()).map_err(|_| ContractError::HexDecodingError {})?,
+        pi_c: hex::decode(proof.c.clone()).map_err(|_| ContractError::HexDecodingError {})?,
     };
 
     // Parse the verification key and prepare for verification
@@ -489,6 +777,7 @@ pub fn execute_process_message(
             step: String::from("Process"),
         });
     }
+
     // Proof verify success
     // Update the current state commitment
     CURRENT_STATE_COMMITMENT.save(deps.storage, &new_state_commitment)?;
@@ -496,10 +785,13 @@ pub fn execute_process_message(
     // Update the count of processed messages
     processed_msg_count += batch_end_index - batch_start_index;
     PROCESSED_MSG_COUNT.save(deps.storage, &processed_msg_count)?;
-
     Ok(Response::new()
         .add_attribute("action", "process_message")
-        .add_attribute("zk_verify", is_passed.to_string()))
+        .add_attribute("zk_verify", is_passed.to_string())
+        .add_attribute("commitment", new_state_commitment.to_string())
+        .add_attribute("pi_a", proof.a)
+        .add_attribute("pi_b", proof.b)
+        .add_attribute("pi_c", proof.c))
 }
 
 pub fn execute_stop_processing_period(
@@ -585,9 +877,9 @@ pub fn execute_process_tally(
 
     // Parse the SNARK proof
     let proof_str = ProofStr {
-        pi_a: hex::decode(proof.a).map_err(|_| ContractError::HexDecodingError {})?,
-        pi_b: hex::decode(proof.b).map_err(|_| ContractError::HexDecodingError {})?,
-        pi_c: hex::decode(proof.c).map_err(|_| ContractError::HexDecodingError {})?,
+        pi_a: hex::decode(proof.a.clone()).map_err(|_| ContractError::HexDecodingError {})?,
+        pi_b: hex::decode(proof.b.clone()).map_err(|_| ContractError::HexDecodingError {})?,
+        pi_c: hex::decode(proof.c.clone()).map_err(|_| ContractError::HexDecodingError {})?,
     };
 
     // Parse the verification key and prepare for verification
@@ -626,7 +918,11 @@ pub fn execute_process_tally(
 
     Ok(Response::new()
         .add_attribute("action", "process_tally")
-        .add_attribute("zk_verify", is_passed.to_string()))
+        .add_attribute("zk_verify", is_passed.to_string())
+        .add_attribute("commitment", new_tally_commitment.to_string())
+        .add_attribute("pi_a", proof.a)
+        .add_attribute("pi_b", proof.b)
+        .add_attribute("pi_c", proof.c))
 }
 
 fn execute_stop_tallying_period(
@@ -689,7 +985,19 @@ fn execute_stop_tallying_period(
     };
     PERIOD.save(deps.storage, &period)?;
 
-    Ok(Response::new().add_attribute("action", "stop_tallying_period"))
+    Ok(Response::new()
+        .add_attribute("action", "stop_tallying_period")
+        .add_attribute(
+            "results",
+            format!(
+                "{:?}",
+                results
+                    .iter()
+                    .map(|x| x.to_string())
+                    .collect::<Vec<String>>()
+            ),
+        )
+        .add_attribute("all_result", sum.to_string()))
 }
 
 fn can_sign_up(deps: Deps, sender: &str) -> StdResult<bool> {
@@ -792,6 +1100,36 @@ fn state_update_at(deps: &mut DepsMut, index: Uint256) -> Result<bool, ContractE
     Ok(true)
 }
 
+fn check_voting_time(
+    env: Env,
+    voting_time: Option<VotingTime>,
+    period_status: PeriodStatus,
+) -> Result<(), ContractError> {
+    match voting_time {
+        Some(vt) => {
+            if let Some(start_time) = vt.start_time {
+                if env.block.time <= start_time {
+                    return Err(ContractError::PeriodError {});
+                }
+                if let Some(end_time) = vt.end_time {
+                    if env.block.time >= end_time {
+                        return Err(ContractError::PeriodError {});
+                    }
+                }
+            } else {
+                return Err(ContractError::PeriodError {});
+            }
+        }
+        None => {
+            if period_status != PeriodStatus::Voting {
+                return Err(ContractError::PeriodError {});
+            }
+        }
+    }
+
+    Ok(())
+}
+
 pub fn hash_message_and_enc_pub_key(
     message: Message,
     enc_pub_key: PubKey,
@@ -828,7 +1166,10 @@ fn can_execute(deps: Deps, sender: &str) -> StdResult<bool> {
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
-        QueryMsg::GetConfig {} => to_binary::<Config>(&CONFIG.load(deps.storage).unwrap()),
+        QueryMsg::GetRoundInfo {} => to_binary::<RoundInfo>(&ROUNDINFO.load(deps.storage).unwrap()),
+        QueryMsg::GetVotingTime {} => {
+            to_binary::<VotingTime>(&VOTINGTIME.load(deps.storage).unwrap())
+        }
         QueryMsg::GetPeriod {} => to_binary::<Period>(&PERIOD.load(deps.storage).unwrap()),
         QueryMsg::GetNumSignUp {} => to_binary::<Uint256>(&NUMSIGNUPS.load(deps.storage).unwrap()),
         QueryMsg::GetMsgChainLength {} => {
@@ -854,6 +1195,12 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::IsWhiteList { sender } => to_binary::<bool>(&query_can_sign_up(deps, sender)?),
         QueryMsg::WhiteBalanceOf { sender } => {
             to_binary::<Uint256>(&query_user_balance_of(deps, sender)?)
+        }
+        QueryMsg::VoteOptionMap {} => {
+            to_binary::<Vec<String>>(&VOTEOPTIONMAP.load(deps.storage).unwrap())
+        }
+        QueryMsg::MaxVoteOptions {} => {
+            to_binary::<Uint256>(&MAX_VOTE_OPTIONS.load(deps.storage).unwrap())
         }
     }
 }

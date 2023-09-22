@@ -44,4 +44,16 @@ pub enum ContractError {
 
     #[error("Invalid proof, step {step} verify failed")]
     InvalidProof { step: String },
+
+    #[error("whitelist already exist")]
+    AlreadySetWhitelist {},
+
+    #[error("already set {time_name} time")]
+    AlreadySetVotingTime { time_name: String },
+
+    #[error("end_time must big than start_time")]
+    WrongTimeSet {},
+
+    #[error("round title can not be empty")]
+    TitleIsEmpty,
 }
