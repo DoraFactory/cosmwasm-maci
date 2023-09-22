@@ -68,7 +68,7 @@ mod test {
         let mut app = App::default();
 
         let code_id = MaciCodeId::store_code(&mut app);
-        let label = "Group";
+        let label = "Dora Maci";
         let contract = code_id
             .instantiate_with_no_voting_time(&mut app, owner(), label)
             .unwrap();
