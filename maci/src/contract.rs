@@ -19,6 +19,7 @@ use cosmos_sdk_proto::cosmos::feegrant::v1beta1::{
 use cosmos_sdk_proto::prost::Message;
 use cosmos_sdk_proto::traits::TypeUrl;
 use cosmos_sdk_proto::Any;
+use prost_types::Timestamp as SdkTimestamp;
 
 use cosmwasm_std::{
     attr, coins, to_binary, BankMsg, Binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Response,
@@ -1047,12 +1048,25 @@ fn execute_grant(
 
     let base_amount = max_amount / Uint128::from(whitelist.users.len() as u128);
 
+    let mut expiration_time: Option<SdkTimestamp> = None;
+
+    let voting_time = VOTINGTIME.may_load(deps.storage)?;
+
+    if let Some(voting_time) = voting_time {
+        if let Some(end_time) = voting_time.end_time {
+            expiration_time = Some(SdkTimestamp {
+                seconds: end_time.seconds() as i64,
+                nanos: 0,
+            })
+        }
+    }
+
     let allowance = BasicAllowance {
         spend_limit: vec![SdkCoin {
             denom: denom,
             amount: base_amount.to_string(),
         }],
-        expiration: None,
+        expiration: expiration_time,
     };
 
     let allowed_allowance = AllowedMsgAllowance {

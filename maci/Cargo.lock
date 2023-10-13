@@ -770,6 +770,8 @@ dependencies = [
  "num-traits",
  "pairing_ce",
  "poseidon-rs",
+ "prost 0.11.9",
+ "prost-types",
  "schemars",
  "serde",
  "serde_json",
