@@ -286,7 +286,7 @@ pub fn execute_start_voting_period(
         // Return a success response
         Ok(Response::new()
             .add_attribute("action", "start_voting_period")
-            .add_attribute("start_time", format!("{:?}", start_time)))
+            .add_attribute("start_time", start_time.nanos().to_string()))
     }
 }
 
@@ -384,7 +384,6 @@ pub fn execute_set_whitelists(
 }
 
 // in pending
-// TODO: check runing period(all/pending)，这个需要全局时间都能进行设置，因为如果他在投票结束的时候没设置这个vote option，后面都没法运行。
 pub fn execute_set_vote_options_map(
     deps: DepsMut,
     env: Env,
@@ -483,7 +482,7 @@ pub fn execute_sign_up(
     STATEIDXINC.save(deps.storage, &info.sender, &num_sign_ups)?;
     VOICECREDITBALANCE.save(
         deps.storage,
-        state_index.to_be_bytes().to_vec(), // TODO: state_index need equal num_sign_ups
+        state_index.to_be_bytes().to_vec(),
         &user_balance,
     )?;
     NUMSIGNUPS.save(deps.storage, &num_sign_ups)?;
@@ -619,7 +618,7 @@ pub fn execute_stop_voting_period(
         // Return a success response
         Ok(Response::new()
             .add_attribute("action", "stop_voting_period")
-            .add_attribute("end_time", end_time.to_string()))
+            .add_attribute("end_time", end_time.nanos().to_string()))
     }
 }
 
