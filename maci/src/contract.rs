@@ -2,17 +2,27 @@ use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, ProofType, QueryMsg};
 use crate::parser::{parse_proof, parse_vkey};
 use crate::state::{
-    Admin, Message, Period, PeriodStatus, ProofStr, PubKey, RoundInfo, StateLeaf, VkeyStr,
+    Admin, MessageData, Period, PeriodStatus, ProofStr, PubKey, RoundInfo, StateLeaf, VkeyStr,
     VotingTime, Whitelist, ADMIN, COORDINATORHASH, CURRENT_STATE_COMMITMENT,
-    CURRENT_TALLY_COMMITMENT, LEAF_IDX_0, MACIPARAMETERS, MAX_LEAVES_COUNT, MAX_VOTE_OPTIONS,
-    MSG_CHAIN_LENGTH, MSG_HASHES, NODES, NUMSIGNUPS, PERIOD, PROCESSED_MSG_COUNT,
+    CURRENT_TALLY_COMMITMENT, FEEGRANTS, LEAF_IDX_0, MACIPARAMETERS, MAX_LEAVES_COUNT,
+    MAX_VOTE_OPTIONS, MSG_CHAIN_LENGTH, MSG_HASHES, NODES, NUMSIGNUPS, PERIOD, PROCESSED_MSG_COUNT,
     PROCESSED_USER_COUNT, PROCESS_VKEYS, QTR_LIB, RESULT, ROUNDINFO, STATEIDXINC, TALLY_VKEYS,
-    TOTAL_RESULT, VOICECREDITBALANCE, VOTEOPTIONMAP, VOTINGTIME, WHITELIST, ZEROS,
+    TOTAL, TOTAL_RESULT, VOICECREDITBALANCE, VOTEOPTIONMAP, VOTINGTIME, WHITELIST, ZEROS,
 };
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
+
+use cosmos_sdk_proto::cosmos::base::v1beta1::Coin as SdkCoin;
+use cosmos_sdk_proto::cosmos::feegrant::v1beta1::{
+    AllowedMsgAllowance, BasicAllowance, MsgGrantAllowance, MsgRevokeAllowance,
+};
+use cosmos_sdk_proto::prost::Message;
+use cosmos_sdk_proto::traits::TypeUrl;
+use cosmos_sdk_proto::Any;
+
 use cosmwasm_std::{
-    attr, to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, Uint256,
+    attr, coins, to_binary, BankMsg, Binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Response,
+    StdResult, Uint128, Uint256,
 };
 
 use crate::utils::{hash2, hash5, hash_256_uint256_list, uint256_from_hex_string};
@@ -157,6 +167,7 @@ pub fn instantiate(
     // Save the initial period to storage
     PERIOD.save(deps.storage, &period)?;
 
+    TOTAL.save(deps.storage, &0)?;
     Ok(Response::default().add_attribute("action", "instantiate"))
 }
 
@@ -211,6 +222,10 @@ pub fn execute(
         ExecuteMsg::StopTallyingPeriod { results, salt } => {
             execute_stop_tallying_period(deps, env, info, results, salt)
         }
+        ExecuteMsg::Grant { max_amount } => execute_grant(deps, env, info, max_amount),
+        ExecuteMsg::Revoke {} => execute_revoke(deps, env, info),
+        ExecuteMsg::Bond {} => execute_bond(deps, env, info),
+        ExecuteMsg::Withdraw { amount } => execute_withdraw(deps, env, info, amount),
     }
 }
 
@@ -352,6 +367,10 @@ pub fn execute_set_whitelists(
     whitelists: Whitelist,
 ) -> Result<Response, ContractError> {
     let period = PERIOD.load(deps.storage)?;
+
+    if FEEGRANTS.exists(deps.storage) {
+        return Err(ContractError::FeeGrantAlreadyExists);
+    }
 
     if VOTINGTIME.exists(deps.storage) {
         let voting_time = VOTINGTIME.load(deps.storage)?;
@@ -506,7 +525,7 @@ pub fn execute_publish_message(
     deps: DepsMut,
     env: Env,
     _info: MessageInfo,
-    message: Message,
+    message: MessageData,
     enc_pub_key: PubKey,
 ) -> Result<Response, ContractError> {
     let period = PERIOD.load(deps.storage)?;
@@ -632,9 +651,7 @@ pub fn execute_start_process_period(
 
     if let Some(voting_time) = voting_time {
         if let Some(end_time) = voting_time.end_time {
-            // 如果 end time 还为空，则代表没有设置 end time，如果没有设置 end time 就意味着是手动环节，也就是还没手动结束 voting 环节
             if env.block.time <= end_time {
-                // 如果还在 end time 内，则代表 round 还没结束，就不能开始 process 环节
                 return Err(ContractError::PeriodError {});
             } else {
                 if period.status == PeriodStatus::Ended
@@ -648,7 +665,6 @@ pub fn execute_start_process_period(
             return Err(ContractError::PeriodError {});
         }
     } else {
-        // 如果 VOTINGTIME 没有数据，则意味着是手动环节，并且还没手动结束
         return Err(ContractError::PeriodError {});
     }
 
@@ -999,6 +1015,168 @@ fn execute_stop_tallying_period(
         .add_attribute("all_result", sum.to_string()))
 }
 
+fn execute_grant(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    max_amount: Uint128,
+) -> Result<Response, ContractError> {
+    // Check if the sender is authorized to execute the function
+    if !can_execute(deps.as_ref(), info.sender.as_ref())? {
+        return Err(ContractError::Unauthorized {});
+    }
+
+    if FEEGRANTS.exists(deps.storage) {
+        return Err(ContractError::FeeGrantAlreadyExists {});
+    }
+
+    // let denom = config.gas_denom;?
+    let denom = "peaka".to_string();
+
+    let mut amount: Uint128 = Uint128::new(0);
+    // Iterate through the funds and find the amount with the MACI denomination
+    info.funds.iter().for_each(|fund| {
+        if fund.denom == denom {
+            amount = fund.amount;
+        }
+    });
+
+    FEEGRANTS.save(deps.storage, &max_amount)?;
+
+    let whitelist = WHITELIST.load(deps.storage)?;
+
+    let base_amount = max_amount / Uint128::from(whitelist.users.len() as u128);
+
+    let allowance = BasicAllowance {
+        spend_limit: vec![SdkCoin {
+            denom: denom,
+            amount: base_amount.to_string(),
+        }],
+        expiration: None,
+    };
+
+    let allowed_allowance = AllowedMsgAllowance {
+        allowance: Some(Any {
+            type_url: BasicAllowance::TYPE_URL.to_string(),
+            value: allowance.encode_to_vec(),
+        }),
+        allowed_messages: vec!["/cosmwasm.wasm.v1.MsgExecuteContract".to_string()],
+    };
+
+    let mut messages = vec![];
+    for i in 0..whitelist.users.len() {
+        let grant_msg = MsgGrantAllowance {
+            granter: env.contract.address.to_string(),
+            grantee: whitelist.users[i].addr.to_string(),
+            allowance: Some(Any {
+                type_url: AllowedMsgAllowance::TYPE_URL.to_string(),
+                value: allowed_allowance.encode_to_vec(),
+            }),
+        };
+
+        let message = CosmosMsg::Stargate {
+            type_url: MsgGrantAllowance::TYPE_URL.to_string(),
+            value: grant_msg.encode_to_vec().into(),
+        };
+        messages.push(message);
+    }
+
+    let total = TOTAL.load(deps.storage)?;
+    let new_total = total + amount.u128();
+    TOTAL.save(deps.storage, &new_total)?;
+
+    Ok(Response::default().add_messages(messages).add_attributes([
+        ("action", "grant"),
+        ("max_amount", max_amount.to_string().as_str()),
+        ("bond_amount", amount.to_string().as_str()),
+    ]))
+}
+
+fn execute_revoke(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, ContractError> {
+    // Check if the sender is authorized to execute the function
+    if !can_execute(deps.as_ref(), info.sender.as_ref())? {
+        return Err(ContractError::Unauthorized {});
+    }
+
+    if !FEEGRANTS.exists(deps.storage) {
+        return Err(ContractError::FeeGrantIsNotExists {});
+    }
+
+    let whitelist = WHITELIST.load(deps.storage)?;
+
+    let mut messages = vec![];
+    for i in 0..whitelist.users.len() {
+        let revoke_msg = MsgRevokeAllowance {
+            granter: env.contract.address.to_string(),
+            grantee: whitelist.users[i].addr.to_string(),
+        };
+        let message = CosmosMsg::Stargate {
+            type_url: MsgRevokeAllowance::TYPE_URL.to_string(),
+            value: revoke_msg.encode_to_vec().into(),
+        };
+        messages.push(message);
+    }
+    FEEGRANTS.save(deps.storage, &Uint128::from(0u128))?;
+
+    Ok(Response::default()
+        .add_messages(messages)
+        .add_attributes([("action", "revoke")]))
+}
+
+fn execute_bond(deps: DepsMut, _env: Env, info: MessageInfo) -> Result<Response, ContractError> {
+    if !can_execute(deps.as_ref(), info.sender.as_ref())? {
+        return Err(ContractError::Unauthorized {});
+    }
+
+    let denom = "peaka".to_string();
+    let mut amount: Uint128 = Uint128::new(0);
+    // Iterate through the funds and find the amount with the MACI denomination
+    info.funds.iter().for_each(|fund| {
+        if fund.denom == denom {
+            amount = fund.amount;
+        }
+    });
+
+    // update total
+    let total = TOTAL.load(deps.storage)?;
+    let new_total = total + amount.u128();
+    TOTAL.save(deps.storage, &new_total)?;
+
+    Ok(Response::new()
+        .add_attribute("action", "bond")
+        .add_attribute("amount", amount.to_string()))
+}
+
+fn execute_withdraw(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    amount: Option<Uint128>,
+) -> Result<Response, ContractError> {
+    if !can_execute(deps.as_ref(), info.sender.as_ref())? {
+        return Err(ContractError::Unauthorized {});
+    }
+
+    let denom = "peaka".to_string();
+    let contract_balance = deps.querier.query_balance(env.contract.address, &denom)?;
+    let mut withdraw_amount = amount.map_or_else(|| contract_balance.amount.u128(), |am| am.u128());
+
+    if withdraw_amount > contract_balance.amount.u128() {
+        withdraw_amount = contract_balance.amount.u128();
+    }
+
+    let amount_res = coins(withdraw_amount, denom);
+    let message = BankMsg::Send {
+        to_address: info.sender.to_string(),
+        amount: amount_res,
+    };
+
+    Ok(Response::new()
+        .add_message(message)
+        .add_attribute("action", "withdraw")
+        .add_attribute("amount", withdraw_amount.to_string()))
+}
+
 fn can_sign_up(deps: Deps, sender: &str) -> StdResult<bool> {
     let cfg = WHITELIST.load(deps.storage)?;
     let can = cfg.is_whitelist(&sender);
@@ -1010,9 +1188,6 @@ fn user_balance_of(deps: Deps, sender: &str) -> StdResult<Uint256> {
     let balance = cfg.balance_of(&sender);
     Ok(balance)
 }
-
-// fn user_register(deps: DepsMut, sender: &str) {
-// }
 
 // Load the root node of the state tree
 fn state_root(deps: Deps) -> Uint256 {
@@ -1130,7 +1305,7 @@ fn check_voting_time(
 }
 
 pub fn hash_message_and_enc_pub_key(
-    message: Message,
+    message: MessageData,
     enc_pub_key: PubKey,
     prev_hash: Uint256,
 ) -> Uint256 {
@@ -1170,21 +1345,25 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
             to_binary::<VotingTime>(&VOTINGTIME.load(deps.storage).unwrap())
         }
         QueryMsg::GetPeriod {} => to_binary::<Period>(&PERIOD.load(deps.storage).unwrap()),
-        QueryMsg::GetNumSignUp {} => to_binary::<Uint256>(&NUMSIGNUPS.load(deps.storage).unwrap()),
+        QueryMsg::GetNumSignUp {} => {
+            to_binary::<Uint256>(&NUMSIGNUPS.may_load(deps.storage)?.unwrap_or_default())
+        }
         QueryMsg::GetMsgChainLength {} => {
-            to_binary::<Uint256>(&MSG_CHAIN_LENGTH.load(deps.storage).unwrap())
+            to_binary::<Uint256>(&MSG_CHAIN_LENGTH.may_load(deps.storage)?.unwrap_or_default())
         }
         QueryMsg::GetResult { index } => to_binary::<Uint256>(
             &RESULT
-                .load(deps.storage, index.to_be_bytes().to_vec())
-                .unwrap(),
+                .may_load(deps.storage, index.to_be_bytes().to_vec())?
+                .unwrap_or_default(),
         ),
         QueryMsg::GetAllResult {} => {
-            to_binary::<Uint256>(&TOTAL_RESULT.load(deps.storage).unwrap())
+            to_binary::<Uint256>(&TOTAL_RESULT.may_load(deps.storage)?.unwrap_or_default())
         }
-        QueryMsg::GetStateIdxInc { address } => {
-            to_binary::<Uint256>(&STATEIDXINC.load(deps.storage, &address).unwrap())
-        }
+        QueryMsg::GetStateIdxInc { address } => to_binary::<Uint256>(
+            &STATEIDXINC
+                .may_load(deps.storage, &address)?
+                .unwrap_or_default(),
+        ),
         QueryMsg::GetVoiceCreditBalance { index } => to_binary::<Uint256>(
             &VOICECREDITBALANCE
                 .load(deps.storage, index.to_be_bytes().to_vec())
@@ -1199,7 +1378,13 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
             to_binary::<Vec<String>>(&VOTEOPTIONMAP.load(deps.storage).unwrap())
         }
         QueryMsg::MaxVoteOptions {} => {
-            to_binary::<Uint256>(&MAX_VOTE_OPTIONS.load(deps.storage).unwrap())
+            to_binary::<Uint256>(&MAX_VOTE_OPTIONS.may_load(deps.storage)?.unwrap_or_default())
+        }
+        QueryMsg::QueryTotalBalance {} => {
+            to_binary::<u128>(&TOTAL.may_load(deps.storage)?.unwrap_or_default())
+        }
+        QueryMsg::QueryTotalFeeGrant {} => {
+            to_binary::<Uint128>(&FEEGRANTS.may_load(deps.storage)?.unwrap_or_default())
         }
     }
 }

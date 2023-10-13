@@ -5,7 +5,7 @@ use anyhow::Result as AnyResult;
 
 use crate::msg::VKeyType;
 use crate::state::{
-    MaciParameters, Message, Period, PubKey, QuinaryTreeRoot, RoundInfo, VotingTime, Whitelist,
+    MaciParameters, MessageData, Period, PubKey, QuinaryTreeRoot, RoundInfo, VotingTime, Whitelist,
     WhitelistConfig,
 };
 use crate::utils::uint256_from_hex_string;
@@ -492,7 +492,7 @@ impl MaciContract {
         &self,
         app: &mut App,
         sender: Addr,
-        message: Message,
+        message: MessageData,
         enc_pub_key: PubKey,
     ) -> AnyResult<AppResponse> {
         app.execute_contract(

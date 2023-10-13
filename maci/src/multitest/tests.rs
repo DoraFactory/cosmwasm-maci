@@ -6,7 +6,7 @@ mod test {
     use crate::error::ContractError;
     use crate::msg::ProofType;
     use crate::multitest::{owner, uint256_from_decimal_string, user1, user2, MaciCodeId};
-    use crate::state::{Message, Period, PeriodStatus, PubKey, RoundInfo};
+    use crate::state::{MessageData, Period, PeriodStatus, PubKey, RoundInfo};
     use serde::{Deserialize, Serialize};
     use serde_json;
     use std::fs;
@@ -129,7 +129,7 @@ mod test {
                 let _ = contract.sign_up(&mut app, Addr::unchecked(i.to_string()), pubkey);
                 app.update_block(next_block);
             }
-            let message = Message {
+            let message = MessageData {
                 data: [
                     uint256_from_decimal_string(&data.msgs[i][0]),
                     uint256_from_decimal_string(&data.msgs[i][1]),
@@ -391,7 +391,7 @@ mod test {
                 println!("---------- signup ---------- {:?}", i);
                 let _ = contract.sign_up(&mut app, Addr::unchecked(i.to_string()), pubkey);
             }
-            let message = Message {
+            let message = MessageData {
                 data: [
                     uint256_from_decimal_string(&data.msgs[i][0]),
                     uint256_from_decimal_string(&data.msgs[i][1]),
@@ -622,7 +622,7 @@ mod test {
                 println!("---------- signup ---------- {:?}", i);
                 let _ = contract.sign_up(&mut app, Addr::unchecked(i.to_string()), pubkey);
             }
-            let message = Message {
+            let message = MessageData {
                 data: [
                     uint256_from_decimal_string(&data.msgs[i][0]),
                     uint256_from_decimal_string(&data.msgs[i][1]),
@@ -827,7 +827,7 @@ mod test {
                 println!("---------- signup ---------- {:?}", i);
                 let _ = contract.sign_up(&mut app, Addr::unchecked(i.to_string()), pubkey);
             }
-            let message = Message {
+            let message = MessageData {
                 data: [
                     uint256_from_decimal_string(&data.msgs[i][0]),
                     uint256_from_decimal_string(&data.msgs[i][1]),
