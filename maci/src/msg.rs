@@ -139,8 +139,5 @@ pub enum QueryMsg {
     MaxVoteOptions {},
 
     #[returns(Uint128)]
-    QueryTotalBalance {},
-
-    #[returns(Uint128)]
     QueryTotalFeeGrant {},
 }

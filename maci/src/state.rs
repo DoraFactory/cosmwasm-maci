@@ -1,7 +1,6 @@
 use crate::utils::hash5;
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, Timestamp, Uint128, Uint256};
-use cw4::TOTAL_KEY;
 use cw_storage_plus::{Item, Map};
 
 #[cw_serde]
@@ -264,7 +263,6 @@ impl Whitelist {
 pub const WHITELIST: Item<Whitelist> = Item::new("whitelist");
 
 pub const FEEGRANTS: Item<Uint128> = Item::new("fee_grants");
-pub const TOTAL: Item<u128> = Item::new(TOTAL_KEY);
 
 #[cfg(test)]
 mod tests {

@@ -7,7 +7,7 @@ use crate::state::{
     CURRENT_TALLY_COMMITMENT, FEEGRANTS, LEAF_IDX_0, MACIPARAMETERS, MAX_LEAVES_COUNT,
     MAX_VOTE_OPTIONS, MSG_CHAIN_LENGTH, MSG_HASHES, NODES, NUMSIGNUPS, PERIOD, PROCESSED_MSG_COUNT,
     PROCESSED_USER_COUNT, PROCESS_VKEYS, QTR_LIB, RESULT, ROUNDINFO, STATEIDXINC, TALLY_VKEYS,
-    TOTAL, TOTAL_RESULT, VOICECREDITBALANCE, VOTEOPTIONMAP, VOTINGTIME, WHITELIST, ZEROS,
+    TOTAL_RESULT, VOICECREDITBALANCE, VOTEOPTIONMAP, VOTINGTIME, WHITELIST, ZEROS,
 };
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
@@ -168,7 +168,6 @@ pub fn instantiate(
     // Save the initial period to storage
     PERIOD.save(deps.storage, &period)?;
 
-    TOTAL.save(deps.storage, &0)?;
     Ok(Response::default().add_attribute("action", "instantiate"))
 }
 
@@ -1027,11 +1026,18 @@ fn execute_grant(
         return Err(ContractError::Unauthorized {});
     }
 
+    let period = PERIOD.load(deps.storage)?;
+    if VOTINGTIME.exists(deps.storage) {
+        let voting_time = VOTINGTIME.load(deps.storage)?;
+        check_voting_time(env.clone(), Some(voting_time), period.status)?;
+    } else {
+        check_voting_time(env.clone(), None, period.status)?;
+    }
+
     if FEEGRANTS.exists(deps.storage) {
         return Err(ContractError::FeeGrantAlreadyExists {});
     }
 
-    // let denom = config.gas_denom;?
     let denom = "peaka".to_string();
 
     let mut amount: Uint128 = Uint128::new(0);
@@ -1041,7 +1047,6 @@ fn execute_grant(
             amount = fund.amount;
         }
     });
-
     FEEGRANTS.save(deps.storage, &max_amount)?;
 
     let whitelist = WHITELIST.load(deps.storage)?;
@@ -1095,10 +1100,6 @@ fn execute_grant(
         messages.push(message);
     }
 
-    let total = TOTAL.load(deps.storage)?;
-    let new_total = total + amount.u128();
-    TOTAL.save(deps.storage, &new_total)?;
-
     Ok(Response::default().add_messages(messages).add_attributes([
         ("action", "grant"),
         ("max_amount", max_amount.to_string().as_str()),
@@ -1130,7 +1131,7 @@ fn execute_revoke(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response
         };
         messages.push(message);
     }
-    FEEGRANTS.save(deps.storage, &Uint128::from(0u128))?;
+    FEEGRANTS.remove(deps.storage);
 
     Ok(Response::default()
         .add_messages(messages)
@@ -1150,11 +1151,6 @@ fn execute_bond(deps: DepsMut, _env: Env, info: MessageInfo) -> Result<Response,
             amount = fund.amount;
         }
     });
-
-    // update total
-    let total = TOTAL.load(deps.storage)?;
-    let new_total = total + amount.u128();
-    TOTAL.save(deps.storage, &new_total)?;
 
     Ok(Response::new()
         .add_attribute("action", "bond")
@@ -1393,9 +1389,6 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
         }
         QueryMsg::MaxVoteOptions {} => {
             to_binary::<Uint256>(&MAX_VOTE_OPTIONS.may_load(deps.storage)?.unwrap_or_default())
-        }
-        QueryMsg::QueryTotalBalance {} => {
-            to_binary::<u128>(&TOTAL.may_load(deps.storage)?.unwrap_or_default())
         }
         QueryMsg::QueryTotalFeeGrant {} => {
             to_binary::<Uint128>(&FEEGRANTS.may_load(deps.storage)?.unwrap_or_default())
