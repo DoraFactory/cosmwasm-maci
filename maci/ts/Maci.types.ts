@@ -87,7 +87,7 @@ export type ExecuteMsg = {
 } | {
   publish_message: {
     enc_pub_key: PubKey;
-    message: Message;
+    message: MessageData;
   };
 } | {
   process_message: {
@@ -106,8 +106,21 @@ export type ExecuteMsg = {
     results: Uint256[];
     salt: Uint256;
   };
+} | {
+  grant: {
+    max_amount: Uint128;
+  };
+} | {
+  revoke: {};
+} | {
+  bond: {};
+} | {
+  withdraw: {
+    amount?: Uint128 | null;
+  };
 };
-export interface Message {
+export type Uint128 = string;
+export interface MessageData {
   data: [Uint256, Uint256, Uint256, Uint256, Uint256, Uint256, Uint256];
 }
 export interface ProofType {
@@ -153,6 +166,8 @@ export type QueryMsg = {
   vote_option_map: {};
 } | {
   max_vote_options: {};
+} | {
+  query_total_fee_grant: {};
 };
 export type Addr = string;
 export type PeriodStatus = "pending" | "voting" | "processing" | "tallying" | "ended";
