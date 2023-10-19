@@ -1103,6 +1103,7 @@ fn execute_grant(
     Ok(Response::default().add_messages(messages).add_attributes([
         ("action", "grant"),
         ("max_amount", max_amount.to_string().as_str()),
+        ("base_amount", base_amount.to_string().as_str()),
         ("bond_amount", amount.to_string().as_str()),
     ]))
 }
