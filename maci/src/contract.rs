@@ -3,7 +3,7 @@ use crate::msg::{ExecuteMsg, InstantiateMsg, ProofType, QueryMsg};
 use crate::parser::{parse_proof, parse_vkey};
 use crate::state::{
     Admin, MessageData, Period, PeriodStatus, ProofStr, PubKey, RoundInfo, StateLeaf, VkeyStr,
-    VotingTime, Whitelist, ADMIN, COORDINATORHASH, CURRENT_STATE_COMMITMENT,
+    VotingTime, Whitelist, ADMIN, CIRCUITTYPE, COORDINATORHASH, CURRENT_STATE_COMMITMENT,
     CURRENT_TALLY_COMMITMENT, FEEGRANTS, LEAF_IDX_0, MACIPARAMETERS, MAX_LEAVES_COUNT,
     MAX_VOTE_OPTIONS, MSG_CHAIN_LENGTH, MSG_HASHES, NODES, NUMSIGNUPS, PERIOD, PROCESSED_MSG_COUNT,
     PROCESSED_USER_COUNT, PROCESS_VKEYS, QTR_LIB, RESULT, ROUNDINFO, STATEIDXINC, TALLY_VKEYS,
@@ -139,6 +139,7 @@ pub fn instantiate(
     }
     VOTEOPTIONMAP.save(deps.storage, &vote_option_map)?;
     ROUNDINFO.save(deps.storage, &msg.round_info)?;
+    CIRCUITTYPE.save(deps.storage, &msg.circuit_type)?;
 
     match msg.whitelist {
         Some(content) => WHITELIST.save(deps.storage, &content)?,
@@ -717,9 +718,26 @@ pub fn execute_process_message(
 
     let num_sign_ups = NUMSIGNUPS.load(deps.storage)?;
     let max_vote_options = MAX_VOTE_OPTIONS.load(deps.storage)?;
+    let circuit_type = CIRCUITTYPE.load(deps.storage)?;
+    println!("================================");
+    println!("type: {:?}", circuit_type);
+    println!("type == 0: {:?}", circuit_type == Uint256::from_u128(0u128));
+    println!("type == 1: {:?}", circuit_type == Uint256::from_u128(1u128));
+    if circuit_type == Uint256::from_u128(0u128) {
+        // 1v1c
+        input[0] = (num_sign_ups << 32) + max_vote_options; // packedVals
+    } else if circuit_type == Uint256::from_u128(1u128) {
+        // qv
+        input[0] = (num_sign_ups << 32) + (circuit_type << 64) + max_vote_options;
+        // packedVals
+        //
 
-    input[0] = (num_sign_ups << 32) + max_vote_options; // packedVals
-
+        println!("-------- here");
+        println!("max_vote_options: {:?}", max_vote_options);
+        println!("num_sign_ups: {:?}", num_sign_ups);
+        println!("circuit_type: {:?}", circuit_type);
+        println!("packedVals: {:?}", input[0]);
+    }
     // Load the coordinator's public key hash
     let coordinator_hash = COORDINATORHASH.load(deps.storage)?;
     input[1] = coordinator_hash; // coordPubKeyHash
@@ -760,7 +778,14 @@ pub fn execute_process_message(
 
     // Compute the hash of the input values
     let input_hash = uint256_from_hex_string(&hash_256_uint256_list(&input)) % snark_scalar_field; // input hash
-
+    println!("input_0:  {:?}", input[0]);
+    println!("input_1:  {:?}", input[1]);
+    println!("input_2:  {:?}", input[2]);
+    println!("input_3:  {:?}", input[3]);
+    println!("input_4:  {:?}", input[4]);
+    println!("input_5:  {:?}", input[5]);
+    println!("hash_input:  {:?}", hash_256_uint256_list(&input));
+    println!("input_hash:  {:?}", input_hash);
     // Load the process verification keys
     let process_vkeys_str = PROCESS_VKEYS.load(deps.storage)?;
 
@@ -785,6 +810,7 @@ pub fn execute_process_message(
         &[Fr::from_str(&input_hash.to_string()).unwrap()],
     )
     .unwrap();
+    println!("=============== process verify {:?}", is_passed);
 
     // If the proof verification fails, return an error
     if !is_passed {
@@ -792,7 +818,6 @@ pub fn execute_process_message(
             step: String::from("Process"),
         });
     }
-
     // Proof verify success
     // Update the current state commitment
     CURRENT_STATE_COMMITMENT.save(deps.storage, &new_state_commitment)?;
@@ -912,6 +937,7 @@ pub fn execute_process_tally(
     )
     .unwrap();
 
+    println!("=============== tally verify {:?}", is_passed);
     // If the proof verification fails, return an error
     if !is_passed {
         return Err(ContractError::InvalidProof {
@@ -925,8 +951,17 @@ pub fn execute_process_tally(
         .save(deps.storage, &new_tally_commitment)
         .unwrap();
 
+    println!("======================= process tally");
+    println!("processed_user_count {:?}", processed_user_count);
     // Update the count of processed users
     processed_user_count += batch_size;
+    println!("batch_size {:?}", batch_size);
+
+    println!(
+        "processed_user_count + batch_size {:?}",
+        processed_user_count
+    );
+
     PROCESSED_USER_COUNT
         .save(deps.storage, &processed_user_count)
         .unwrap();
@@ -957,6 +992,9 @@ fn execute_stop_tallying_period(
     let num_sign_ups = NUMSIGNUPS.load(deps.storage)?;
     let max_vote_options = MAX_VOTE_OPTIONS.load(deps.storage)?;
 
+    println!("========================== signup");
+    println!("signup: {:?}", num_sign_ups);
+    println!("processed_user_count: {:?}", processed_user_count);
     // Check that all users have been processed
     assert!(processed_user_count >= num_sign_ups);
 
@@ -972,7 +1010,11 @@ fn execute_stop_tallying_period(
 
     // Calculate the tally commitment
     let tally_commitment = hash2([results_root, salt]);
-
+    println!("-----------------------=======");
+    println!("results {:?}", results.clone());
+    println!("root {:?}", results_root);
+    println!("salt {:?}", salt);
+    println!("tally_commitment {:?}", tally_commitment);
     // Load the current tally commitment
     let current_tally_commitment = CURRENT_TALLY_COMMITMENT.load(deps.storage)?;
 

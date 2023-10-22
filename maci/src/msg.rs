@@ -17,6 +17,7 @@ pub struct InstantiateMsg {
     pub round_info: RoundInfo,
     pub voting_time: Option<VotingTime>,
     pub whitelist: Option<Whitelist>,
+    pub circuit_type: Uint256,
 }
 
 #[cw_serde]
