@@ -719,10 +719,6 @@ pub fn execute_process_message(
     let num_sign_ups = NUMSIGNUPS.load(deps.storage)?;
     let max_vote_options = MAX_VOTE_OPTIONS.load(deps.storage)?;
     let circuit_type = CIRCUITTYPE.load(deps.storage)?;
-    println!("================================");
-    println!("type: {:?}", circuit_type);
-    println!("type == 0: {:?}", circuit_type == Uint256::from_u128(0u128));
-    println!("type == 1: {:?}", circuit_type == Uint256::from_u128(1u128));
     if circuit_type == Uint256::from_u128(0u128) {
         // 1v1c
         input[0] = (num_sign_ups << 32) + max_vote_options; // packedVals
@@ -730,13 +726,6 @@ pub fn execute_process_message(
         // qv
         input[0] = (num_sign_ups << 32) + (circuit_type << 64) + max_vote_options;
         // packedVals
-        //
-
-        println!("-------- here");
-        println!("max_vote_options: {:?}", max_vote_options);
-        println!("num_sign_ups: {:?}", num_sign_ups);
-        println!("circuit_type: {:?}", circuit_type);
-        println!("packedVals: {:?}", input[0]);
     }
     // Load the coordinator's public key hash
     let coordinator_hash = COORDINATORHASH.load(deps.storage)?;
@@ -778,14 +767,7 @@ pub fn execute_process_message(
 
     // Compute the hash of the input values
     let input_hash = uint256_from_hex_string(&hash_256_uint256_list(&input)) % snark_scalar_field; // input hash
-    println!("input_0:  {:?}", input[0]);
-    println!("input_1:  {:?}", input[1]);
-    println!("input_2:  {:?}", input[2]);
-    println!("input_3:  {:?}", input[3]);
-    println!("input_4:  {:?}", input[4]);
-    println!("input_5:  {:?}", input[5]);
-    println!("hash_input:  {:?}", hash_256_uint256_list(&input));
-    println!("input_hash:  {:?}", input_hash);
+
     // Load the process verification keys
     let process_vkeys_str = PROCESS_VKEYS.load(deps.storage)?;
 
@@ -810,7 +792,6 @@ pub fn execute_process_message(
         &[Fr::from_str(&input_hash.to_string()).unwrap()],
     )
     .unwrap();
-    println!("=============== process verify {:?}", is_passed);
 
     // If the proof verification fails, return an error
     if !is_passed {
@@ -937,7 +918,6 @@ pub fn execute_process_tally(
     )
     .unwrap();
 
-    println!("=============== tally verify {:?}", is_passed);
     // If the proof verification fails, return an error
     if !is_passed {
         return Err(ContractError::InvalidProof {
@@ -951,16 +931,8 @@ pub fn execute_process_tally(
         .save(deps.storage, &new_tally_commitment)
         .unwrap();
 
-    println!("======================= process tally");
-    println!("processed_user_count {:?}", processed_user_count);
     // Update the count of processed users
     processed_user_count += batch_size;
-    println!("batch_size {:?}", batch_size);
-
-    println!(
-        "processed_user_count + batch_size {:?}",
-        processed_user_count
-    );
 
     PROCESSED_USER_COUNT
         .save(deps.storage, &processed_user_count)
@@ -992,9 +964,6 @@ fn execute_stop_tallying_period(
     let num_sign_ups = NUMSIGNUPS.load(deps.storage)?;
     let max_vote_options = MAX_VOTE_OPTIONS.load(deps.storage)?;
 
-    println!("========================== signup");
-    println!("signup: {:?}", num_sign_ups);
-    println!("processed_user_count: {:?}", processed_user_count);
     // Check that all users have been processed
     assert!(processed_user_count >= num_sign_ups);
 
@@ -1010,11 +979,7 @@ fn execute_stop_tallying_period(
 
     // Calculate the tally commitment
     let tally_commitment = hash2([results_root, salt]);
-    println!("-----------------------=======");
-    println!("results {:?}", results.clone());
-    println!("root {:?}", results_root);
-    println!("salt {:?}", salt);
-    println!("tally_commitment {:?}", tally_commitment);
+
     // Load the current tally commitment
     let current_tally_commitment = CURRENT_TALLY_COMMITMENT.load(deps.storage)?;
 

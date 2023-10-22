@@ -59,7 +59,13 @@ mod test {
         results: Vec<String>,
     }
 
-    // #[test]
+    #[derive(Debug, Serialize, Deserialize)]
+    #[serde(rename_all = "camelCase")]
+    struct UserPubkeyData {
+        pubkeys: Vec<Vec<String>>,
+    }
+
+    #[test]
     fn instantiate_with_no_voting_time_should_works() {
         let msg_file_path = "./src/test/msg_test.json";
 
@@ -125,11 +131,32 @@ mod test {
 
         let data: MsgData = serde_json::from_str(&msg_content).expect("Failed to parse JSON");
 
+        let result_file_path = "./src/test/result.json";
+        let mut result_file = fs::File::open(result_file_path).expect("Failed to open file");
+        let mut result_content = String::new();
+        result_file
+            .read_to_string(&mut result_content)
+            .expect("Failed to read file");
+
+        let result_data: ResultData =
+            serde_json::from_str(&result_content).expect("Failed to parse JSON");
+
+        let pubkey_file_path = "./src/test/user_pubkey.json";
+
+        let mut pubkey_file = fs::File::open(pubkey_file_path).expect("Failed to open file");
+        let mut pubkey_content = String::new();
+
+        pubkey_file
+            .read_to_string(&mut pubkey_content)
+            .expect("Failed to read file");
+        let pubkey_data: UserPubkeyData =
+            serde_json::from_str(&pubkey_content).expect("Failed to parse JSON");
+
         for i in 0..data.msgs.len() {
             if i < Uint256::from_u128(2u128).to_string().parse().unwrap() {
                 let pubkey = PubKey {
-                    x: uint256_from_decimal_string(&data.current_state_leaves[i][0]),
-                    y: uint256_from_decimal_string(&data.current_state_leaves[i][1]),
+                    x: uint256_from_decimal_string(&pubkey_data.pubkeys[i][0]),
+                    y: uint256_from_decimal_string(&pubkey_data.pubkeys[i][1]),
                 };
 
                 println!("---------- signup ---------- {:?}", i);
@@ -255,8 +282,8 @@ mod test {
 
         _ = contract.process_tally(&mut app, owner(), new_tally_commitment, tally_proof);
         println!("------ tally");
-        let results: Vec<Uint256> = tally_data
-            .current_results
+        let results: Vec<Uint256> = result_data
+            .results
             .iter()
             .map(|input| uint256_from_decimal_string(input))
             .collect();
@@ -316,6 +343,17 @@ mod test {
 
         let result_data: ResultData =
             serde_json::from_str(&result_content).expect("Failed to parse JSON");
+
+        let pubkey_file_path = "./src/test/user_pubkey.json";
+
+        let mut pubkey_file = fs::File::open(pubkey_file_path).expect("Failed to open file");
+        let mut pubkey_content = String::new();
+
+        pubkey_file
+            .read_to_string(&mut pubkey_content)
+            .expect("Failed to read file");
+        let pubkey_data: UserPubkeyData =
+            serde_json::from_str(&pubkey_content).expect("Failed to parse JSON");
 
         let mut app = App::default();
         let code_id = MaciCodeId::store_code(&mut app);
@@ -401,8 +439,8 @@ mod test {
         for i in 0..data.msgs.len() {
             if i < Uint256::from_u128(2u128).to_string().parse().unwrap() {
                 let pubkey = PubKey {
-                    x: uint256_from_decimal_string(&data.current_state_leaves[i][0]),
-                    y: uint256_from_decimal_string(&data.current_state_leaves[i][1]),
+                    x: uint256_from_decimal_string(&pubkey_data.pubkeys[i][0]),
+                    y: uint256_from_decimal_string(&pubkey_data.pubkeys[i][1]),
                 };
 
                 println!("---------- signup ---------- {:?}", i);
@@ -563,7 +601,7 @@ mod test {
         );
     }
 
-    // #[test]
+    #[test]
     fn instantiate_with_start_time_should_works() {
         let msg_file_path = "./src/test/msg_test.json";
 
@@ -575,6 +613,27 @@ mod test {
             .expect("Failed to read file");
 
         let data: MsgData = serde_json::from_str(&msg_content).expect("Failed to parse JSON");
+
+        let result_file_path = "./src/test/result.json";
+        let mut result_file = fs::File::open(result_file_path).expect("Failed to open file");
+        let mut result_content = String::new();
+        result_file
+            .read_to_string(&mut result_content)
+            .expect("Failed to read file");
+
+        let result_data: ResultData =
+            serde_json::from_str(&result_content).expect("Failed to parse JSON");
+
+        let pubkey_file_path = "./src/test/user_pubkey.json";
+
+        let mut pubkey_file = fs::File::open(pubkey_file_path).expect("Failed to open file");
+        let mut pubkey_content = String::new();
+
+        pubkey_file
+            .read_to_string(&mut pubkey_content)
+            .expect("Failed to read file");
+        let pubkey_data: UserPubkeyData =
+            serde_json::from_str(&pubkey_content).expect("Failed to parse JSON");
 
         let mut app = App::default();
         let code_id = MaciCodeId::store_code(&mut app);
@@ -632,8 +691,8 @@ mod test {
         for i in 0..data.msgs.len() {
             if i < Uint256::from_u128(2u128).to_string().parse().unwrap() {
                 let pubkey = PubKey {
-                    x: uint256_from_decimal_string(&data.current_state_leaves[i][0]),
-                    y: uint256_from_decimal_string(&data.current_state_leaves[i][1]),
+                    x: uint256_from_decimal_string(&pubkey_data.pubkeys[i][0]),
+                    y: uint256_from_decimal_string(&pubkey_data.pubkeys[i][1]),
                 };
 
                 println!("---------- signup ---------- {:?}", i);
@@ -752,8 +811,8 @@ mod test {
 
         _ = contract.process_tally(&mut app, owner(), new_tally_commitment, tally_proof);
 
-        let results: Vec<Uint256> = tally_data
-            .current_results
+        let results: Vec<Uint256> = result_data
+            .results
             .iter()
             .map(|input| uint256_from_decimal_string(input))
             .collect();
@@ -765,7 +824,7 @@ mod test {
         println!("all_result: {:?}", all_result);
     }
 
-    // #[test]
+    #[test]
     fn instantiate_with_end_time_should_works() {
         let msg_file_path = "./src/test/msg_test.json";
 
@@ -777,6 +836,27 @@ mod test {
             .expect("Failed to read file");
 
         let data: MsgData = serde_json::from_str(&msg_content).expect("Failed to parse JSON");
+
+        let result_file_path = "./src/test/result.json";
+        let mut result_file = fs::File::open(result_file_path).expect("Failed to open file");
+        let mut result_content = String::new();
+        result_file
+            .read_to_string(&mut result_content)
+            .expect("Failed to read file");
+
+        let result_data: ResultData =
+            serde_json::from_str(&result_content).expect("Failed to parse JSON");
+
+        let pubkey_file_path = "./src/test/user_pubkey.json";
+
+        let mut pubkey_file = fs::File::open(pubkey_file_path).expect("Failed to open file");
+        let mut pubkey_content = String::new();
+
+        pubkey_file
+            .read_to_string(&mut pubkey_content)
+            .expect("Failed to read file");
+        let pubkey_data: UserPubkeyData =
+            serde_json::from_str(&pubkey_content).expect("Failed to parse JSON");
 
         let mut app = App::default();
         let code_id = MaciCodeId::store_code(&mut app);
@@ -837,8 +917,8 @@ mod test {
         for i in 0..data.msgs.len() {
             if i < Uint256::from_u128(2u128).to_string().parse().unwrap() {
                 let pubkey = PubKey {
-                    x: uint256_from_decimal_string(&data.current_state_leaves[i][0]),
-                    y: uint256_from_decimal_string(&data.current_state_leaves[i][1]),
+                    x: uint256_from_decimal_string(&pubkey_data.pubkeys[i][0]),
+                    y: uint256_from_decimal_string(&pubkey_data.pubkeys[i][1]),
                 };
 
                 println!("---------- signup ---------- {:?}", i);
@@ -957,8 +1037,8 @@ mod test {
 
         _ = contract.process_tally(&mut app, owner(), new_tally_commitment, tally_proof);
 
-        let results: Vec<Uint256> = tally_data
-            .current_results
+        let results: Vec<Uint256> = result_data
+            .results
             .iter()
             .map(|input| uint256_from_decimal_string(input))
             .collect();
@@ -970,7 +1050,7 @@ mod test {
         println!("all_result: {:?}", all_result);
     }
 
-    // #[test]
+    #[test]
     fn instantiate_with_wrong_voting_time_error() {
         let mut app = App::default();
         let code_id = MaciCodeId::store_code(&mut app);
@@ -1087,7 +1167,7 @@ mod test {
         app.update_block(next_block);
     }
 
-    // #[test]
+    #[test]
     fn instantiate_with_voting_time_isqv_should_works() {
         let msg_file_path = "./src/test/qv_test/msg.json";
 
@@ -1109,6 +1189,17 @@ mod test {
 
         let result_data: ResultData =
             serde_json::from_str(&result_content).expect("Failed to parse JSON");
+
+        let pubkey_file_path = "./src/test/user_pubkey.json";
+
+        let mut pubkey_file = fs::File::open(pubkey_file_path).expect("Failed to open file");
+        let mut pubkey_content = String::new();
+
+        pubkey_file
+            .read_to_string(&mut pubkey_content)
+            .expect("Failed to read file");
+        let pubkey_data: UserPubkeyData =
+            serde_json::from_str(&pubkey_content).expect("Failed to parse JSON");
 
         let mut app = App::default();
         let code_id = MaciCodeId::store_code(&mut app);
@@ -1194,8 +1285,8 @@ mod test {
         for i in 0..data.msgs.len() {
             if i < Uint256::from_u128(2u128).to_string().parse().unwrap() {
                 let pubkey = PubKey {
-                    x: uint256_from_decimal_string(&data.current_state_leaves[i][0]),
-                    y: uint256_from_decimal_string(&data.current_state_leaves[i][1]),
+                    x: uint256_from_decimal_string(&pubkey_data.pubkeys[i][0]),
+                    y: uint256_from_decimal_string(&pubkey_data.pubkeys[i][1]),
                 };
 
                 println!("---------- signup ---------- {:?}", i);
@@ -1324,9 +1415,9 @@ mod test {
         let new_tally_commitment = uint256_from_decimal_string(&tally_data.new_tally_commitment);
 
         let tally_proof = ProofType {
-            a: "23e4c58a265d9c5c0c0b96f8882fa26b924c85719bc260873fb4d96a722254802f682da81d21a5ca6316fb7451fad4ed5282fcd01994e18b525dbbcd32fc3bec".to_string(),
-            b: "253a0a3c1fe6ad269a80049ba63dca0fbb8d3ec64bccddc0246dc0541808432d1b7f72c0beb4cd64db1f718ab74cff52b5e3776f1f94f88136c96792ad452e7c02a2007a46b9b231a4abc46bb1682e8993c1655c14e8d05c8e5adbc1f88a3e73292067d24e6802a365750347b4506490979a83ae9cade7e00eae06df09488ab9".to_string(),
-            c: "12a4d65323b9db119499574faeadfcfaac33890249a9919b859993fb96cba6382ecaeba6e50795170bbe5e545084b800faa20dc6fdcb8054b1b79886e683266f".to_string()
+            a: "2274e1f6b71fc2887c4f746ff384f00fd9d2b4f8ed1d59853af2cb891058624a2e73d79f02de60ee49604e972e9dae72e5a3f3b63b7b0bb6167d1d7365f3af0b".to_string(),
+            b: "147e97b696f2483f9be88419802de05a37c272328413907b1cadf61768e4abf604435ebd5462d1af60bee71de26d9a7259982f809f5edf3da7ecbb8c2b55dec40b403b2e4becd1587519488c8fcbf7e6b504dd68016e1ed48443ccced09d08c10a69014af748d7b2921449762eb7e870f0185dab186df6a5aeda4401e9a343cc".to_string(),
+            c: "100005547853768af099c27f658c8b44d52bb94117a235243dfb243f3687395e2d3634cdce0cbe115d8d497e2330a907f965e4d9080183b381fb4ff30f98f02a".to_string()
         };
 
         _ = contract.process_tally(&mut app, owner(), new_tally_commitment, tally_proof);
