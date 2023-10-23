@@ -141,4 +141,7 @@ pub enum QueryMsg {
 
     #[returns(Uint128)]
     QueryTotalFeeGrant {},
+
+    #[returns(Uint256)]
+    QueryCircuitType {},
 }

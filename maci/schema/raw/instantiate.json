@@ -3,6 +3,7 @@
   "title": "InstantiateMsg",
   "type": "object",
   "required": [
+    "circuit_type",
     "coordinator",
     "max_vote_options",
     "parameters",
@@ -12,6 +13,9 @@
     "tally_vkey"
   ],
   "properties": {
+    "circuit_type": {
+      "$ref": "#/definitions/Uint256"
+    },
     "coordinator": {
       "$ref": "#/definitions/PubKey"
     },

@@ -8,6 +8,7 @@ export type Uint256 = string;
 export type Timestamp = Uint64;
 export type Uint64 = string;
 export interface InstantiateMsg {
+  circuit_type: Uint256;
   coordinator: PubKey;
   max_vote_options: Uint256;
   parameters: MaciParameters;
@@ -168,6 +169,8 @@ export type QueryMsg = {
   max_vote_options: {};
 } | {
   query_total_fee_grant: {};
+} | {
+  query_circuit_type: {};
 };
 export type Addr = string;
 export type PeriodStatus = "pending" | "voting" | "processing" | "tallying" | "ended";

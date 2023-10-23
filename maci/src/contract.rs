@@ -1401,6 +1401,9 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::QueryTotalFeeGrant {} => {
             to_binary::<Uint128>(&FEEGRANTS.may_load(deps.storage)?.unwrap_or_default())
         }
+        QueryMsg::QueryCircuitType {} => {
+            to_binary::<Uint256>(&CIRCUITTYPE.may_load(deps.storage)?.unwrap_or_default())
+        }
     }
 }
 
