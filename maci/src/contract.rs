@@ -720,7 +720,7 @@ pub fn execute_process_message(
     let max_vote_options = MAX_VOTE_OPTIONS.load(deps.storage)?;
     let circuit_type = CIRCUITTYPE.load(deps.storage)?;
     if circuit_type == Uint256::from_u128(0u128) {
-        // 1v1c
+        // 1p1v
         input[0] = (num_sign_ups << 32) + max_vote_options; // packedVals
     } else if circuit_type == Uint256::from_u128(1u128) {
         // qv
