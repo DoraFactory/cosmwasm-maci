@@ -3,7 +3,7 @@ use crate::msg::{ExecuteMsg, InstantiateMsg, ProofType, QueryMsg};
 use crate::parser::{parse_proof, parse_vkey};
 use crate::state::{
     Admin, MessageData, Period, PeriodStatus, ProofStr, PubKey, RoundInfo, StateLeaf, VkeyStr,
-    VotingTime, Whitelist, ADMIN, COORDINATORHASH, CURRENT_STATE_COMMITMENT,
+    VotingTime, Whitelist, ADMIN, CIRCUITTYPE, COORDINATORHASH, CURRENT_STATE_COMMITMENT,
     CURRENT_TALLY_COMMITMENT, FEEGRANTS, LEAF_IDX_0, MACIPARAMETERS, MAX_LEAVES_COUNT,
     MAX_VOTE_OPTIONS, MSG_CHAIN_LENGTH, MSG_HASHES, NODES, NUMSIGNUPS, PERIOD, PROCESSED_MSG_COUNT,
     PROCESSED_USER_COUNT, PROCESS_VKEYS, QTR_LIB, RESULT, ROUNDINFO, STATEIDXINC, TALLY_VKEYS,
@@ -139,6 +139,7 @@ pub fn instantiate(
     }
     VOTEOPTIONMAP.save(deps.storage, &vote_option_map)?;
     ROUNDINFO.save(deps.storage, &msg.round_info)?;
+    CIRCUITTYPE.save(deps.storage, &msg.circuit_type)?;
 
     match msg.whitelist {
         Some(content) => WHITELIST.save(deps.storage, &content)?,
@@ -717,9 +718,15 @@ pub fn execute_process_message(
 
     let num_sign_ups = NUMSIGNUPS.load(deps.storage)?;
     let max_vote_options = MAX_VOTE_OPTIONS.load(deps.storage)?;
-
-    input[0] = (num_sign_ups << 32) + max_vote_options; // packedVals
-
+    let circuit_type = CIRCUITTYPE.load(deps.storage)?;
+    if circuit_type == Uint256::from_u128(0u128) {
+        // 1v1c
+        input[0] = (num_sign_ups << 32) + max_vote_options; // packedVals
+    } else if circuit_type == Uint256::from_u128(1u128) {
+        // qv
+        input[0] = (num_sign_ups << 32) + (circuit_type << 64) + max_vote_options;
+        // packedVals
+    }
     // Load the coordinator's public key hash
     let coordinator_hash = COORDINATORHASH.load(deps.storage)?;
     input[1] = coordinator_hash; // coordPubKeyHash
@@ -792,7 +799,6 @@ pub fn execute_process_message(
             step: String::from("Process"),
         });
     }
-
     // Proof verify success
     // Update the current state commitment
     CURRENT_STATE_COMMITMENT.save(deps.storage, &new_state_commitment)?;
@@ -927,6 +933,7 @@ pub fn execute_process_tally(
 
     // Update the count of processed users
     processed_user_count += batch_size;
+
     PROCESSED_USER_COUNT
         .save(deps.storage, &processed_user_count)
         .unwrap();

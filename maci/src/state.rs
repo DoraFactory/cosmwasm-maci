@@ -264,6 +264,8 @@ pub const WHITELIST: Item<Whitelist> = Item::new("whitelist");
 
 pub const FEEGRANTS: Item<Uint128> = Item::new("fee_grants");
 
+pub const CIRCUITTYPE: Item<Uint256> = Item::new("circuit_type");
+
 #[cfg(test)]
 mod tests {
     use super::*;
