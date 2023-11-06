@@ -1,12 +1,13 @@
 #[cfg(test)]
 mod test {
-    use cosmwasm_std::{Addr, Uint256};
+    use cosmwasm_std::{coins, Addr, Uint128, Uint256};
+
     use cw_multi_test::{next_block, App};
 
     use crate::error::ContractError;
     use crate::msg::ProofType;
     use crate::multitest::{owner, uint256_from_decimal_string, user1, user2, MaciCodeId};
-    use crate::state::{Message, Period, PeriodStatus, PubKey, RoundInfo};
+    use crate::state::{MessageData, Period, PeriodStatus, PubKey, RoundInfo};
     use serde::{Deserialize, Serialize};
     use serde_json;
     use std::fs;
@@ -50,6 +51,18 @@ mod test {
         current_results: Vec<String>,
         current_results_root_salt: String,
         new_results_root_salt: String,
+    }
+
+    #[derive(Debug, Serialize, Deserialize)]
+    #[serde(rename_all = "camelCase")]
+    struct ResultData {
+        results: Vec<String>,
+    }
+
+    #[derive(Debug, Serialize, Deserialize)]
+    #[serde(rename_all = "camelCase")]
+    struct UserPubkeyData {
+        pubkeys: Vec<Vec<String>>,
     }
 
     #[test]
@@ -118,18 +131,39 @@ mod test {
 
         let data: MsgData = serde_json::from_str(&msg_content).expect("Failed to parse JSON");
 
+        let result_file_path = "./src/test/result.json";
+        let mut result_file = fs::File::open(result_file_path).expect("Failed to open file");
+        let mut result_content = String::new();
+        result_file
+            .read_to_string(&mut result_content)
+            .expect("Failed to read file");
+
+        let result_data: ResultData =
+            serde_json::from_str(&result_content).expect("Failed to parse JSON");
+
+        let pubkey_file_path = "./src/test/user_pubkey.json";
+
+        let mut pubkey_file = fs::File::open(pubkey_file_path).expect("Failed to open file");
+        let mut pubkey_content = String::new();
+
+        pubkey_file
+            .read_to_string(&mut pubkey_content)
+            .expect("Failed to read file");
+        let pubkey_data: UserPubkeyData =
+            serde_json::from_str(&pubkey_content).expect("Failed to parse JSON");
+
         for i in 0..data.msgs.len() {
             if i < Uint256::from_u128(2u128).to_string().parse().unwrap() {
                 let pubkey = PubKey {
-                    x: uint256_from_decimal_string(&data.current_state_leaves[i][0]),
-                    y: uint256_from_decimal_string(&data.current_state_leaves[i][1]),
+                    x: uint256_from_decimal_string(&pubkey_data.pubkeys[i][0]),
+                    y: uint256_from_decimal_string(&pubkey_data.pubkeys[i][1]),
                 };
 
                 println!("---------- signup ---------- {:?}", i);
                 let _ = contract.sign_up(&mut app, Addr::unchecked(i.to_string()), pubkey);
                 app.update_block(next_block);
             }
-            let message = Message {
+            let message = MessageData {
                 data: [
                     uint256_from_decimal_string(&data.msgs[i][0]),
                     uint256_from_decimal_string(&data.msgs[i][1]),
@@ -213,9 +247,9 @@ mod test {
 
         let new_state_commitment = uint256_from_decimal_string(&data.new_state_commitment);
         let proof = ProofType {
-                a: "2e2f3ec86864aaf9ff5936b7aa7c50797eb7b70d4d73fb2d97fdc8e9c0e03583149b169f45d10395042c3f7b44d3fbc4e997b0ac0549b474e19eadeca9a4f141".to_string(),
-                b: "213a21f9042d926a01116583e90a956264e368fabdc26e49638d7faaa09ee9f20ff0eb1a87dd3fc412cedb749823d2f97c0247ae4df89003e0dacd5bc195c990107b7a645d618143c91d78b6a456c71c690f469ea5b0b808e89a3228f92147b2108008e3de0fa8b1ff576cfc92047be60bd7a43e76d1e651bba1b494d58c6170".to_string(),
-                c: "2385dc34f583a5d34bea5f9083e4788326b7b07054dc85a414fd07fba31c1e76068f86ff1d85f70c55bb4737d1f77744ee73c41d6d4cbc727b624e09ef5fffa0".to_string()
+                a: "29c214f2e1b0b10ebdb52c629714526764355daa96aa077cb249db04586e705b0c4dcf9b653d561cec0988842f8604c7fc3b9742bf27864637ac6b14b675644c".to_string(),
+                b: "21c903a347fa0c9640d749c974f63317d4597f194d0df896c4150a2e970484790792a071af0a7e50ada1c2dc0e5eb443e3c4661c036a9705cdccfcc5d3f0d3e617fc7d5525fe41a47171448b17bb31f90cceca92de9416268c2e55f37f76e2b8248c8231d33675174cdafe8ad04b8b17a42894f5e047d2984519be75312ae4ac".to_string(),
+                c: "0367155150920842a79a007ce6a311e3f970a45548354fec69216eea28661a0c10e1fa54022a7f4b078e7972f76ac91fa446447f0b2b4c4dc539f7c3f9c546da".to_string()
             };
         println!("process_message proof {:?}", proof);
         println!(
@@ -241,15 +275,15 @@ mod test {
         let new_tally_commitment = uint256_from_decimal_string(&tally_data.new_tally_commitment);
 
         let tally_proof = ProofType {
-                a: "0bae3bc2485c2cd6a3bfdf16e7d8a5b93710c3bdcf9410d725aae938ccbebca12b1021be36b6c1d96db410d52369a0e51249da0a1b41497af53bb227ae1e674e".to_string(),
-                b: "1ff4ed89d5aefdca176419a76a82d2359f334d9bc479daa6ca11201076745749220fc921f3e77889779969467456beec42cdb5c874e3961a7a0f29b75899417929d1f4d3bb2ca8cfa15b1a1c893f0daa9304131f7512841174b2d2deeb30462e2f8eed8ab95da0c502c740216f89553f1b37ee2d34110c04363a34093337044b".to_string(),
-                c: "0c054469563868b8878f72628cb3db437137e3d39fa8b74e344e573fedef8fcb1794cd30a661746438034f71e49349ac16357ebd8c1afc8be7585f4aa5366534".to_string()
-            };
+            a: "136119496feea080d3b191f8f872ee471642f5e9c3c55f3dfd38b5510d8c3ea3188944f0866a4ddb3ee0543a0b57b80ce5cfadbdbbaae1e3b8c70f7ac05718de".to_string(),
+            b: "171e57bd50b3cc28db893095de6ee56336847890bb46563bceac48fc5d8d1b66079bd76a71d5b90a97cbe34c6fdf7277c2aee5292e82d7f62407d019cc74be3b1865535414327686604c0bda663a375411ed8e89619e61c2d603ee3ef678eb602d4e3d5106dba466709c76a7e204c5557fbba126b7b56925c4927e01cbbe10d1".to_string(),
+            c: "111e06873463cd8749a1bd8adc83d252fe79097089777668e40007accdb7cdb406de890a7d29c08a90ed207a140b0ad142f558754708b86c3ca61444143eb40d".to_string()
+        };
 
         _ = contract.process_tally(&mut app, owner(), new_tally_commitment, tally_proof);
         println!("------ tally");
-        let results: Vec<Uint256> = tally_data
-            .current_results
+        let results: Vec<Uint256> = result_data
+            .results
             .iter()
             .map(|input| uint256_from_decimal_string(input))
             .collect();
@@ -299,6 +333,27 @@ mod test {
             .expect("Failed to read file");
 
         let data: MsgData = serde_json::from_str(&msg_content).expect("Failed to parse JSON");
+
+        let result_file_path = "./src/test/result.json";
+        let mut result_file = fs::File::open(result_file_path).expect("Failed to open file");
+        let mut result_content = String::new();
+        result_file
+            .read_to_string(&mut result_content)
+            .expect("Failed to read file");
+
+        let result_data: ResultData =
+            serde_json::from_str(&result_content).expect("Failed to parse JSON");
+
+        let pubkey_file_path = "./src/test/user_pubkey.json";
+
+        let mut pubkey_file = fs::File::open(pubkey_file_path).expect("Failed to open file");
+        let mut pubkey_content = String::new();
+
+        pubkey_file
+            .read_to_string(&mut pubkey_content)
+            .expect("Failed to read file");
+        let pubkey_data: UserPubkeyData =
+            serde_json::from_str(&pubkey_content).expect("Failed to parse JSON");
 
         let mut app = App::default();
         let code_id = MaciCodeId::store_code(&mut app);
@@ -384,14 +439,14 @@ mod test {
         for i in 0..data.msgs.len() {
             if i < Uint256::from_u128(2u128).to_string().parse().unwrap() {
                 let pubkey = PubKey {
-                    x: uint256_from_decimal_string(&data.current_state_leaves[i][0]),
-                    y: uint256_from_decimal_string(&data.current_state_leaves[i][1]),
+                    x: uint256_from_decimal_string(&pubkey_data.pubkeys[i][0]),
+                    y: uint256_from_decimal_string(&pubkey_data.pubkeys[i][1]),
                 };
 
                 println!("---------- signup ---------- {:?}", i);
                 let _ = contract.sign_up(&mut app, Addr::unchecked(i.to_string()), pubkey);
             }
-            let message = Message {
+            let message = MessageData {
                 data: [
                     uint256_from_decimal_string(&data.msgs[i][0]),
                     uint256_from_decimal_string(&data.msgs[i][1]),
@@ -473,10 +528,10 @@ mod test {
 
         let new_state_commitment = uint256_from_decimal_string(&data.new_state_commitment);
         let proof = ProofType {
-                    a: "2e2f3ec86864aaf9ff5936b7aa7c50797eb7b70d4d73fb2d97fdc8e9c0e03583149b169f45d10395042c3f7b44d3fbc4e997b0ac0549b474e19eadeca9a4f141".to_string(),
-                    b: "213a21f9042d926a01116583e90a956264e368fabdc26e49638d7faaa09ee9f20ff0eb1a87dd3fc412cedb749823d2f97c0247ae4df89003e0dacd5bc195c990107b7a645d618143c91d78b6a456c71c690f469ea5b0b808e89a3228f92147b2108008e3de0fa8b1ff576cfc92047be60bd7a43e76d1e651bba1b494d58c6170".to_string(),
-                    c: "2385dc34f583a5d34bea5f9083e4788326b7b07054dc85a414fd07fba31c1e76068f86ff1d85f70c55bb4737d1f77744ee73c41d6d4cbc727b624e09ef5fffa0".to_string()
-                };
+                a: "29c214f2e1b0b10ebdb52c629714526764355daa96aa077cb249db04586e705b0c4dcf9b653d561cec0988842f8604c7fc3b9742bf27864637ac6b14b675644c".to_string(),
+                b: "21c903a347fa0c9640d749c974f63317d4597f194d0df896c4150a2e970484790792a071af0a7e50ada1c2dc0e5eb443e3c4661c036a9705cdccfcc5d3f0d3e617fc7d5525fe41a47171448b17bb31f90cceca92de9416268c2e55f37f76e2b8248c8231d33675174cdafe8ad04b8b17a42894f5e047d2984519be75312ae4ac".to_string(),
+                c: "0367155150920842a79a007ce6a311e3f970a45548354fec69216eea28661a0c10e1fa54022a7f4b078e7972f76ac91fa446447f0b2b4c4dc539f7c3f9c546da".to_string()
+            };
         println!("process_message proof {:?}", proof);
         println!(
             "process_message new state commitment {:?}",
@@ -514,15 +569,15 @@ mod test {
         let new_tally_commitment = uint256_from_decimal_string(&tally_data.new_tally_commitment);
 
         let tally_proof = ProofType {
-                    a: "0bae3bc2485c2cd6a3bfdf16e7d8a5b93710c3bdcf9410d725aae938ccbebca12b1021be36b6c1d96db410d52369a0e51249da0a1b41497af53bb227ae1e674e".to_string(),
-                    b: "1ff4ed89d5aefdca176419a76a82d2359f334d9bc479daa6ca11201076745749220fc921f3e77889779969467456beec42cdb5c874e3961a7a0f29b75899417929d1f4d3bb2ca8cfa15b1a1c893f0daa9304131f7512841174b2d2deeb30462e2f8eed8ab95da0c502c740216f89553f1b37ee2d34110c04363a34093337044b".to_string(),
-                    c: "0c054469563868b8878f72628cb3db437137e3d39fa8b74e344e573fedef8fcb1794cd30a661746438034f71e49349ac16357ebd8c1afc8be7585f4aa5366534".to_string()
-                };
+            a: "136119496feea080d3b191f8f872ee471642f5e9c3c55f3dfd38b5510d8c3ea3188944f0866a4ddb3ee0543a0b57b80ce5cfadbdbbaae1e3b8c70f7ac05718de".to_string(),
+            b: "171e57bd50b3cc28db893095de6ee56336847890bb46563bceac48fc5d8d1b66079bd76a71d5b90a97cbe34c6fdf7277c2aee5292e82d7f62407d019cc74be3b1865535414327686604c0bda663a375411ed8e89619e61c2d603ee3ef678eb602d4e3d5106dba466709c76a7e204c5557fbba126b7b56925c4927e01cbbe10d1".to_string(),
+            c: "111e06873463cd8749a1bd8adc83d252fe79097089777668e40007accdb7cdb406de890a7d29c08a90ed207a140b0ad142f558754708b86c3ca61444143eb40d".to_string()
+        };
 
         _ = contract.process_tally(&mut app, owner(), new_tally_commitment, tally_proof);
 
-        let results: Vec<Uint256> = tally_data
-            .current_results
+        let results: Vec<Uint256> = result_data
+            .results
             .iter()
             .map(|input| uint256_from_decimal_string(input))
             .collect();
@@ -558,6 +613,27 @@ mod test {
             .expect("Failed to read file");
 
         let data: MsgData = serde_json::from_str(&msg_content).expect("Failed to parse JSON");
+
+        let result_file_path = "./src/test/result.json";
+        let mut result_file = fs::File::open(result_file_path).expect("Failed to open file");
+        let mut result_content = String::new();
+        result_file
+            .read_to_string(&mut result_content)
+            .expect("Failed to read file");
+
+        let result_data: ResultData =
+            serde_json::from_str(&result_content).expect("Failed to parse JSON");
+
+        let pubkey_file_path = "./src/test/user_pubkey.json";
+
+        let mut pubkey_file = fs::File::open(pubkey_file_path).expect("Failed to open file");
+        let mut pubkey_content = String::new();
+
+        pubkey_file
+            .read_to_string(&mut pubkey_content)
+            .expect("Failed to read file");
+        let pubkey_data: UserPubkeyData =
+            serde_json::from_str(&pubkey_content).expect("Failed to parse JSON");
 
         let mut app = App::default();
         let code_id = MaciCodeId::store_code(&mut app);
@@ -615,14 +691,14 @@ mod test {
         for i in 0..data.msgs.len() {
             if i < Uint256::from_u128(2u128).to_string().parse().unwrap() {
                 let pubkey = PubKey {
-                    x: uint256_from_decimal_string(&data.current_state_leaves[i][0]),
-                    y: uint256_from_decimal_string(&data.current_state_leaves[i][1]),
+                    x: uint256_from_decimal_string(&pubkey_data.pubkeys[i][0]),
+                    y: uint256_from_decimal_string(&pubkey_data.pubkeys[i][1]),
                 };
 
                 println!("---------- signup ---------- {:?}", i);
                 let _ = contract.sign_up(&mut app, Addr::unchecked(i.to_string()), pubkey);
             }
-            let message = Message {
+            let message = MessageData {
                 data: [
                     uint256_from_decimal_string(&data.msgs[i][0]),
                     uint256_from_decimal_string(&data.msgs[i][1]),
@@ -699,10 +775,10 @@ mod test {
 
         let new_state_commitment = uint256_from_decimal_string(&data.new_state_commitment);
         let proof = ProofType {
-                        a: "2e2f3ec86864aaf9ff5936b7aa7c50797eb7b70d4d73fb2d97fdc8e9c0e03583149b169f45d10395042c3f7b44d3fbc4e997b0ac0549b474e19eadeca9a4f141".to_string(),
-                        b: "213a21f9042d926a01116583e90a956264e368fabdc26e49638d7faaa09ee9f20ff0eb1a87dd3fc412cedb749823d2f97c0247ae4df89003e0dacd5bc195c990107b7a645d618143c91d78b6a456c71c690f469ea5b0b808e89a3228f92147b2108008e3de0fa8b1ff576cfc92047be60bd7a43e76d1e651bba1b494d58c6170".to_string(),
-                        c: "2385dc34f583a5d34bea5f9083e4788326b7b07054dc85a414fd07fba31c1e76068f86ff1d85f70c55bb4737d1f77744ee73c41d6d4cbc727b624e09ef5fffa0".to_string()
-                    };
+                a: "29c214f2e1b0b10ebdb52c629714526764355daa96aa077cb249db04586e705b0c4dcf9b653d561cec0988842f8604c7fc3b9742bf27864637ac6b14b675644c".to_string(),
+                b: "21c903a347fa0c9640d749c974f63317d4597f194d0df896c4150a2e970484790792a071af0a7e50ada1c2dc0e5eb443e3c4661c036a9705cdccfcc5d3f0d3e617fc7d5525fe41a47171448b17bb31f90cceca92de9416268c2e55f37f76e2b8248c8231d33675174cdafe8ad04b8b17a42894f5e047d2984519be75312ae4ac".to_string(),
+                c: "0367155150920842a79a007ce6a311e3f970a45548354fec69216eea28661a0c10e1fa54022a7f4b078e7972f76ac91fa446447f0b2b4c4dc539f7c3f9c546da".to_string()
+            };
         println!("process_message proof {:?}", proof);
         println!(
             "process_message new state commitment {:?}",
@@ -728,15 +804,15 @@ mod test {
         let new_tally_commitment = uint256_from_decimal_string(&tally_data.new_tally_commitment);
 
         let tally_proof = ProofType {
-                        a: "0bae3bc2485c2cd6a3bfdf16e7d8a5b93710c3bdcf9410d725aae938ccbebca12b1021be36b6c1d96db410d52369a0e51249da0a1b41497af53bb227ae1e674e".to_string(),
-                        b: "1ff4ed89d5aefdca176419a76a82d2359f334d9bc479daa6ca11201076745749220fc921f3e77889779969467456beec42cdb5c874e3961a7a0f29b75899417929d1f4d3bb2ca8cfa15b1a1c893f0daa9304131f7512841174b2d2deeb30462e2f8eed8ab95da0c502c740216f89553f1b37ee2d34110c04363a34093337044b".to_string(),
-                        c: "0c054469563868b8878f72628cb3db437137e3d39fa8b74e344e573fedef8fcb1794cd30a661746438034f71e49349ac16357ebd8c1afc8be7585f4aa5366534".to_string()
-                    };
+            a: "136119496feea080d3b191f8f872ee471642f5e9c3c55f3dfd38b5510d8c3ea3188944f0866a4ddb3ee0543a0b57b80ce5cfadbdbbaae1e3b8c70f7ac05718de".to_string(),
+            b: "171e57bd50b3cc28db893095de6ee56336847890bb46563bceac48fc5d8d1b66079bd76a71d5b90a97cbe34c6fdf7277c2aee5292e82d7f62407d019cc74be3b1865535414327686604c0bda663a375411ed8e89619e61c2d603ee3ef678eb602d4e3d5106dba466709c76a7e204c5557fbba126b7b56925c4927e01cbbe10d1".to_string(),
+            c: "111e06873463cd8749a1bd8adc83d252fe79097089777668e40007accdb7cdb406de890a7d29c08a90ed207a140b0ad142f558754708b86c3ca61444143eb40d".to_string()
+        };
 
         _ = contract.process_tally(&mut app, owner(), new_tally_commitment, tally_proof);
 
-        let results: Vec<Uint256> = tally_data
-            .current_results
+        let results: Vec<Uint256> = result_data
+            .results
             .iter()
             .map(|input| uint256_from_decimal_string(input))
             .collect();
@@ -760,6 +836,27 @@ mod test {
             .expect("Failed to read file");
 
         let data: MsgData = serde_json::from_str(&msg_content).expect("Failed to parse JSON");
+
+        let result_file_path = "./src/test/result.json";
+        let mut result_file = fs::File::open(result_file_path).expect("Failed to open file");
+        let mut result_content = String::new();
+        result_file
+            .read_to_string(&mut result_content)
+            .expect("Failed to read file");
+
+        let result_data: ResultData =
+            serde_json::from_str(&result_content).expect("Failed to parse JSON");
+
+        let pubkey_file_path = "./src/test/user_pubkey.json";
+
+        let mut pubkey_file = fs::File::open(pubkey_file_path).expect("Failed to open file");
+        let mut pubkey_content = String::new();
+
+        pubkey_file
+            .read_to_string(&mut pubkey_content)
+            .expect("Failed to read file");
+        let pubkey_data: UserPubkeyData =
+            serde_json::from_str(&pubkey_content).expect("Failed to parse JSON");
 
         let mut app = App::default();
         let code_id = MaciCodeId::store_code(&mut app);
@@ -820,14 +917,14 @@ mod test {
         for i in 0..data.msgs.len() {
             if i < Uint256::from_u128(2u128).to_string().parse().unwrap() {
                 let pubkey = PubKey {
-                    x: uint256_from_decimal_string(&data.current_state_leaves[i][0]),
-                    y: uint256_from_decimal_string(&data.current_state_leaves[i][1]),
+                    x: uint256_from_decimal_string(&pubkey_data.pubkeys[i][0]),
+                    y: uint256_from_decimal_string(&pubkey_data.pubkeys[i][1]),
                 };
 
                 println!("---------- signup ---------- {:?}", i);
                 let _ = contract.sign_up(&mut app, Addr::unchecked(i.to_string()), pubkey);
             }
-            let message = Message {
+            let message = MessageData {
                 data: [
                     uint256_from_decimal_string(&data.msgs[i][0]),
                     uint256_from_decimal_string(&data.msgs[i][1]),
@@ -904,10 +1001,10 @@ mod test {
 
         let new_state_commitment = uint256_from_decimal_string(&data.new_state_commitment);
         let proof = ProofType {
-                            a: "2e2f3ec86864aaf9ff5936b7aa7c50797eb7b70d4d73fb2d97fdc8e9c0e03583149b169f45d10395042c3f7b44d3fbc4e997b0ac0549b474e19eadeca9a4f141".to_string(),
-                            b: "213a21f9042d926a01116583e90a956264e368fabdc26e49638d7faaa09ee9f20ff0eb1a87dd3fc412cedb749823d2f97c0247ae4df89003e0dacd5bc195c990107b7a645d618143c91d78b6a456c71c690f469ea5b0b808e89a3228f92147b2108008e3de0fa8b1ff576cfc92047be60bd7a43e76d1e651bba1b494d58c6170".to_string(),
-                            c: "2385dc34f583a5d34bea5f9083e4788326b7b07054dc85a414fd07fba31c1e76068f86ff1d85f70c55bb4737d1f77744ee73c41d6d4cbc727b624e09ef5fffa0".to_string()
-                        };
+                a: "29c214f2e1b0b10ebdb52c629714526764355daa96aa077cb249db04586e705b0c4dcf9b653d561cec0988842f8604c7fc3b9742bf27864637ac6b14b675644c".to_string(),
+                b: "21c903a347fa0c9640d749c974f63317d4597f194d0df896c4150a2e970484790792a071af0a7e50ada1c2dc0e5eb443e3c4661c036a9705cdccfcc5d3f0d3e617fc7d5525fe41a47171448b17bb31f90cceca92de9416268c2e55f37f76e2b8248c8231d33675174cdafe8ad04b8b17a42894f5e047d2984519be75312ae4ac".to_string(),
+                c: "0367155150920842a79a007ce6a311e3f970a45548354fec69216eea28661a0c10e1fa54022a7f4b078e7972f76ac91fa446447f0b2b4c4dc539f7c3f9c546da".to_string()
+            };
         println!("process_message proof {:?}", proof);
         println!(
             "process_message new state commitment {:?}",
@@ -933,15 +1030,15 @@ mod test {
         let new_tally_commitment = uint256_from_decimal_string(&tally_data.new_tally_commitment);
 
         let tally_proof = ProofType {
-                            a: "0bae3bc2485c2cd6a3bfdf16e7d8a5b93710c3bdcf9410d725aae938ccbebca12b1021be36b6c1d96db410d52369a0e51249da0a1b41497af53bb227ae1e674e".to_string(),
-                            b: "1ff4ed89d5aefdca176419a76a82d2359f334d9bc479daa6ca11201076745749220fc921f3e77889779969467456beec42cdb5c874e3961a7a0f29b75899417929d1f4d3bb2ca8cfa15b1a1c893f0daa9304131f7512841174b2d2deeb30462e2f8eed8ab95da0c502c740216f89553f1b37ee2d34110c04363a34093337044b".to_string(),
-                            c: "0c054469563868b8878f72628cb3db437137e3d39fa8b74e344e573fedef8fcb1794cd30a661746438034f71e49349ac16357ebd8c1afc8be7585f4aa5366534".to_string()
-                        };
+            a: "136119496feea080d3b191f8f872ee471642f5e9c3c55f3dfd38b5510d8c3ea3188944f0866a4ddb3ee0543a0b57b80ce5cfadbdbbaae1e3b8c70f7ac05718de".to_string(),
+            b: "171e57bd50b3cc28db893095de6ee56336847890bb46563bceac48fc5d8d1b66079bd76a71d5b90a97cbe34c6fdf7277c2aee5292e82d7f62407d019cc74be3b1865535414327686604c0bda663a375411ed8e89619e61c2d603ee3ef678eb602d4e3d5106dba466709c76a7e204c5557fbba126b7b56925c4927e01cbbe10d1".to_string(),
+            c: "111e06873463cd8749a1bd8adc83d252fe79097089777668e40007accdb7cdb406de890a7d29c08a90ed207a140b0ad142f558754708b86c3ca61444143eb40d".to_string()
+        };
 
         _ = contract.process_tally(&mut app, owner(), new_tally_commitment, tally_proof);
 
-        let results: Vec<Uint256> = tally_data
-            .current_results
+        let results: Vec<Uint256> = result_data
+            .results
             .iter()
             .map(|input| uint256_from_decimal_string(input))
             .collect();
@@ -965,5 +1062,388 @@ mod test {
         // let start_voting_error = contract.start_voting(&mut app, owner()).unwrap_err();
 
         assert_eq!(ContractError::WrongTimeSet {}, contract.downcast().unwrap());
+    }
+
+    // #[test]
+    fn instantiate_with_voting_time_and_test_grant_should_works() {
+        let admin_coin_amount = 50u128;
+        let bond_coin_amount = 10u128;
+        const DORA_DEMON: &str = "peaka";
+
+        let msg_file_path = "./src/test/msg_test.json";
+
+        let mut msg_file = fs::File::open(msg_file_path).expect("Failed to open file");
+        let mut msg_content = String::new();
+
+        msg_file
+            .read_to_string(&mut msg_content)
+            .expect("Failed to read file");
+
+        let data: MsgData = serde_json::from_str(&msg_content).expect("Failed to parse JSON");
+
+        let mut app = App::new(|router, _api, storage| {
+            router
+                .bank
+                .init_balance(storage, &owner(), coins(admin_coin_amount, DORA_DEMON))
+                .unwrap();
+        });
+        let code_id = MaciCodeId::store_code(&mut app);
+        let label = "Group";
+        let contract = code_id
+            .instantiate_with_voting_time_and_no_whitelist(&mut app, owner(), label)
+            .unwrap();
+
+        _ = contract.set_vote_option_map(&mut app, owner());
+        let new_vote_option_map = contract.vote_option_map(&app).unwrap();
+        assert_eq!(
+            new_vote_option_map,
+            vec![
+                String::from("did_not_vote"),
+                String::from("yes"),
+                String::from("no"),
+                String::from("no_with_veto"),
+                String::from("abstain"),
+            ]
+        );
+        _ = contract.set_whitelist(&mut app, owner());
+
+        let error_grant_in_pending = contract
+            .grant(&mut app, owner(), &coins(bond_coin_amount, DORA_DEMON))
+            .unwrap_err();
+        assert_eq!(
+            ContractError::PeriodError {},
+            error_grant_in_pending.downcast().unwrap()
+        );
+
+        _ = contract.set_vote_option_map(&mut app, owner());
+
+        app.update_block(next_block); // Start Voting
+
+        let a = contract.grant(&mut app, owner(), &coins(bond_coin_amount, DORA_DEMON));
+        println!("grant res: {:?}", a);
+        let feegrant_amount = contract.query_total_feegrant(&app).unwrap();
+        assert_eq!(Uint128::from(10000000000000u128), feegrant_amount);
+
+        for i in 0..data.msgs.len() {
+            if i < Uint256::from_u128(2u128).to_string().parse().unwrap() {
+                let pubkey = PubKey {
+                    x: uint256_from_decimal_string(&data.current_state_leaves[i][0]),
+                    y: uint256_from_decimal_string(&data.current_state_leaves[i][1]),
+                };
+
+                println!("---------- signup ---------- {:?}", i);
+                let _ = contract.sign_up(&mut app, Addr::unchecked(i.to_string()), pubkey);
+            }
+            let message = MessageData {
+                data: [
+                    uint256_from_decimal_string(&data.msgs[i][0]),
+                    uint256_from_decimal_string(&data.msgs[i][1]),
+                    uint256_from_decimal_string(&data.msgs[i][2]),
+                    uint256_from_decimal_string(&data.msgs[i][3]),
+                    uint256_from_decimal_string(&data.msgs[i][4]),
+                    uint256_from_decimal_string(&data.msgs[i][5]),
+                    uint256_from_decimal_string(&data.msgs[i][6]),
+                ],
+            };
+
+            let enc_pub = PubKey {
+                x: uint256_from_decimal_string(&data.enc_pub_keys[i][0]),
+                y: uint256_from_decimal_string(&data.enc_pub_keys[i][1]),
+            };
+            _ = contract.publish_message(&mut app, user2(), message, enc_pub);
+        }
+
+        assert_eq!(
+            contract.num_sign_up(&app).unwrap(),
+            Uint256::from_u128(2u128)
+        );
+
+        assert_eq!(
+            contract.msg_length(&app).unwrap(),
+            Uint256::from_u128(3u128)
+        );
+
+        // Stop Voting Period
+        app.update_block(next_block);
+    }
+
+    #[test]
+    fn instantiate_with_voting_time_isqv_should_works() {
+        let msg_file_path = "./src/test/qv_test/msg.json";
+
+        let mut msg_file = fs::File::open(msg_file_path).expect("Failed to open file");
+        let mut msg_content = String::new();
+
+        msg_file
+            .read_to_string(&mut msg_content)
+            .expect("Failed to read file");
+
+        let data: MsgData = serde_json::from_str(&msg_content).expect("Failed to parse JSON");
+
+        let result_file_path = "./src/test/qv_test/result.json";
+        let mut result_file = fs::File::open(result_file_path).expect("Failed to open file");
+        let mut result_content = String::new();
+        result_file
+            .read_to_string(&mut result_content)
+            .expect("Failed to read file");
+
+        let result_data: ResultData =
+            serde_json::from_str(&result_content).expect("Failed to parse JSON");
+
+        let pubkey_file_path = "./src/test/user_pubkey.json";
+
+        let mut pubkey_file = fs::File::open(pubkey_file_path).expect("Failed to open file");
+        let mut pubkey_content = String::new();
+
+        pubkey_file
+            .read_to_string(&mut pubkey_content)
+            .expect("Failed to read file");
+        let pubkey_data: UserPubkeyData =
+            serde_json::from_str(&pubkey_content).expect("Failed to parse JSON");
+
+        let mut app = App::default();
+        let code_id = MaciCodeId::store_code(&mut app);
+        let label = "Group";
+        let contract = code_id
+            .instantiate_with_voting_time_isqv(&mut app, owner(), user1(), user2(), label)
+            .unwrap();
+
+        let start_voting_error = contract.start_voting(&mut app, owner()).unwrap_err();
+
+        assert_eq!(
+            ContractError::AlreadySetVotingTime {
+                time_name: String::from("start_time")
+            },
+            start_voting_error.downcast().unwrap()
+        );
+
+        let num_sign_up = contract.num_sign_up(&app).unwrap();
+        assert_eq!(num_sign_up, Uint256::from_u128(0u128));
+
+        let vote_option_map = contract.vote_option_map(&app).unwrap();
+        let max_vote_options = contract.max_vote_options(&app).unwrap();
+        assert_eq!(vote_option_map, vec!["", "", "", "", ""]);
+        assert_eq!(max_vote_options, Uint256::from_u128(5u128));
+        _ = contract.set_vote_option_map(&mut app, owner());
+        let new_vote_option_map = contract.vote_option_map(&app).unwrap();
+        assert_eq!(
+            new_vote_option_map,
+            vec![
+                String::from("did_not_vote"),
+                String::from("yes"),
+                String::from("no"),
+                String::from("no_with_veto"),
+                String::from("abstain"),
+            ]
+        );
+        // assert_eq!(num_sign_up, Uint256::from_u128(0u128));
+
+        let test_pubkey = PubKey {
+            x: uint256_from_decimal_string(&data.current_state_leaves[0][0]),
+            y: uint256_from_decimal_string(&data.current_state_leaves[0][1]),
+        };
+        let sign_up_error = contract
+            .sign_up(
+                &mut app,
+                Addr::unchecked(0.to_string()),
+                test_pubkey.clone(),
+            )
+            .unwrap_err();
+        assert_eq!(
+            ContractError::PeriodError {},
+            sign_up_error.downcast().unwrap()
+        ); // 不能在voting环节之前进行signup
+
+        _ = contract.set_vote_option_map(&mut app, owner());
+
+        app.update_block(next_block); // Start Voting
+        let set_whitelist_only_in_pending = contract.set_whitelist(&mut app, owner()).unwrap_err();
+        assert_eq!(
+            // 注册之后不能再进行注册
+            ContractError::PeriodError {},
+            set_whitelist_only_in_pending.downcast().unwrap()
+        );
+        let set_vote_option_map_error =
+            contract.set_vote_option_map(&mut app, owner()).unwrap_err();
+        assert_eq!(
+            ContractError::PeriodError {},
+            set_vote_option_map_error.downcast().unwrap()
+        );
+
+        let error_start_process_in_voting = contract.start_process(&mut app, owner()).unwrap_err();
+        assert_eq!(
+            ContractError::PeriodError {},
+            error_start_process_in_voting.downcast().unwrap()
+        );
+        assert_eq!(
+            Period {
+                status: PeriodStatus::Pending
+            },
+            contract.get_period(&app).unwrap()
+        );
+
+        for i in 0..data.msgs.len() {
+            if i < Uint256::from_u128(2u128).to_string().parse().unwrap() {
+                let pubkey = PubKey {
+                    x: uint256_from_decimal_string(&pubkey_data.pubkeys[i][0]),
+                    y: uint256_from_decimal_string(&pubkey_data.pubkeys[i][1]),
+                };
+
+                println!("---------- signup ---------- {:?}", i);
+                let _ = contract.sign_up(&mut app, Addr::unchecked(i.to_string()), pubkey);
+            }
+            let message = MessageData {
+                data: [
+                    uint256_from_decimal_string(&data.msgs[i][0]),
+                    uint256_from_decimal_string(&data.msgs[i][1]),
+                    uint256_from_decimal_string(&data.msgs[i][2]),
+                    uint256_from_decimal_string(&data.msgs[i][3]),
+                    uint256_from_decimal_string(&data.msgs[i][4]),
+                    uint256_from_decimal_string(&data.msgs[i][5]),
+                    uint256_from_decimal_string(&data.msgs[i][6]),
+                ],
+            };
+
+            let enc_pub = PubKey {
+                x: uint256_from_decimal_string(&data.enc_pub_keys[i][0]),
+                y: uint256_from_decimal_string(&data.enc_pub_keys[i][1]),
+            };
+            _ = contract.publish_message(&mut app, user2(), message, enc_pub);
+        }
+
+        let sign_up_after_voting_end_error = contract
+            .sign_up(
+                &mut app,
+                Addr::unchecked(0.to_string()),
+                test_pubkey.clone(),
+            )
+            .unwrap_err();
+        assert_eq!(
+            // 注册之后不能再进行注册
+            ContractError::Unauthorized {},
+            sign_up_after_voting_end_error.downcast().unwrap()
+        );
+
+        assert_eq!(
+            contract.num_sign_up(&app).unwrap(),
+            Uint256::from_u128(2u128)
+        );
+
+        assert_eq!(
+            contract.msg_length(&app).unwrap(),
+            Uint256::from_u128(3u128)
+        );
+
+        // Stop Voting Period
+        app.update_block(next_block);
+
+        let sign_up_after_voting_end_error = contract
+            .sign_up(
+                &mut app,
+                Addr::unchecked(3.to_string()),
+                test_pubkey.clone(),
+            )
+            .unwrap_err();
+        assert_eq!(
+            // 不能投票环节结束之后不能进行sign up
+            ContractError::PeriodError {},
+            sign_up_after_voting_end_error.downcast().unwrap()
+        );
+
+        let stop_voting_error = contract.stop_voting(&mut app, owner()).unwrap_err();
+        assert_eq!(
+            ContractError::AlreadySetVotingTime {
+                time_name: String::from("end_time")
+            },
+            stop_voting_error.downcast().unwrap()
+        );
+        app.update_block(next_block);
+
+        _ = contract.start_process(&mut app, owner());
+        assert_eq!(
+            Period {
+                status: PeriodStatus::Processing
+            },
+            contract.get_period(&app).unwrap()
+        );
+
+        println!(
+            "after start process: {:?}",
+            contract.get_period(&app).unwrap()
+        );
+
+        let new_state_commitment = uint256_from_decimal_string(&data.new_state_commitment);
+        let proof = ProofType {
+                a: "1d357813049bc4b83ded0d9dab748251c70633d6283df4aef6c3c8f53da22942297e1f9820cdd8acd3719be1dc18c0d6d7d978b8022b10b2412c0be757d898cb".to_string(),
+                b: "205d75e9165f8e472d935314381246d192e174262a19779afbb3fac8f9471b211b93759ce5a42fcb5c92a37b7013b9f9f72f13bd6d4190a7327d661b2a1530c205cc957a89cf5a4be26d822ea194bee53b59c8780f49e13968436a734c2e5de10f5fcf817e99122edce715d30bb63babbbdb7c541154c166ee2d9f42349957c8".to_string(),
+                c: "15f91dba796a622d18dc73af0e50a5a7b2d9668f3cbd4015b4137b54c6743f5524080bdc6be18a94e8a3e638c684e4810465e065bb3c68d3c752e5fb8ea9ea65".to_string()
+            };
+        println!("process_message proof {:?}", proof);
+        println!(
+            "process_message new state commitment {:?}",
+            new_state_commitment
+        );
+        _ = contract.process_message(&mut app, owner(), new_state_commitment, proof);
+
+        _ = contract.stop_processing(&mut app, owner());
+        println!(
+            "after stop process: {:?}",
+            contract.get_period(&app).unwrap()
+        );
+
+        let error_start_process_in_talling = contract.start_process(&mut app, owner()).unwrap_err();
+        assert_eq!(
+            ContractError::PeriodError {},
+            error_start_process_in_talling.downcast().unwrap()
+        );
+        assert_eq!(
+            Period {
+                status: PeriodStatus::Tallying
+            },
+            contract.get_period(&app).unwrap()
+        );
+        let tally_path = "./src/test/qv_test/tally.json";
+        let mut tally_file = fs::File::open(tally_path).expect("Failed to open file");
+        let mut tally_content = String::new();
+        tally_file
+            .read_to_string(&mut tally_content)
+            .expect("Failed to read file");
+
+        let tally_data: TallyData =
+            serde_json::from_str(&tally_content).expect("Failed to parse JSON");
+
+        let new_tally_commitment = uint256_from_decimal_string(&tally_data.new_tally_commitment);
+
+        let tally_proof = ProofType {
+            a: "2274e1f6b71fc2887c4f746ff384f00fd9d2b4f8ed1d59853af2cb891058624a2e73d79f02de60ee49604e972e9dae72e5a3f3b63b7b0bb6167d1d7365f3af0b".to_string(),
+            b: "147e97b696f2483f9be88419802de05a37c272328413907b1cadf61768e4abf604435ebd5462d1af60bee71de26d9a7259982f809f5edf3da7ecbb8c2b55dec40b403b2e4becd1587519488c8fcbf7e6b504dd68016e1ed48443ccced09d08c10a69014af748d7b2921449762eb7e870f0185dab186df6a5aeda4401e9a343cc".to_string(),
+            c: "100005547853768af099c27f658c8b44d52bb94117a235243dfb243f3687395e2d3634cdce0cbe115d8d497e2330a907f965e4d9080183b381fb4ff30f98f02a".to_string()
+        };
+
+        _ = contract.process_tally(&mut app, owner(), new_tally_commitment, tally_proof);
+
+        let results: Vec<Uint256> = result_data
+            .results
+            .iter()
+            .map(|input| uint256_from_decimal_string(input))
+            .collect();
+
+        let salt = uint256_from_decimal_string(&tally_data.new_results_root_salt);
+        _ = contract.stop_tallying(&mut app, owner(), results, salt);
+
+        let all_result = contract.get_all_result(&app);
+        println!("all_result: {:?}", all_result);
+        let error_start_process = contract.start_process(&mut app, owner()).unwrap_err();
+        assert_eq!(
+            ContractError::PeriodError {},
+            error_start_process.downcast().unwrap()
+        );
+
+        assert_eq!(
+            Period {
+                status: PeriodStatus::Ended
+            },
+            contract.get_period(&app).unwrap()
+        );
     }
 }

@@ -56,4 +56,10 @@ pub enum ContractError {
 
     #[error("round title can not be empty")]
     TitleIsEmpty,
+
+    #[error("Fee Grant already exists")]
+    FeeGrantAlreadyExists,
+
+    #[error("Fee Grant is not exists")]
+    FeeGrantIsNotExists,
 }

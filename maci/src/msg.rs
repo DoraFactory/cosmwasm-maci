@@ -1,9 +1,9 @@
 use crate::state::{
-    MaciParameters, Message, PeriodStatus, PubKey, QuinaryTreeRoot, RoundInfo, VotingTime,
+    MaciParameters, MessageData, PeriodStatus, PubKey, QuinaryTreeRoot, RoundInfo, VotingTime,
     Whitelist,
 };
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{Addr, Uint256};
+use cosmwasm_std::{Addr, Uint128, Uint256};
 
 #[cw_serde]
 pub struct InstantiateMsg {
@@ -17,6 +17,7 @@ pub struct InstantiateMsg {
     pub round_info: RoundInfo,
     pub voting_time: Option<VotingTime>,
     pub whitelist: Option<Whitelist>,
+    pub circuit_type: Uint256,
 }
 
 #[cw_serde]
@@ -60,7 +61,7 @@ pub enum ExecuteMsg {
     StartProcessPeriod {},
     StopVotingPeriod {},
     PublishMessage {
-        message: Message,
+        message: MessageData,
         enc_pub_key: PubKey,
     },
     ProcessMessage {
@@ -75,6 +76,14 @@ pub enum ExecuteMsg {
     StopTallyingPeriod {
         results: Vec<Uint256>,
         salt: Uint256,
+    },
+    Grant {
+        max_amount: Uint128,
+    },
+    Revoke {},
+    Bond {},
+    Withdraw {
+        amount: Option<Uint128>,
     },
 }
 
@@ -129,4 +138,10 @@ pub enum QueryMsg {
 
     #[returns(Uint256)]
     MaxVoteOptions {},
+
+    #[returns(Uint128)]
+    QueryTotalFeeGrant {},
+
+    #[returns(Uint256)]
+    QueryCircuitType {},
 }

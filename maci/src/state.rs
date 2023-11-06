@@ -1,8 +1,6 @@
 use crate::utils::hash5;
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::Addr;
-use cosmwasm_std::Timestamp;
-use cosmwasm_std::Uint256;
+use cosmwasm_std::{Addr, Timestamp, Uint128, Uint256};
 use cw_storage_plus::{Item, Map};
 
 #[cw_serde]
@@ -113,7 +111,7 @@ pub const COORDINATORHASH: Item<Uint256> = Item::new("coordinator_hash");
 pub const ZEROS: Item<[Uint256; 8]> = Item::new("zeros");
 
 #[cw_serde]
-pub struct Message {
+pub struct MessageData {
     pub data: [Uint256; 7],
 }
 
@@ -263,6 +261,10 @@ impl Whitelist {
 }
 
 pub const WHITELIST: Item<Whitelist> = Item::new("whitelist");
+
+pub const FEEGRANTS: Item<Uint128> = Item::new("fee_grants");
+
+pub const CIRCUITTYPE: Item<Uint256> = Item::new("circuit_type");
 
 #[cfg(test)]
 mod tests {

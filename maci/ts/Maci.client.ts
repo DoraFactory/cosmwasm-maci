@@ -6,7 +6,7 @@
 
 import { CosmWasmClient, SigningCosmWasmClient, ExecuteResult } from "@cosmjs/cosmwasm-stargate";
 import { Coin, StdFee } from "@cosmjs/amino";
-import { Uint256, Timestamp, Uint64, InstantiateMsg, PubKey, MaciParameters, VKeyType, QuinaryTreeRoot, RoundInfo, VotingTime, Whitelist, WhitelistConfig, ExecuteMsg, Message, ProofType, QueryMsg, Addr, PeriodStatus, Period, Boolean, ArrayOfString } from "./Maci.types";
+import { Uint256, Timestamp, Uint64, InstantiateMsg, PubKey, MaciParameters, VKeyType, QuinaryTreeRoot, RoundInfo, VotingTime, Whitelist, WhitelistConfig, ExecuteMsg, Uint128, MessageData, ProofType, QueryMsg, Addr, PeriodStatus, Period, Boolean, ArrayOfString } from "./Maci.types";
 export interface MaciReadOnlyInterface {
   contractAddress: string;
   getRoundInfo: () => Promise<RoundInfo>;
@@ -43,6 +43,8 @@ export interface MaciReadOnlyInterface {
   }) => Promise<Uint256>;
   voteOptionMap: () => Promise<ArrayOfString>;
   maxVoteOptions: () => Promise<Uint256>;
+  queryTotalFeeGrant: () => Promise<Uint128>;
+  queryCircuitType: () => Promise<Uint256>;
 }
 export class MaciQueryClient implements MaciReadOnlyInterface {
   client: CosmWasmClient;
@@ -65,6 +67,8 @@ export class MaciQueryClient implements MaciReadOnlyInterface {
     this.whiteBalanceOf = this.whiteBalanceOf.bind(this);
     this.voteOptionMap = this.voteOptionMap.bind(this);
     this.maxVoteOptions = this.maxVoteOptions.bind(this);
+    this.queryTotalFeeGrant = this.queryTotalFeeGrant.bind(this);
+    this.queryCircuitType = this.queryCircuitType.bind(this);
   }
 
   getRoundInfo = async (): Promise<RoundInfo> => {
@@ -167,6 +171,16 @@ export class MaciQueryClient implements MaciReadOnlyInterface {
       max_vote_options: {}
     });
   };
+  queryTotalFeeGrant = async (): Promise<Uint128> => {
+    return this.client.queryContractSmart(this.contractAddress, {
+      query_total_fee_grant: {}
+    });
+  };
+  queryCircuitType = async (): Promise<Uint256> => {
+    return this.client.queryContractSmart(this.contractAddress, {
+      query_circuit_type: {}
+    });
+  };
 }
 export interface MaciInterface extends MaciReadOnlyInterface {
   contractAddress: string;
@@ -210,7 +224,7 @@ export interface MaciInterface extends MaciReadOnlyInterface {
     message
   }: {
     encPubKey: PubKey;
-    message: Message;
+    message: MessageData;
   }, fee?: number | StdFee | "auto", memo?: string, _funds?: Coin[]) => Promise<ExecuteResult>;
   processMessage: ({
     newStateCommitment,
@@ -233,6 +247,18 @@ export interface MaciInterface extends MaciReadOnlyInterface {
   }: {
     results: Uint256[];
     salt: Uint256;
+  }, fee?: number | StdFee | "auto", memo?: string, _funds?: Coin[]) => Promise<ExecuteResult>;
+  grant: ({
+    maxAmount
+  }: {
+    maxAmount: Uint128;
+  }, fee?: number | StdFee | "auto", memo?: string, _funds?: Coin[]) => Promise<ExecuteResult>;
+  revoke: (fee?: number | StdFee | "auto", memo?: string, _funds?: Coin[]) => Promise<ExecuteResult>;
+  bond: (fee?: number | StdFee | "auto", memo?: string, _funds?: Coin[]) => Promise<ExecuteResult>;
+  withdraw: ({
+    amount
+  }: {
+    amount?: Uint128;
   }, fee?: number | StdFee | "auto", memo?: string, _funds?: Coin[]) => Promise<ExecuteResult>;
 }
 export class MaciClient extends MaciQueryClient implements MaciInterface {
@@ -258,6 +284,10 @@ export class MaciClient extends MaciQueryClient implements MaciInterface {
     this.stopProcessingPeriod = this.stopProcessingPeriod.bind(this);
     this.processTally = this.processTally.bind(this);
     this.stopTallyingPeriod = this.stopTallyingPeriod.bind(this);
+    this.grant = this.grant.bind(this);
+    this.revoke = this.revoke.bind(this);
+    this.bond = this.bond.bind(this);
+    this.withdraw = this.withdraw.bind(this);
   }
 
   setParams = async ({
@@ -344,7 +374,7 @@ export class MaciClient extends MaciQueryClient implements MaciInterface {
     message
   }: {
     encPubKey: PubKey;
-    message: Message;
+    message: MessageData;
   }, fee: number | StdFee | "auto" = "auto", memo?: string, _funds?: Coin[]): Promise<ExecuteResult> => {
     return await this.client.execute(this.sender, this.contractAddress, {
       publish_message: {
@@ -397,6 +427,38 @@ export class MaciClient extends MaciQueryClient implements MaciInterface {
       stop_tallying_period: {
         results,
         salt
+      }
+    }, fee, memo, _funds);
+  };
+  grant = async ({
+    maxAmount
+  }: {
+    maxAmount: Uint128;
+  }, fee: number | StdFee | "auto" = "auto", memo?: string, _funds?: Coin[]): Promise<ExecuteResult> => {
+    return await this.client.execute(this.sender, this.contractAddress, {
+      grant: {
+        max_amount: maxAmount
+      }
+    }, fee, memo, _funds);
+  };
+  revoke = async (fee: number | StdFee | "auto" = "auto", memo?: string, _funds?: Coin[]): Promise<ExecuteResult> => {
+    return await this.client.execute(this.sender, this.contractAddress, {
+      revoke: {}
+    }, fee, memo, _funds);
+  };
+  bond = async (fee: number | StdFee | "auto" = "auto", memo?: string, _funds?: Coin[]): Promise<ExecuteResult> => {
+    return await this.client.execute(this.sender, this.contractAddress, {
+      bond: {}
+    }, fee, memo, _funds);
+  };
+  withdraw = async ({
+    amount
+  }: {
+    amount?: Uint128;
+  }, fee: number | StdFee | "auto" = "auto", memo?: string, _funds?: Coin[]): Promise<ExecuteResult> => {
+    return await this.client.execute(this.sender, this.contractAddress, {
+      withdraw: {
+        amount
       }
     }, fee, memo, _funds);
   };
