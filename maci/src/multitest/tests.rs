@@ -5,7 +5,7 @@ mod test {
     use cw_multi_test::{next_block, App};
 
     use crate::error::ContractError;
-    use crate::msg::ProofType;
+    use crate::msg::Groth16ProofType;
     use crate::multitest::{owner, uint256_from_decimal_string, user1, user2, MaciCodeId};
     use crate::state::{MessageData, Period, PeriodStatus, PubKey, RoundInfo};
     use serde::{Deserialize, Serialize};
@@ -246,7 +246,7 @@ mod test {
         app.update_block(next_block);
 
         let new_state_commitment = uint256_from_decimal_string(&data.new_state_commitment);
-        let proof = ProofType {
+        let proof = Groth16ProofType {
                 a: "29c214f2e1b0b10ebdb52c629714526764355daa96aa077cb249db04586e705b0c4dcf9b653d561cec0988842f8604c7fc3b9742bf27864637ac6b14b675644c".to_string(),
                 b: "21c903a347fa0c9640d749c974f63317d4597f194d0df896c4150a2e970484790792a071af0a7e50ada1c2dc0e5eb443e3c4661c036a9705cdccfcc5d3f0d3e617fc7d5525fe41a47171448b17bb31f90cceca92de9416268c2e55f37f76e2b8248c8231d33675174cdafe8ad04b8b17a42894f5e047d2984519be75312ae4ac".to_string(),
                 c: "0367155150920842a79a007ce6a311e3f970a45548354fec69216eea28661a0c10e1fa54022a7f4b078e7972f76ac91fa446447f0b2b4c4dc539f7c3f9c546da".to_string()
@@ -274,7 +274,7 @@ mod test {
 
         let new_tally_commitment = uint256_from_decimal_string(&tally_data.new_tally_commitment);
 
-        let tally_proof = ProofType {
+        let tally_proof = Groth16ProofType {
             a: "136119496feea080d3b191f8f872ee471642f5e9c3c55f3dfd38b5510d8c3ea3188944f0866a4ddb3ee0543a0b57b80ce5cfadbdbbaae1e3b8c70f7ac05718de".to_string(),
             b: "171e57bd50b3cc28db893095de6ee56336847890bb46563bceac48fc5d8d1b66079bd76a71d5b90a97cbe34c6fdf7277c2aee5292e82d7f62407d019cc74be3b1865535414327686604c0bda663a375411ed8e89619e61c2d603ee3ef678eb602d4e3d5106dba466709c76a7e204c5557fbba126b7b56925c4927e01cbbe10d1".to_string(),
             c: "111e06873463cd8749a1bd8adc83d252fe79097089777668e40007accdb7cdb406de890a7d29c08a90ed207a140b0ad142f558754708b86c3ca61444143eb40d".to_string()
@@ -527,7 +527,7 @@ mod test {
         );
 
         let new_state_commitment = uint256_from_decimal_string(&data.new_state_commitment);
-        let proof = ProofType {
+        let proof = Groth16ProofType {
                 a: "29c214f2e1b0b10ebdb52c629714526764355daa96aa077cb249db04586e705b0c4dcf9b653d561cec0988842f8604c7fc3b9742bf27864637ac6b14b675644c".to_string(),
                 b: "21c903a347fa0c9640d749c974f63317d4597f194d0df896c4150a2e970484790792a071af0a7e50ada1c2dc0e5eb443e3c4661c036a9705cdccfcc5d3f0d3e617fc7d5525fe41a47171448b17bb31f90cceca92de9416268c2e55f37f76e2b8248c8231d33675174cdafe8ad04b8b17a42894f5e047d2984519be75312ae4ac".to_string(),
                 c: "0367155150920842a79a007ce6a311e3f970a45548354fec69216eea28661a0c10e1fa54022a7f4b078e7972f76ac91fa446447f0b2b4c4dc539f7c3f9c546da".to_string()
@@ -568,7 +568,7 @@ mod test {
 
         let new_tally_commitment = uint256_from_decimal_string(&tally_data.new_tally_commitment);
 
-        let tally_proof = ProofType {
+        let tally_proof = Groth16ProofType {
             a: "136119496feea080d3b191f8f872ee471642f5e9c3c55f3dfd38b5510d8c3ea3188944f0866a4ddb3ee0543a0b57b80ce5cfadbdbbaae1e3b8c70f7ac05718de".to_string(),
             b: "171e57bd50b3cc28db893095de6ee56336847890bb46563bceac48fc5d8d1b66079bd76a71d5b90a97cbe34c6fdf7277c2aee5292e82d7f62407d019cc74be3b1865535414327686604c0bda663a375411ed8e89619e61c2d603ee3ef678eb602d4e3d5106dba466709c76a7e204c5557fbba126b7b56925c4927e01cbbe10d1".to_string(),
             c: "111e06873463cd8749a1bd8adc83d252fe79097089777668e40007accdb7cdb406de890a7d29c08a90ed207a140b0ad142f558754708b86c3ca61444143eb40d".to_string()
@@ -774,7 +774,7 @@ mod test {
         );
 
         let new_state_commitment = uint256_from_decimal_string(&data.new_state_commitment);
-        let proof = ProofType {
+        let proof = Groth16ProofType {
                 a: "29c214f2e1b0b10ebdb52c629714526764355daa96aa077cb249db04586e705b0c4dcf9b653d561cec0988842f8604c7fc3b9742bf27864637ac6b14b675644c".to_string(),
                 b: "21c903a347fa0c9640d749c974f63317d4597f194d0df896c4150a2e970484790792a071af0a7e50ada1c2dc0e5eb443e3c4661c036a9705cdccfcc5d3f0d3e617fc7d5525fe41a47171448b17bb31f90cceca92de9416268c2e55f37f76e2b8248c8231d33675174cdafe8ad04b8b17a42894f5e047d2984519be75312ae4ac".to_string(),
                 c: "0367155150920842a79a007ce6a311e3f970a45548354fec69216eea28661a0c10e1fa54022a7f4b078e7972f76ac91fa446447f0b2b4c4dc539f7c3f9c546da".to_string()
@@ -803,7 +803,7 @@ mod test {
 
         let new_tally_commitment = uint256_from_decimal_string(&tally_data.new_tally_commitment);
 
-        let tally_proof = ProofType {
+        let tally_proof = Groth16ProofType {
             a: "136119496feea080d3b191f8f872ee471642f5e9c3c55f3dfd38b5510d8c3ea3188944f0866a4ddb3ee0543a0b57b80ce5cfadbdbbaae1e3b8c70f7ac05718de".to_string(),
             b: "171e57bd50b3cc28db893095de6ee56336847890bb46563bceac48fc5d8d1b66079bd76a71d5b90a97cbe34c6fdf7277c2aee5292e82d7f62407d019cc74be3b1865535414327686604c0bda663a375411ed8e89619e61c2d603ee3ef678eb602d4e3d5106dba466709c76a7e204c5557fbba126b7b56925c4927e01cbbe10d1".to_string(),
             c: "111e06873463cd8749a1bd8adc83d252fe79097089777668e40007accdb7cdb406de890a7d29c08a90ed207a140b0ad142f558754708b86c3ca61444143eb40d".to_string()
@@ -1000,7 +1000,7 @@ mod test {
         );
 
         let new_state_commitment = uint256_from_decimal_string(&data.new_state_commitment);
-        let proof = ProofType {
+        let proof = Groth16ProofType {
                 a: "29c214f2e1b0b10ebdb52c629714526764355daa96aa077cb249db04586e705b0c4dcf9b653d561cec0988842f8604c7fc3b9742bf27864637ac6b14b675644c".to_string(),
                 b: "21c903a347fa0c9640d749c974f63317d4597f194d0df896c4150a2e970484790792a071af0a7e50ada1c2dc0e5eb443e3c4661c036a9705cdccfcc5d3f0d3e617fc7d5525fe41a47171448b17bb31f90cceca92de9416268c2e55f37f76e2b8248c8231d33675174cdafe8ad04b8b17a42894f5e047d2984519be75312ae4ac".to_string(),
                 c: "0367155150920842a79a007ce6a311e3f970a45548354fec69216eea28661a0c10e1fa54022a7f4b078e7972f76ac91fa446447f0b2b4c4dc539f7c3f9c546da".to_string()
@@ -1029,7 +1029,7 @@ mod test {
 
         let new_tally_commitment = uint256_from_decimal_string(&tally_data.new_tally_commitment);
 
-        let tally_proof = ProofType {
+        let tally_proof = Groth16ProofType {
             a: "136119496feea080d3b191f8f872ee471642f5e9c3c55f3dfd38b5510d8c3ea3188944f0866a4ddb3ee0543a0b57b80ce5cfadbdbbaae1e3b8c70f7ac05718de".to_string(),
             b: "171e57bd50b3cc28db893095de6ee56336847890bb46563bceac48fc5d8d1b66079bd76a71d5b90a97cbe34c6fdf7277c2aee5292e82d7f62407d019cc74be3b1865535414327686604c0bda663a375411ed8e89619e61c2d603ee3ef678eb602d4e3d5106dba466709c76a7e204c5557fbba126b7b56925c4927e01cbbe10d1".to_string(),
             c: "111e06873463cd8749a1bd8adc83d252fe79097089777668e40007accdb7cdb406de890a7d29c08a90ed207a140b0ad142f558754708b86c3ca61444143eb40d".to_string()
@@ -1373,7 +1373,7 @@ mod test {
         );
 
         let new_state_commitment = uint256_from_decimal_string(&data.new_state_commitment);
-        let proof = ProofType {
+        let proof = Groth16ProofType {
                 a: "1d357813049bc4b83ded0d9dab748251c70633d6283df4aef6c3c8f53da22942297e1f9820cdd8acd3719be1dc18c0d6d7d978b8022b10b2412c0be757d898cb".to_string(),
                 b: "205d75e9165f8e472d935314381246d192e174262a19779afbb3fac8f9471b211b93759ce5a42fcb5c92a37b7013b9f9f72f13bd6d4190a7327d661b2a1530c205cc957a89cf5a4be26d822ea194bee53b59c8780f49e13968436a734c2e5de10f5fcf817e99122edce715d30bb63babbbdb7c541154c166ee2d9f42349957c8".to_string(),
                 c: "15f91dba796a622d18dc73af0e50a5a7b2d9668f3cbd4015b4137b54c6743f5524080bdc6be18a94e8a3e638c684e4810465e065bb3c68d3c752e5fb8ea9ea65".to_string()
@@ -1414,7 +1414,7 @@ mod test {
 
         let new_tally_commitment = uint256_from_decimal_string(&tally_data.new_tally_commitment);
 
-        let tally_proof = ProofType {
+        let tally_proof = Groth16ProofType {
             a: "2274e1f6b71fc2887c4f746ff384f00fd9d2b4f8ed1d59853af2cb891058624a2e73d79f02de60ee49604e972e9dae72e5a3f3b63b7b0bb6167d1d7365f3af0b".to_string(),
             b: "147e97b696f2483f9be88419802de05a37c272328413907b1cadf61768e4abf604435ebd5462d1af60bee71de26d9a7259982f809f5edf3da7ecbb8c2b55dec40b403b2e4becd1587519488c8fcbf7e6b504dd68016e1ed48443ccced09d08c10a69014af748d7b2921449762eb7e870f0185dab186df6a5aeda4401e9a343cc".to_string(),
             c: "100005547853768af099c27f658c8b44d52bb94117a235243dfb243f3687395e2d3634cdce0cbe115d8d497e2330a907f965e4d9080183b381fb4ff30f98f02a".to_string()

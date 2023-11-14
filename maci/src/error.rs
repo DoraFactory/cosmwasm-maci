@@ -62,4 +62,13 @@ pub enum ContractError {
 
     #[error("Fee Grant is not exists")]
     FeeGrantIsNotExists,
+
+    #[error("this account({difficuty_issuer}) didn't issue difficulty problem")]
+    NonPublishDifficulty { difficuty_issuer: String },
+
+    #[error("could not convert into prime field")]
+    InvalidPrimeField {},
+
+    #[error("SynthesisError of zk verify")]
+    SynthesisError {},
 }

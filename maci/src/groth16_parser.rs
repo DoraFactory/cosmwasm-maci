@@ -1,12 +1,12 @@
 use super::error::ContractError;
-use crate::state::{ProofStr, VkeyStr};
+use crate::state::{Groth16ProofStr, Groth16VkeyStr};
 use bellman_ce_verifier::{Proof, VerifyingKey};
 use cosmwasm_std::ensure;
 use pairing_ce::bn256::{G1Affine, G1Uncompressed, G2Affine, G2Uncompressed};
 use pairing_ce::{CurveAffine, EncodedPoint, Engine};
 
 /// convert the proof into the affine type, which will be used to verify
-pub fn parse_proof<E>(pof: ProofStr) -> Result<Proof<E>, ContractError>
+pub fn parse_groth16_proof<E>(pof: Groth16ProofStr) -> Result<Proof<E>, ContractError>
 where
     E: Engine<G1Affine = G1Affine, G2Affine = G2Affine>,
 {
@@ -46,7 +46,7 @@ where
 }
 
 /// convert the verification key into the affine type, which will be used in verification
-pub fn parse_vkey<E>(vk: VkeyStr) -> Result<VerifyingKey<E>, ContractError>
+pub fn parse_groth16_vkey<E>(vk: Groth16VkeyStr) -> Result<VerifyingKey<E>, ContractError>
 where
     E: Engine<G1Affine = G1Affine, G2Affine = G2Affine>,
 {

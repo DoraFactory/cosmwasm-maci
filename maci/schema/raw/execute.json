@@ -4,9 +4,7 @@
   "oneOf": [
     {
       "type": "object",
-      "required": [
-        "set_params"
-      ],
+      "required": ["set_params"],
       "properties": {
         "set_params": {
           "type": "object",
@@ -37,15 +35,11 @@
     },
     {
       "type": "object",
-      "required": [
-        "set_round_info"
-      ],
+      "required": ["set_round_info"],
       "properties": {
         "set_round_info": {
           "type": "object",
-          "required": [
-            "round_info"
-          ],
+          "required": ["round_info"],
           "properties": {
             "round_info": {
               "$ref": "#/definitions/RoundInfo"
@@ -58,15 +52,11 @@
     },
     {
       "type": "object",
-      "required": [
-        "set_whitelists"
-      ],
+      "required": ["set_whitelists"],
       "properties": {
         "set_whitelists": {
           "type": "object",
-          "required": [
-            "whitelists"
-          ],
+          "required": ["whitelists"],
           "properties": {
             "whitelists": {
               "$ref": "#/definitions/Whitelist"
@@ -79,15 +69,11 @@
     },
     {
       "type": "object",
-      "required": [
-        "set_vote_options_map"
-      ],
+      "required": ["set_vote_options_map"],
       "properties": {
         "set_vote_options_map": {
           "type": "object",
-          "required": [
-            "vote_option_map"
-          ],
+          "required": ["vote_option_map"],
           "properties": {
             "vote_option_map": {
               "type": "array",
@@ -103,9 +89,7 @@
     },
     {
       "type": "object",
-      "required": [
-        "start_voting_period"
-      ],
+      "required": ["start_voting_period"],
       "properties": {
         "start_voting_period": {
           "type": "object",
@@ -116,15 +100,11 @@
     },
     {
       "type": "object",
-      "required": [
-        "sign_up"
-      ],
+      "required": ["sign_up"],
       "properties": {
         "sign_up": {
           "type": "object",
-          "required": [
-            "pubkey"
-          ],
+          "required": ["pubkey"],
           "properties": {
             "pubkey": {
               "$ref": "#/definitions/PubKey"
@@ -137,9 +117,7 @@
     },
     {
       "type": "object",
-      "required": [
-        "start_process_period"
-      ],
+      "required": ["start_process_period"],
       "properties": {
         "start_process_period": {
           "type": "object",
@@ -150,9 +128,7 @@
     },
     {
       "type": "object",
-      "required": [
-        "stop_voting_period"
-      ],
+      "required": ["stop_voting_period"],
       "properties": {
         "stop_voting_period": {
           "type": "object",
@@ -163,16 +139,11 @@
     },
     {
       "type": "object",
-      "required": [
-        "publish_message"
-      ],
+      "required": ["publish_message"],
       "properties": {
         "publish_message": {
           "type": "object",
-          "required": [
-            "enc_pub_key",
-            "message"
-          ],
+          "required": ["enc_pub_key", "message"],
           "properties": {
             "enc_pub_key": {
               "$ref": "#/definitions/PubKey"
@@ -188,16 +159,11 @@
     },
     {
       "type": "object",
-      "required": [
-        "process_message"
-      ],
+      "required": ["process_message"],
       "properties": {
         "process_message": {
           "type": "object",
-          "required": [
-            "new_state_commitment",
-            "proof"
-          ],
+          "required": ["new_state_commitment", "proof"],
           "properties": {
             "new_state_commitment": {
               "$ref": "#/definitions/Uint256"
@@ -213,9 +179,7 @@
     },
     {
       "type": "object",
-      "required": [
-        "stop_processing_period"
-      ],
+      "required": ["stop_processing_period"],
       "properties": {
         "stop_processing_period": {
           "type": "object",
@@ -226,16 +190,11 @@
     },
     {
       "type": "object",
-      "required": [
-        "process_tally"
-      ],
+      "required": ["process_tally"],
       "properties": {
         "process_tally": {
           "type": "object",
-          "required": [
-            "new_tally_commitment",
-            "proof"
-          ],
+          "required": ["new_tally_commitment", "proof"],
           "properties": {
             "new_tally_commitment": {
               "$ref": "#/definitions/Uint256"
@@ -251,16 +210,11 @@
     },
     {
       "type": "object",
-      "required": [
-        "stop_tallying_period"
-      ],
+      "required": ["stop_tallying_period"],
       "properties": {
         "stop_tallying_period": {
           "type": "object",
-          "required": [
-            "results",
-            "salt"
-          ],
+          "required": ["results", "salt"],
           "properties": {
             "results": {
               "type": "array",
@@ -279,15 +233,11 @@
     },
     {
       "type": "object",
-      "required": [
-        "grant"
-      ],
+      "required": ["grant"],
       "properties": {
         "grant": {
           "type": "object",
-          "required": [
-            "max_amount"
-          ],
+          "required": ["max_amount"],
           "properties": {
             "max_amount": {
               "$ref": "#/definitions/Uint128"
@@ -300,9 +250,7 @@
     },
     {
       "type": "object",
-      "required": [
-        "revoke"
-      ],
+      "required": ["revoke"],
       "properties": {
         "revoke": {
           "type": "object",
@@ -313,9 +261,7 @@
     },
     {
       "type": "object",
-      "required": [
-        "bond"
-      ],
+      "required": ["bond"],
       "properties": {
         "bond": {
           "type": "object",
@@ -326,9 +272,7 @@
     },
     {
       "type": "object",
-      "required": [
-        "withdraw"
-      ],
+      "required": ["withdraw"],
       "properties": {
         "withdraw": {
           "type": "object",
@@ -353,9 +297,7 @@
   "definitions": {
     "MessageData": {
       "type": "object",
-      "required": [
-        "data"
-      ],
+      "required": ["data"],
       "properties": {
         "data": {
           "type": "array",
@@ -370,11 +312,7 @@
     },
     "ProofType": {
       "type": "object",
-      "required": [
-        "a",
-        "b",
-        "c"
-      ],
+      "required": ["a", "b", "c"],
       "properties": {
         "a": {
           "type": "string"
@@ -390,10 +328,7 @@
     },
     "PubKey": {
       "type": "object",
-      "required": [
-        "x",
-        "y"
-      ],
+      "required": ["x", "y"],
       "properties": {
         "x": {
           "$ref": "#/definitions/Uint256"
@@ -406,11 +341,7 @@
     },
     "RoundInfo": {
       "type": "object",
-      "required": [
-        "description",
-        "link",
-        "title"
-      ],
+      "required": ["description", "link", "title"],
       "properties": {
         "description": {
           "type": "string"
@@ -434,9 +365,7 @@
     },
     "Whitelist": {
       "type": "object",
-      "required": [
-        "users"
-      ],
+      "required": ["users"],
       "properties": {
         "users": {
           "type": "array",
@@ -449,10 +378,7 @@
     },
     "WhitelistConfig": {
       "type": "object",
-      "required": [
-        "addr",
-        "balance"
-      ],
+      "required": ["addr", "balance"],
       "properties": {
         "addr": {
           "type": "string"

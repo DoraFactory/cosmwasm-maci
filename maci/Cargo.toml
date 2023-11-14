@@ -63,6 +63,10 @@ prost = "0.11"
 prost-types = "0.11"
 cw4 = "1.1.0"
 
+pairing_matter = { package="pairing_ce", git = "https://github.com/matter-labs/pairing.git" }
+bellman_ce = { git = "https://github.com/DoraFactory/bellman.git" }
+franklin-crypto = { git = "https://github.com/matter-labs/franklin-crypto", branch = "beta", features = [ "multicore", "plonk" ] }
+
 [dev-dependencies]
 anyhow = "1"
 assert_matches = "1"

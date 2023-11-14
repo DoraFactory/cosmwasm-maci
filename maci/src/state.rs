@@ -122,7 +122,7 @@ pub const PROCESSED_MSG_COUNT: Item<Uint256> = Item::new("processed_msg_count");
 pub const PROCESSED_USER_COUNT: Item<Uint256> = Item::new("processed_user_count");
 
 #[cw_serde]
-pub struct ProofStr {
+pub struct Groth16ProofStr {
     pub pi_a: Vec<u8>,
     pub pi_b: Vec<u8>,
     pub pi_c: Vec<u8>,
@@ -197,27 +197,6 @@ impl QuinaryTreeRoot {
 pub const QTR_LIB: Item<QuinaryTreeRoot> = Item::new("qtr_lib");
 
 #[cw_serde]
-pub struct VkeyStr {
-    pub alpha_1: Vec<u8>,
-    pub beta_2: Vec<u8>,
-    pub gamma_2: Vec<u8>,
-    pub delta_2: Vec<u8>,
-    pub ic0: Vec<u8>,
-    pub ic1: Vec<u8>,
-}
-
-#[cw_serde]
-pub struct ProofInfo {
-    pub proof: ProofStr,
-    pub is_valid: bool,
-}
-
-pub const PROVERINFO: Map<&Addr, ProofInfo> = Map::new("prover_info");
-pub const PROVERLIST: Map<(&Addr, &Addr), ProofInfo> = Map::new("prover_list");
-pub const PROCESS_VKEYS: Item<VkeyStr> = Item::new("process_vkeys");
-pub const TALLY_VKEYS: Item<VkeyStr> = Item::new("tally_vkeys");
-
-#[cw_serde]
 pub struct WhitelistConfig {
     pub addr: String,
     pub balance: Uint256,
@@ -264,7 +243,54 @@ pub const WHITELIST: Item<Whitelist> = Item::new("whitelist");
 
 pub const FEEGRANTS: Item<Uint128> = Item::new("fee_grants");
 
-pub const CIRCUITTYPE: Item<Uint256> = Item::new("circuit_type");
+pub const CIRCUITTYPE: Item<Uint256> = Item::new("circuit_type"); // <0: 1p1v | 1: pv>
+
+pub const CERTSYSTEM: Item<Uint256> = Item::new("certification_system"); // <0: groth16 | 1: plonk>
+
+#[cw_serde]
+pub struct PlonkProofStr {
+    pub num_inputs: usize,
+    pub n: usize,
+    pub input_values: Vec<String>,
+    pub wire_commitments: Vec<Vec<u8>>,
+    pub grand_product_commitment: Vec<u8>,
+    pub quotient_poly_commitments: Vec<Vec<u8>>,
+    pub wire_values_at_z: Vec<String>,
+    pub wire_values_at_z_omega: Vec<String>,
+    pub grand_product_at_z_omega: String,
+    pub quotient_polynomial_at_z: String,
+    pub linearization_polynomial_at_z: String,
+    pub permutation_polynomials_at_z: Vec<String>,
+    pub opening_at_z_proof: Vec<u8>,
+    pub opening_at_z_omega_proof: Vec<u8>,
+}
+
+#[cw_serde]
+pub struct Groth16VkeyStr {
+    pub alpha_1: Vec<u8>,
+    pub beta_2: Vec<u8>,
+    pub gamma_2: Vec<u8>,
+    pub delta_2: Vec<u8>,
+    pub ic0: Vec<u8>,
+    pub ic1: Vec<u8>,
+}
+
+pub const GROTH16_PROCESS_VKEYS: Item<Groth16VkeyStr> = Item::new("groth16_process_vkeys");
+pub const GROTH16_TALLY_VKEYS: Item<Groth16VkeyStr> = Item::new("groth16_tally_vkeys");
+
+#[cw_serde]
+pub struct PlonkVkeyStr {
+    pub n: usize,
+    pub num_inputs: usize,
+    pub selector_commitments: Vec<Vec<u8>>,
+    pub next_step_selector_commitments: Vec<Vec<u8>>,
+    pub permutation_commitments: Vec<Vec<u8>>,
+    pub non_residues: Vec<String>,
+    pub g2_elements: Vec<Vec<u8>>,
+}
+
+pub const PLONK_PROCESS_VKEYS: Item<PlonkVkeyStr> = Item::new("plonk_process_vkeys");
+pub const PLONK_TALLY_VKEYS: Item<PlonkVkeyStr> = Item::new("plonk_tally_vkeys");
 
 #[cfg(test)]
 mod tests {

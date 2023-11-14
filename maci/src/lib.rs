@@ -1,7 +1,8 @@
 pub mod contract;
 mod error;
+pub mod groth16_parser;
 pub mod msg;
-pub mod parser;
+pub mod plonk_parser;
 pub mod state;
 pub mod utils;
 

@@ -3,7 +3,7 @@ mod tests;
 
 use anyhow::Result as AnyResult;
 
-use crate::msg::VKeyType;
+use crate::msg::Groth16VKeyType;
 use crate::state::{
     MaciParameters, MessageData, Period, PubKey, QuinaryTreeRoot, RoundInfo, VotingTime, Whitelist,
     WhitelistConfig,
@@ -360,14 +360,7 @@ impl MaciContract {
                                 x: uint256_from_decimal_string("3557592161792765812904087712812111121909518311142005886657252371904276697771"),
                                 y: uint256_from_decimal_string("4363822302427519764561660537570341277214758164895027920046745209970137856681")
                             },
-                            process_vkey: VKeyType {
-                                vk_alpha1: "2d4d9aa7e302d9df41749d5507949d05dbea33fbb16c643b22f599a2be6df2e214bedd503c37ceb061d8ec60209fe345ce89830a19230301f076caff004d1926".to_string(),
-                                vk_beta_2: "0967032fcbf776d1afc985f88877f182d38480a653f2decaa9794cbc3bf3060c0e187847ad4c798374d0d6732bf501847dd68bc0e071241e0213bc7fc13db7ab304cfbd1e08a704a99f5e847d93f8c3caafddec46b7a0d379da69a4d112346a71739c1b1a457a8c7313123d24d2f9192f896b7c63eea05a9d57f06547ad0cec8".to_string(),
-                                vk_gamma_2: "198e9393920d483a7260bfb731fb5d25f1aa493335a9e71297e485b7aef312c21800deef121f1e76426a00665e5c4479674322d4f75edadd46debd5cd992f6ed090689d0585ff075ec9e99ad690c3395bc4b313370b38ef355acdadcd122975b12c85ea5db8c6deb4aab71808dcb408fe3d1e7690c43d37b4ce6cc0166fa7daa".to_string(),
-                                vk_delta_2: "2178a9c3805dd82071b2b28bb4c0ffc8178cad913c8c990b98b4863284dc3a5d175c0be554fc060c27c551e5e32effef015b918a0f5a2dc1b92909b8272719301c521d5f6542db5ea4775a42d32159c356a696599c1a3df011ec00559ae1c2b60d860f7e6513a7d20feaeaca401863e35a0f691dd7d30ce06d07946840de1ec8".to_string(),
-                                vk_ic0: "19126a54a9b6d0d415f892c246485cb2889487cf9c4a8cd88dab5e1140e1d0630d1d76ef4652df8887c9dc557aa57f25e221db7e5b2e4cf618a362bece107f5c".to_string(),
-                                vk_ic1: "0632e625fefc7172e8aec1070c4d32b90b6c482f6f3806773a4c55a03877c2d716cfd935eb3e3883f580c93f56adbf3a253ce3c208c52fb784f9d8fec139c617".to_string(),
-                            },
+
                             qtr_lib: QuinaryTreeRoot {
                                 zeros: [
                                     uint256_from_decimal_string("0"),
@@ -397,14 +390,25 @@ impl MaciContract {
                                     ),
                                 ],
                             },
-                            tally_vkey: VKeyType {
-                            vk_alpha1: "2d4d9aa7e302d9df41749d5507949d05dbea33fbb16c643b22f599a2be6df2e214bedd503c37ceb061d8ec60209fe345ce89830a19230301f076caff004d1926".to_string(),
-                            vk_beta_2: "0967032fcbf776d1afc985f88877f182d38480a653f2decaa9794cbc3bf3060c0e187847ad4c798374d0d6732bf501847dd68bc0e071241e0213bc7fc13db7ab304cfbd1e08a704a99f5e847d93f8c3caafddec46b7a0d379da69a4d112346a71739c1b1a457a8c7313123d24d2f9192f896b7c63eea05a9d57f06547ad0cec8".to_string(),
-                            vk_gamma_2: "198e9393920d483a7260bfb731fb5d25f1aa493335a9e71297e485b7aef312c21800deef121f1e76426a00665e5c4479674322d4f75edadd46debd5cd992f6ed090689d0585ff075ec9e99ad690c3395bc4b313370b38ef355acdadcd122975b12c85ea5db8c6deb4aab71808dcb408fe3d1e7690c43d37b4ce6cc0166fa7daa".to_string(),
-                            vk_delta_2: "2e9fad39728c543c5213599111e1a44b01720c999a6785e8136c3e3b3bf8e07e248e1933d477969ca6e27cb7a74bca18cac7e3bbdf9371be5c54fe151f6376a30955609ec69b89329322a2f435b706ca248d1312c7513853a50ef37ed0f7826c25a5c57bf07789d89e538bc24017cf2722811f21480b0bb8030ed0028ecb7cd8".to_string(),
-                            vk_ic0: "1bc1a1a3444256469c07cd6f4d1cfd9f7c9ddce596a306e0af077ca9e9c0fe9602db2a9aecef76a9dc4c19bf88c0099b04fc75410cc9004f0966440825e3790a".to_string(),
-                            vk_ic1: "05b8b475f2bfedba4fa04ab1972006da9764c2c3e6fb65d6dd0aac938fd298112a560e13770b06a3f709a49fddf016331ea205fa125026993f6666eff69f4def".to_string()
-                            },
+                            groth16_process_vkey: Some(Groth16VKeyType {
+                                vk_alpha1: "2d4d9aa7e302d9df41749d5507949d05dbea33fbb16c643b22f599a2be6df2e214bedd503c37ceb061d8ec60209fe345ce89830a19230301f076caff004d1926".to_string(),
+                                vk_beta_2: "0967032fcbf776d1afc985f88877f182d38480a653f2decaa9794cbc3bf3060c0e187847ad4c798374d0d6732bf501847dd68bc0e071241e0213bc7fc13db7ab304cfbd1e08a704a99f5e847d93f8c3caafddec46b7a0d379da69a4d112346a71739c1b1a457a8c7313123d24d2f9192f896b7c63eea05a9d57f06547ad0cec8".to_string(),
+                                vk_gamma_2: "198e9393920d483a7260bfb731fb5d25f1aa493335a9e71297e485b7aef312c21800deef121f1e76426a00665e5c4479674322d4f75edadd46debd5cd992f6ed090689d0585ff075ec9e99ad690c3395bc4b313370b38ef355acdadcd122975b12c85ea5db8c6deb4aab71808dcb408fe3d1e7690c43d37b4ce6cc0166fa7daa".to_string(),
+                                vk_delta_2: "2178a9c3805dd82071b2b28bb4c0ffc8178cad913c8c990b98b4863284dc3a5d175c0be554fc060c27c551e5e32effef015b918a0f5a2dc1b92909b8272719301c521d5f6542db5ea4775a42d32159c356a696599c1a3df011ec00559ae1c2b60d860f7e6513a7d20feaeaca401863e35a0f691dd7d30ce06d07946840de1ec8".to_string(),
+                                vk_ic0: "19126a54a9b6d0d415f892c246485cb2889487cf9c4a8cd88dab5e1140e1d0630d1d76ef4652df8887c9dc557aa57f25e221db7e5b2e4cf618a362bece107f5c".to_string(),
+                                vk_ic1: "0632e625fefc7172e8aec1070c4d32b90b6c482f6f3806773a4c55a03877c2d716cfd935eb3e3883f580c93f56adbf3a253ce3c208c52fb784f9d8fec139c617".to_string(),
+                            }),
+                            groth16_tally_vkey: Some(Groth16VKeyType {
+                                vk_alpha1: "2d4d9aa7e302d9df41749d5507949d05dbea33fbb16c643b22f599a2be6df2e214bedd503c37ceb061d8ec60209fe345ce89830a19230301f076caff004d1926".to_string(),
+                                vk_beta_2: "0967032fcbf776d1afc985f88877f182d38480a653f2decaa9794cbc3bf3060c0e187847ad4c798374d0d6732bf501847dd68bc0e071241e0213bc7fc13db7ab304cfbd1e08a704a99f5e847d93f8c3caafddec46b7a0d379da69a4d112346a71739c1b1a457a8c7313123d24d2f9192f896b7c63eea05a9d57f06547ad0cec8".to_string(),
+                                vk_gamma_2: "198e9393920d483a7260bfb731fb5d25f1aa493335a9e71297e485b7aef312c21800deef121f1e76426a00665e5c4479674322d4f75edadd46debd5cd992f6ed090689d0585ff075ec9e99ad690c3395bc4b313370b38ef355acdadcd122975b12c85ea5db8c6deb4aab71808dcb408fe3d1e7690c43d37b4ce6cc0166fa7daa".to_string(),
+                                vk_delta_2: "2e9fad39728c543c5213599111e1a44b01720c999a6785e8136c3e3b3bf8e07e248e1933d477969ca6e27cb7a74bca18cac7e3bbdf9371be5c54fe151f6376a30955609ec69b89329322a2f435b706ca248d1312c7513853a50ef37ed0f7826c25a5c57bf07789d89e538bc24017cf2722811f21480b0bb8030ed0028ecb7cd8".to_string(),
+                                vk_ic0: "1bc1a1a3444256469c07cd6f4d1cfd9f7c9ddce596a306e0af077ca9e9c0fe9602db2a9aecef76a9dc4c19bf88c0099b04fc75410cc9004f0966440825e3790a".to_string(),
+                                vk_ic1: "05b8b475f2bfedba4fa04ab1972006da9764c2c3e6fb65d6dd0aac938fd298112a560e13770b06a3f709a49fddf016331ea205fa125026993f6666eff69f4def".to_string()
+                            }),
+                            plonk_process_vkey: None,
+                            plonk_tally_vkey: None,
+                            certification_system: Uint256::from_u128(0u128),
                             max_vote_options: Uint256::from_u128(5u128),
                             round_info,
                             whitelist,
@@ -548,14 +552,15 @@ impl MaciContract {
         app: &mut App,
         sender: Addr,
         new_state_commitment: Uint256,
-        proof: ProofType,
+        proof: Groth16ProofType,
     ) -> AnyResult<AppResponse> {
         app.execute_contract(
             sender,
             self.addr(),
             &ExecuteMsg::ProcessMessage {
                 new_state_commitment,
-                proof,
+                groth16_proof: Some(proof),
+                plonk_proof: None,
             },
             &[],
         )
@@ -577,14 +582,15 @@ impl MaciContract {
         app: &mut App,
         sender: Addr,
         new_tally_commitment: Uint256,
-        proof: ProofType,
+        proof: Groth16ProofType,
     ) -> AnyResult<AppResponse> {
         app.execute_contract(
             sender,
             self.addr(),
             &ExecuteMsg::ProcessTally {
                 new_tally_commitment,
-                proof,
+                groth16_proof: Some(proof),
+                plonk_proof: None,
             },
             &[],
         )
