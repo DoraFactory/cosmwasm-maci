@@ -65,9 +65,9 @@ where
     );
 
     // start transform the Affine type
-    let mut wire_commitments_affine: Vec<E::G1Affine> = Vec::new();
+    // let mut wire_commitments_affine: Vec<E::G1Affine> = Vec::new();
     let mut grand_product_commitment_arr: [u8; 64] = [0; 64];
-    let mut quotient_poly_commitments_affine: Vec<E::G1Affine> = Vec::new();
+    // let mut quotient_poly_commitments_affine: Vec<E::G1Affine> = Vec::new();
     let mut opening_at_z_proof_arr: [u8; 64] = [0; 64];
     let mut opening_at_z_omega_proof_arr: [u8; 64] = [0; 64];
 
@@ -81,7 +81,7 @@ where
                 .map_err(|_| ContractError::ErrorProof {})
         })
         .collect();
-    wire_commitments_affine = wire_commitments_affine_res?;
+    let wire_commitments_affine = wire_commitments_affine_res?;
 
     grand_product_commitment_arr[..grand_product_commitment.len()]
         .copy_from_slice(&grand_product_commitment[..]);
@@ -97,7 +97,7 @@ where
                     .map_err(|_| ContractError::ErrorProof {})
             })
             .collect();
-    quotient_poly_commitments_affine = quotient_poly_commitments_res?;
+    let quotient_poly_commitments_affine = quotient_poly_commitments_res?;
 
     opening_at_z_proof_arr[..opening_at_z_proof.len()].copy_from_slice(&opening_at_z_proof[..]);
     opening_at_z_omega_proof_arr[..opening_at_z_omega_proof.len()]
@@ -194,10 +194,10 @@ where
         ContractError::ErrorVerificationKey {}
     );
 
-    let mut selector_commitments_affine: Vec<E::G1Affine> = Vec::new();
-    let mut next_step_selector_commitments_affine: Vec<E::G1Affine> = Vec::new();
-    let mut permutation_commitments_affine: Vec<E::G1Affine> = Vec::new();
-    let mut g2_elements_affine: Vec<E::G2Affine> = Vec::new();
+    // let mut selector_commitments_affine: Vec<E::G1Affine> = Vec::new();
+    // let mut next_step_selector_commitments_affine: Vec<E::G1Affine> = Vec::new();
+    // let mut permutation_commitments_affine: Vec<E::G1Affine> = Vec::new();
+    // let mut g2_elements_affine: Vec<E::G2Affine> = Vec::new();
 
     let selector_commitments_res: Result<Vec<E::G1Affine>, ContractError> = selector_commitments
         .into_iter()
@@ -209,7 +209,7 @@ where
                 .map_err(|_| ContractError::ErrorVerificationKey {})
         })
         .collect();
-    selector_commitments_affine = selector_commitments_res?;
+    let selector_commitments_affine = selector_commitments_res?;
 
     let next_step_selector_commitments_res: Result<Vec<E::G1Affine>, ContractError> =
         next_step_selector_commitments
@@ -222,7 +222,7 @@ where
                     .map_err(|_| ContractError::ErrorVerificationKey {})
             })
             .collect();
-    next_step_selector_commitments_affine = next_step_selector_commitments_res?;
+    let next_step_selector_commitments_affine = next_step_selector_commitments_res?;
 
     let permutation_commitments_res: Result<Vec<E::G1Affine>, ContractError> =
         permutation_commitments
@@ -235,7 +235,7 @@ where
                     .map_err(|_| ContractError::ErrorVerificationKey {})
             })
             .collect();
-    permutation_commitments_affine = permutation_commitments_res?;
+    let permutation_commitments_affine = permutation_commitments_res?;
 
     let g2_elements_res: Result<Vec<E::G2Affine>, ContractError> = g2_elements
         .into_iter()
@@ -247,7 +247,7 @@ where
                 .map_err(|_| ContractError::ErrorVerificationKey {})
         })
         .collect();
-    g2_elements_affine = g2_elements_res?;
+    let g2_elements_affine = g2_elements_res?;
 
     let mut g2_elements_affine_arr: [E::G2Affine; 2] = [E::G2Affine::zero(); 2];
     g2_elements_affine_arr[..g2_elements_affine.len()].copy_from_slice(&g2_elements_affine[..]);
