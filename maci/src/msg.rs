@@ -53,7 +53,6 @@ pub struct PlonkVKeyType {
 
 #[cw_serde]
 pub struct PlonkProofType {
-    pub difficuty_issuer: String,
     pub num_inputs: usize,
     pub n: usize,
     pub input_values: Vec<String>,
