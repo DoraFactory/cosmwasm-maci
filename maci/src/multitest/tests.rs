@@ -323,7 +323,7 @@ mod test {
         );
     }
 
-    // #[test]
+    #[test]
     fn instantiate_with_voting_time_should_works() {
         let msg_file_path = "./src/test/msg_test.json";
 
@@ -1181,7 +1181,7 @@ mod test {
         app.update_block(next_block);
     }
 
-    // #[test]
+    #[test]
     fn instantiate_with_voting_time_isqv_should_works() {
         let msg_file_path = "./src/test/qv_test/msg.json";
 

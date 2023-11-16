@@ -918,9 +918,8 @@ pub fn execute_process_message(
         attributes = vec![
             attr("zk_verify", is_passed.to_string()),
             attr("commitment", new_state_commitment.to_string()),
-            attr("pi_a", groth16_proof_data.a),
-            attr("pi_b", groth16_proof_data.b),
-            attr("pi_c", groth16_proof_data.c),
+            attr("proof", format!("{:?}", groth16_proof_data)),
+            attr("certification_system", "groth16"),
         ];
     }
 
@@ -983,6 +982,7 @@ pub fn execute_process_message(
             attr("zk_verify", is_passed.to_string()),
             attr("commitment", new_state_commitment.to_string()),
             attr("proof", format!("{:?}", plonk_proof_data)),
+            attr("certification_system", "plonk"),
         ];
     }
 
@@ -1118,9 +1118,8 @@ pub fn execute_process_tally(
         attributes = vec![
             attr("zk_verify", is_passed.to_string()),
             attr("commitment", new_tally_commitment.to_string()),
-            attr("pi_a", groth16_proof_data.a),
-            attr("pi_b", groth16_proof_data.b),
-            attr("pi_c", groth16_proof_data.c),
+            attr("proof", format!("{:?}", groth16_proof_data)),
+            attr("certification_system", "groth16"),
         ];
     }
 
@@ -1183,6 +1182,7 @@ pub fn execute_process_tally(
             attr("zk_verify", is_passed.to_string()),
             attr("commitment", new_tally_commitment.to_string()),
             attr("proof", format!("{:?}", plonk_proof_data)),
+            attr("certification_system", "plonk"),
         ];
     }
 
