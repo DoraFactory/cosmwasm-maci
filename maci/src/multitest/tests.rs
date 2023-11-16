@@ -280,7 +280,9 @@ mod test {
             c: "111e06873463cd8749a1bd8adc83d252fe79097089777668e40007accdb7cdb406de890a7d29c08a90ed207a140b0ad142f558754708b86c3ca61444143eb40d".to_string()
         };
 
-        _ = contract.process_tally(&mut app, owner(), new_tally_commitment, tally_proof);
+        _ = contract
+            .process_tally(&mut app, owner(), new_tally_commitment, tally_proof)
+            .unwrap();
         println!("------ tally");
         let results: Vec<Uint256> = result_data
             .results
@@ -537,7 +539,9 @@ mod test {
             "process_message new state commitment {:?}",
             new_state_commitment
         );
-        _ = contract.process_message(&mut app, owner(), new_state_commitment, proof);
+        _ = contract
+            .process_message(&mut app, owner(), new_state_commitment, proof)
+            .unwrap();
 
         _ = contract.stop_processing(&mut app, owner());
         println!(
@@ -574,7 +578,9 @@ mod test {
             c: "111e06873463cd8749a1bd8adc83d252fe79097089777668e40007accdb7cdb406de890a7d29c08a90ed207a140b0ad142f558754708b86c3ca61444143eb40d".to_string()
         };
 
-        _ = contract.process_tally(&mut app, owner(), new_tally_commitment, tally_proof);
+        _ = contract
+            .process_tally(&mut app, owner(), new_tally_commitment, tally_proof)
+            .unwrap();
 
         let results: Vec<Uint256> = result_data
             .results
@@ -784,7 +790,9 @@ mod test {
             "process_message new state commitment {:?}",
             new_state_commitment
         );
-        _ = contract.process_message(&mut app, owner(), new_state_commitment, proof);
+        _ = contract
+            .process_message(&mut app, owner(), new_state_commitment, proof)
+            .unwrap();
 
         _ = contract.stop_processing(&mut app, owner());
         println!(
@@ -809,7 +817,9 @@ mod test {
             c: "111e06873463cd8749a1bd8adc83d252fe79097089777668e40007accdb7cdb406de890a7d29c08a90ed207a140b0ad142f558754708b86c3ca61444143eb40d".to_string()
         };
 
-        _ = contract.process_tally(&mut app, owner(), new_tally_commitment, tally_proof);
+        _ = contract
+            .process_tally(&mut app, owner(), new_tally_commitment, tally_proof)
+            .unwrap();
 
         let results: Vec<Uint256> = result_data
             .results
@@ -1010,7 +1020,9 @@ mod test {
             "process_message new state commitment {:?}",
             new_state_commitment
         );
-        _ = contract.process_message(&mut app, owner(), new_state_commitment, proof);
+        _ = contract
+            .process_message(&mut app, owner(), new_state_commitment, proof)
+            .unwrap();
 
         _ = contract.stop_processing(&mut app, owner());
         println!(
@@ -1035,7 +1047,9 @@ mod test {
             c: "111e06873463cd8749a1bd8adc83d252fe79097089777668e40007accdb7cdb406de890a7d29c08a90ed207a140b0ad142f558754708b86c3ca61444143eb40d".to_string()
         };
 
-        _ = contract.process_tally(&mut app, owner(), new_tally_commitment, tally_proof);
+        _ = contract
+            .process_tally(&mut app, owner(), new_tally_commitment, tally_proof)
+            .unwrap();
 
         let results: Vec<Uint256> = result_data
             .results
@@ -1383,7 +1397,9 @@ mod test {
             "process_message new state commitment {:?}",
             new_state_commitment
         );
-        _ = contract.process_message(&mut app, owner(), new_state_commitment, proof);
+        _ = contract
+            .process_message(&mut app, owner(), new_state_commitment, proof)
+            .unwrap();
 
         _ = contract.stop_processing(&mut app, owner());
         println!(
@@ -1420,7 +1436,9 @@ mod test {
             c: "100005547853768af099c27f658c8b44d52bb94117a235243dfb243f3687395e2d3634cdce0cbe115d8d497e2330a907f965e4d9080183b381fb4ff30f98f02a".to_string()
         };
 
-        _ = contract.process_tally(&mut app, owner(), new_tally_commitment, tally_proof);
+        _ = contract
+            .process_tally(&mut app, owner(), new_tally_commitment, tally_proof)
+            .unwrap();
 
         let results: Vec<Uint256> = result_data
             .results
@@ -1697,7 +1715,9 @@ mod test {
             "process_message new state commitment {:?}",
             new_state_commitment
         );
-        _ = contract.process_message_plonk(&mut app, owner(), new_state_commitment, proof);
+        let _ = contract
+            .process_message_plonk(&mut app, owner(), new_state_commitment, proof)
+            .unwrap();
 
         _ = contract.stop_processing(&mut app, owner());
         println!(
@@ -1768,7 +1788,9 @@ mod test {
           opening_at_z_omega_proof: "0b7b5f1f7a1bad8e2de0798b783be1ca0bda364b11ad05691fdaf77f884e4e4c223e9ad1c59eccddd3281e0eaada926ecefff3754920dc8bdff8dab6fe4d993d".to_string()
         };
 
-        _ = contract.process_tally_plonk(&mut app, owner(), new_tally_commitment, tally_proof);
+        _ = contract
+            .process_tally_plonk(&mut app, owner(), new_tally_commitment, tally_proof)
+            .unwrap();
 
         let results: Vec<Uint256> = result_data
             .results
