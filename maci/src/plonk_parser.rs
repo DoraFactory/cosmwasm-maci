@@ -4,8 +4,8 @@ use bellman_ce::plonk::better_cs::cs::PlonkConstraintSystemParams;
 use bellman_ce::plonk::better_cs::keys::{Proof, VerificationKey};
 use cosmwasm_std::ensure;
 use ff_ce::from_hex;
-use pairing_matter::bn256::{G1Affine, G1Uncompressed, G2Affine, G2Uncompressed};
-use pairing_matter::{CurveAffine, EncodedPoint, Engine};
+use pairing_ce::bn256::{G1Affine, G1Uncompressed, G2Affine, G2Uncompressed};
+use pairing_ce::{CurveAffine, EncodedPoint, Engine};
 
 /// convert the proof into the Affine/Fr type, which will be used to verify
 pub fn parse_plonk_proof<E, P>(pof: PlonkProofStr) -> Result<Proof<E, P>, ContractError>

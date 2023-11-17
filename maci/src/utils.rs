@@ -1,9 +1,9 @@
 use cosmwasm_std::Uint256;
 // use num_bigint::BigUint;
-use sha256::digest;
-
+// use sha256::digest;
 use ff::*;
 use poseidon_rs::Poseidon;
+use sha2::{Digest, Sha256};
 pub type Fr = poseidon_rs::Fr; // alias
 
 // pub fn uint256_from_decimal_string(decimal_string: &str) -> Uint256 {
@@ -107,8 +107,22 @@ pub fn hash_256_uint256_list(arrays: &[Uint256]) -> String {
         result.extend_from_slice(&array.to_be_bytes());
     }
 
-    digest(result.as_slice())
+    let hash_result = Sha256::digest(&result);
+
+    // 使用 hex crate 将二进制数据转换为十六进制字符串
+    hex::encode(hash_result)
 }
+// pub fn hash_256_uint256_list(arrays: &[Uint256]) -> String {
+//     let total_length = arrays.len() * 32;
+//     let mut result: Vec<u8> = Vec::with_capacity(total_length);
+
+//     for array in arrays {
+//         result.extend_from_slice(&array.to_be_bytes());
+//     }
+
+//     // digest(result.as_slice())
+//     Sha256::digest(&result.concat())
+// }
 
 pub fn encode_packed(arrays: &[&[u8; 32]]) -> Vec<u8> {
     let total_length = arrays.len() * 32;

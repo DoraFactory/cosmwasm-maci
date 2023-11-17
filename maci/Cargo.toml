@@ -50,11 +50,13 @@ serde = { version = "1.0.145", default-features = false, features = ["derive"] }
 thiserror = "1.0.31"
 bellman-ce-verifier = { git = "https://github.com/DoraFactory/snarkjs-bellman-adapter.git", default-features = false, version = "0.1.0"}
 hex = "0.4"
-pairing_ce = { git = "https://github.com/VegeBun-csj/pairing.git" }
+# pairing_ce = { git = "https://github.com/matter-labs/pairing.git" }
+pairing_ce = { git = "https://github.com/matter-labs/pairing.git" }
 ff_ce = "0.14.3"
 num-bigint = "0.4.3"
 num-traits = "0.2"
-sha256 = "1.1.3"
+# sha256 = "1.1.3"
+sha2 = { version = "0.9.5", default-features = false }
 poseidon-rs = "0.0.10"
 getrandom = { version = "0.2.9", features = ["js"] }
 ff = {package="ff_ce" , version="0.11", features = ["derive"]}
@@ -63,7 +65,7 @@ prost = "0.11"
 prost-types = "0.11"
 cw4 = "1.1.0"
 
-pairing_matter = { package="pairing_ce", git = "https://github.com/matter-labs/pairing.git" }
+# pairing_matter = { package="pairing_ce", git = "https://github.com/matter-labs/pairing.git" }
 bellman_ce = { git = "https://github.com/DoraFactory/bellman.git" }
 franklin-crypto = { git = "https://github.com/matter-labs/franklin-crypto", branch = "beta", features = [ "multicore", "plonk" ] }
 

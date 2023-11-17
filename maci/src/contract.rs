@@ -13,7 +13,7 @@ use crate::state::{
 };
 
 use pairing_ce::bn256::Bn256;
-use pairing_matter::bn256::Bn256 as MBn256;
+use pairing_ce::bn256::Bn256 as MBn256;
 
 use bellman_ce::plonk::better_cs::cs::PlonkCsWidth4WithNextStepParams;
 
@@ -30,8 +30,8 @@ use cosmos_sdk_proto::Any;
 use prost_types::Timestamp as SdkTimestamp;
 
 use cosmwasm_std::{
-    attr, coins, to_binary, BankMsg, Binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Response,
-    StdResult, Uint128, Uint256,
+    attr, coins, to_json_binary, BankMsg, Binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo,
+    Response, StdResult, Uint128, Uint256,
 };
 
 use crate::utils::{hash2, hash5, hash_256_uint256_list, uint256_from_hex_string};
@@ -966,10 +966,9 @@ pub fn execute_process_message(
         let pof = parse_plonk_proof::<MBn256, PlonkCsWidth4WithNextStepParams>(proof_str.clone())?;
 
         // Verify the SNARK proof using the input hash
-        let is_passed = plonk_verify::<_, _, RollingKeccakTranscript<pairing_matter::bn256::Fr>>(
-            &pof, &vkey, None,
-        )
-        .map_err(|_| ContractError::SynthesisError {})?;
+        let is_passed =
+            plonk_verify::<_, _, RollingKeccakTranscript<pairing_ce::bn256::Fr>>(&pof, &vkey, None)
+                .map_err(|_| ContractError::SynthesisError {})?;
 
         // If the proof verification fails, return an error
         if !is_passed {
@@ -1166,10 +1165,9 @@ pub fn execute_process_tally(
         let pof = parse_plonk_proof::<MBn256, PlonkCsWidth4WithNextStepParams>(proof_str.clone())?;
 
         // Verify the SNARK proof using the input hash
-        is_passed = plonk_verify::<_, _, RollingKeccakTranscript<pairing_matter::bn256::Fr>>(
-            &pof, &vkey, None,
-        )
-        .map_err(|_| ContractError::SynthesisError {})?;
+        is_passed =
+            plonk_verify::<_, _, RollingKeccakTranscript<pairing_ce::bn256::Fr>>(&pof, &vkey, None)
+                .map_err(|_| ContractError::SynthesisError {})?;
 
         // If the proof verification fails, return an error
         if !is_passed {
@@ -1615,51 +1613,55 @@ fn can_execute(deps: Deps, sender: &str) -> StdResult<bool> {
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
-        QueryMsg::GetRoundInfo {} => to_binary::<RoundInfo>(&ROUNDINFO.load(deps.storage).unwrap()),
-        QueryMsg::GetVotingTime {} => {
-            to_binary::<VotingTime>(&VOTINGTIME.load(deps.storage).unwrap())
+        QueryMsg::GetRoundInfo {} => {
+            to_json_binary::<RoundInfo>(&ROUNDINFO.load(deps.storage).unwrap())
         }
-        QueryMsg::GetPeriod {} => to_binary::<Period>(&PERIOD.load(deps.storage).unwrap()),
+        QueryMsg::GetVotingTime {} => {
+            to_json_binary::<VotingTime>(&VOTINGTIME.load(deps.storage).unwrap())
+        }
+        QueryMsg::GetPeriod {} => to_json_binary::<Period>(&PERIOD.load(deps.storage).unwrap()),
         QueryMsg::GetNumSignUp {} => {
-            to_binary::<Uint256>(&NUMSIGNUPS.may_load(deps.storage)?.unwrap_or_default())
+            to_json_binary::<Uint256>(&NUMSIGNUPS.may_load(deps.storage)?.unwrap_or_default())
         }
         QueryMsg::GetMsgChainLength {} => {
-            to_binary::<Uint256>(&MSG_CHAIN_LENGTH.may_load(deps.storage)?.unwrap_or_default())
+            to_json_binary::<Uint256>(&MSG_CHAIN_LENGTH.may_load(deps.storage)?.unwrap_or_default())
         }
-        QueryMsg::GetResult { index } => to_binary::<Uint256>(
+        QueryMsg::GetResult { index } => to_json_binary::<Uint256>(
             &RESULT
                 .may_load(deps.storage, index.to_be_bytes().to_vec())?
                 .unwrap_or_default(),
         ),
         QueryMsg::GetAllResult {} => {
-            to_binary::<Uint256>(&TOTAL_RESULT.may_load(deps.storage)?.unwrap_or_default())
+            to_json_binary::<Uint256>(&TOTAL_RESULT.may_load(deps.storage)?.unwrap_or_default())
         }
-        QueryMsg::GetStateIdxInc { address } => to_binary::<Uint256>(
+        QueryMsg::GetStateIdxInc { address } => to_json_binary::<Uint256>(
             &STATEIDXINC
                 .may_load(deps.storage, &address)?
                 .unwrap_or_default(),
         ),
-        QueryMsg::GetVoiceCreditBalance { index } => to_binary::<Uint256>(
+        QueryMsg::GetVoiceCreditBalance { index } => to_json_binary::<Uint256>(
             &VOICECREDITBALANCE
                 .load(deps.storage, index.to_be_bytes().to_vec())
                 .unwrap(),
         ),
-        QueryMsg::WhiteList {} => to_binary::<Whitelist>(&query_white_list(deps)?),
-        QueryMsg::IsWhiteList { sender } => to_binary::<bool>(&query_can_sign_up(deps, sender)?),
+        QueryMsg::WhiteList {} => to_json_binary::<Whitelist>(&query_white_list(deps)?),
+        QueryMsg::IsWhiteList { sender } => {
+            to_json_binary::<bool>(&query_can_sign_up(deps, sender)?)
+        }
         QueryMsg::WhiteBalanceOf { sender } => {
-            to_binary::<Uint256>(&query_user_balance_of(deps, sender)?)
+            to_json_binary::<Uint256>(&query_user_balance_of(deps, sender)?)
         }
         QueryMsg::VoteOptionMap {} => {
-            to_binary::<Vec<String>>(&VOTEOPTIONMAP.load(deps.storage).unwrap())
+            to_json_binary::<Vec<String>>(&VOTEOPTIONMAP.load(deps.storage).unwrap())
         }
         QueryMsg::MaxVoteOptions {} => {
-            to_binary::<Uint256>(&MAX_VOTE_OPTIONS.may_load(deps.storage)?.unwrap_or_default())
+            to_json_binary::<Uint256>(&MAX_VOTE_OPTIONS.may_load(deps.storage)?.unwrap_or_default())
         }
         QueryMsg::QueryTotalFeeGrant {} => {
-            to_binary::<Uint128>(&FEEGRANTS.may_load(deps.storage)?.unwrap_or_default())
+            to_json_binary::<Uint128>(&FEEGRANTS.may_load(deps.storage)?.unwrap_or_default())
         }
         QueryMsg::QueryCircuitType {} => {
-            to_binary::<Uint256>(&CIRCUITTYPE.may_load(deps.storage)?.unwrap_or_default())
+            to_json_binary::<Uint256>(&CIRCUITTYPE.may_load(deps.storage)?.unwrap_or_default())
         }
     }
 }
