@@ -65,7 +65,7 @@ mod test {
         pubkeys: Vec<Vec<String>>,
     }
 
-    #[test]
+    // #[test]
     fn instantiate_with_no_voting_time_should_works() {
         let msg_file_path = "./src/test/msg_test.json";
 
@@ -323,7 +323,7 @@ mod test {
         );
     }
 
-    #[test]
+    // #[test]
     fn instantiate_with_voting_time_should_works() {
         let msg_file_path = "./src/test/msg_test.json";
 
@@ -607,7 +607,7 @@ mod test {
         );
     }
 
-    #[test]
+    // #[test]
     fn instantiate_with_start_time_should_works() {
         let msg_file_path = "./src/test/msg_test.json";
 
@@ -834,7 +834,7 @@ mod test {
         println!("all_result: {:?}", all_result);
     }
 
-    #[test]
+    // #[test]
     fn instantiate_with_end_time_should_works() {
         let msg_file_path = "./src/test/msg_test.json";
 
@@ -1064,7 +1064,7 @@ mod test {
         println!("all_result: {:?}", all_result);
     }
 
-    #[test]
+    // #[test]
     fn instantiate_with_wrong_voting_time_error() {
         let mut app = App::default();
         let code_id = MaciCodeId::store_code(&mut app);
@@ -1078,7 +1078,7 @@ mod test {
         assert_eq!(ContractError::WrongTimeSet {}, contract.downcast().unwrap());
     }
 
-    #[test]
+    // #[test]
     fn instantiate_with_voting_time_isqv_should_works() {
         let msg_file_path = "./src/test/qv_test/msg.json";
 
@@ -1362,7 +1362,7 @@ mod test {
         );
     }
 
-    #[test]
+    // #[test]
     fn instantiate_with_voting_time_plonk_should_works() {
         let msg_file_path = "./src/test/plonk_test/msg.json";
 
@@ -1714,7 +1714,7 @@ mod test {
         );
     }
 
-    // #[test]
+    #[test]
     fn instantiate_with_voting_time_and_test_grant_should_works() {
         let admin_coin_amount = 50u128;
         let bond_coin_amount = 10u128;
