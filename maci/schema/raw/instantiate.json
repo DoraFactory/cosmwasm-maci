@@ -3,21 +3,43 @@
   "title": "InstantiateMsg",
   "type": "object",
   "required": [
+    "certification_system",
     "circuit_type",
     "coordinator",
     "max_vote_options",
     "parameters",
-    "process_vkey",
     "qtr_lib",
-    "round_info",
-    "tally_vkey"
+    "round_info"
   ],
   "properties": {
+    "certification_system": {
+      "$ref": "#/definitions/Uint256"
+    },
     "circuit_type": {
       "$ref": "#/definitions/Uint256"
     },
     "coordinator": {
       "$ref": "#/definitions/PubKey"
+    },
+    "groth16_process_vkey": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/Groth16VKeyType"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "groth16_tally_vkey": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/Groth16VKeyType"
+        },
+        {
+          "type": "null"
+        }
+      ]
     },
     "max_vote_options": {
       "$ref": "#/definitions/Uint256"
@@ -25,17 +47,31 @@
     "parameters": {
       "$ref": "#/definitions/MaciParameters"
     },
-    "process_vkey": {
-      "$ref": "#/definitions/VKeyType"
+    "plonk_process_vkey": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/PlonkVKeyType"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "plonk_tally_vkey": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/PlonkVKeyType"
+        },
+        {
+          "type": "null"
+        }
+      ]
     },
     "qtr_lib": {
       "$ref": "#/definitions/QuinaryTreeRoot"
     },
     "round_info": {
       "$ref": "#/definitions/RoundInfo"
-    },
-    "tally_vkey": {
-      "$ref": "#/definitions/VKeyType"
     },
     "voting_time": {
       "anyOf": [
@@ -60,6 +96,38 @@
   },
   "additionalProperties": false,
   "definitions": {
+    "Groth16VKeyType": {
+      "type": "object",
+      "required": [
+        "vk_alpha1",
+        "vk_beta_2",
+        "vk_delta_2",
+        "vk_gamma_2",
+        "vk_ic0",
+        "vk_ic1"
+      ],
+      "properties": {
+        "vk_alpha1": {
+          "type": "string"
+        },
+        "vk_beta_2": {
+          "type": "string"
+        },
+        "vk_delta_2": {
+          "type": "string"
+        },
+        "vk_gamma_2": {
+          "type": "string"
+        },
+        "vk_ic0": {
+          "type": "string"
+        },
+        "vk_ic1": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
     "MaciParameters": {
       "type": "object",
       "required": [
@@ -80,6 +148,61 @@
         },
         "vote_option_tree_depth": {
           "$ref": "#/definitions/Uint256"
+        }
+      },
+      "additionalProperties": false
+    },
+    "PlonkVKeyType": {
+      "type": "object",
+      "required": [
+        "g2_elements",
+        "n",
+        "next_step_selector_commitments",
+        "non_residues",
+        "num_inputs",
+        "permutation_commitments",
+        "selector_commitments"
+      ],
+      "properties": {
+        "g2_elements": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "n": {
+          "type": "integer",
+          "format": "uint",
+          "minimum": 0.0
+        },
+        "next_step_selector_commitments": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "non_residues": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "num_inputs": {
+          "type": "integer",
+          "format": "uint",
+          "minimum": 0.0
+        },
+        "permutation_commitments": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "selector_commitments": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         }
       },
       "additionalProperties": false
@@ -152,38 +275,6 @@
     "Uint64": {
       "description": "A thin wrapper around u64 that is using strings for JSON encoding/decoding, such that the full u64 range can be used for clients that convert JSON numbers to floats, like JavaScript and jq.\n\n# Examples\n\nUse `from` to create instances of this and `u64` to get the value out:\n\n``` # use cosmwasm_std::Uint64; let a = Uint64::from(42u64); assert_eq!(a.u64(), 42);\n\nlet b = Uint64::from(70u32); assert_eq!(b.u64(), 70); ```",
       "type": "string"
-    },
-    "VKeyType": {
-      "type": "object",
-      "required": [
-        "vk_alpha1",
-        "vk_beta_2",
-        "vk_delta_2",
-        "vk_gamma_2",
-        "vk_ic0",
-        "vk_ic1"
-      ],
-      "properties": {
-        "vk_alpha1": {
-          "type": "string"
-        },
-        "vk_beta_2": {
-          "type": "string"
-        },
-        "vk_delta_2": {
-          "type": "string"
-        },
-        "vk_gamma_2": {
-          "type": "string"
-        },
-        "vk_ic0": {
-          "type": "string"
-        },
-        "vk_ic1": {
-          "type": "string"
-        }
-      },
-      "additionalProperties": false
     },
     "VotingTime": {
       "type": "object",
