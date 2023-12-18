@@ -1,13 +1,13 @@
 #[cfg(test)]
 mod test {
-    use cosmwasm_std::{coins, Addr, Uint128, Uint256};
-
-    use cw_multi_test::{next_block, App};
-
     use crate::error::ContractError;
     use crate::msg::{Groth16ProofType, PlonkProofType};
-    use crate::multitest::{owner, uint256_from_decimal_string, user1, user2, MaciCodeId};
+    use crate::multitest::{
+        create_app, owner, uint256_from_decimal_string, user1, user2, MaciCodeId,
+    };
     use crate::state::{MessageData, Period, PeriodStatus, PubKey, RoundInfo};
+    use cosmwasm_std::{coins, Addr, Uint128, Uint256};
+    use cw_multi_test::{next_block, AppBuilder, StargateAccepting};
     use serde::{Deserialize, Serialize};
     use serde_json;
     use std::fs;
@@ -78,7 +78,7 @@ mod test {
 
         let data: MsgData = serde_json::from_str(&msg_content).expect("Failed to parse JSON");
 
-        let mut app = App::default();
+        let mut app = create_app();
 
         let code_id = MaciCodeId::store_code(&mut app);
         let label = "Dora Maci";
@@ -357,7 +357,7 @@ mod test {
         let pubkey_data: UserPubkeyData =
             serde_json::from_str(&pubkey_content).expect("Failed to parse JSON");
 
-        let mut app = App::default();
+        let mut app = create_app();
         let code_id = MaciCodeId::store_code(&mut app);
         let label = "Group";
         let contract = code_id
@@ -641,7 +641,7 @@ mod test {
         let pubkey_data: UserPubkeyData =
             serde_json::from_str(&pubkey_content).expect("Failed to parse JSON");
 
-        let mut app = App::default();
+        let mut app = create_app();
         let code_id = MaciCodeId::store_code(&mut app);
         let label = "Group";
         let contract = code_id
@@ -868,7 +868,7 @@ mod test {
         let pubkey_data: UserPubkeyData =
             serde_json::from_str(&pubkey_content).expect("Failed to parse JSON");
 
-        let mut app = App::default();
+        let mut app = create_app();
         let code_id = MaciCodeId::store_code(&mut app);
         let label = "Group";
         let contract = code_id
@@ -1066,7 +1066,7 @@ mod test {
 
     // #[test]
     fn instantiate_with_wrong_voting_time_error() {
-        let mut app = App::default();
+        let mut app = create_app();
         let code_id = MaciCodeId::store_code(&mut app);
         let label = "Group";
         let contract = code_id
@@ -1112,7 +1112,7 @@ mod test {
         let pubkey_data: UserPubkeyData =
             serde_json::from_str(&pubkey_content).expect("Failed to parse JSON");
 
-        let mut app = App::default();
+        let mut app = create_app();
         let code_id = MaciCodeId::store_code(&mut app);
         let label = "Group";
         let contract = code_id
@@ -1396,7 +1396,7 @@ mod test {
         let pubkey_data: UserPubkeyData =
             serde_json::from_str(&pubkey_content).expect("Failed to parse JSON");
 
-        let mut app = App::default();
+        let mut app = create_app();
         let code_id = MaciCodeId::store_code(&mut app);
         let label = "Group";
         let contract = code_id
@@ -1731,12 +1731,15 @@ mod test {
 
         let data: MsgData = serde_json::from_str(&msg_content).expect("Failed to parse JSON");
 
-        let mut app = App::new(|router, _api, storage| {
-            router
-                .bank
-                .init_balance(storage, &owner(), coins(admin_coin_amount, DORA_DEMON))
-                .unwrap();
-        });
+        let mut app = AppBuilder::default()
+            .with_stargate(StargateAccepting)
+            .build(|router, _api, storage| {
+                router
+                    .bank
+                    .init_balance(storage, &owner(), coins(admin_coin_amount, DORA_DEMON))
+                    .unwrap();
+            });
+
         let code_id = MaciCodeId::store_code(&mut app);
         let label = "Group";
         let contract = code_id
