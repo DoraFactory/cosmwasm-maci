@@ -178,4 +178,7 @@ pub enum QueryMsg {
 
     #[returns(Uint256)]
     QueryCircuitType {},
+
+    #[returns(Uint256)]
+    QueryCertSystem {},
 }

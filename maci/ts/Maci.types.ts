@@ -201,6 +201,8 @@ export type QueryMsg = {
   query_total_fee_grant: {};
 } | {
   query_circuit_type: {};
+} | {
+  query_cert_system: {};
 };
 export type Addr = string;
 export type PeriodStatus = "pending" | "voting" | "processing" | "tallying" | "ended";
