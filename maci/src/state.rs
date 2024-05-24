@@ -116,10 +116,19 @@ pub struct MessageData {
 }
 
 pub const MSG_HASHES: Map<Vec<u8>, Uint256> = Map::new("msg_hashes");
-// pub const MSG_HASHES: Item<Vec<Uint256>> = Item::new("msg_hashes");
 pub const MSG_CHAIN_LENGTH: Item<Uint256> = Item::new("msg_chain_length");
 pub const PROCESSED_MSG_COUNT: Item<Uint256> = Item::new("processed_msg_count");
 pub const PROCESSED_USER_COUNT: Item<Uint256> = Item::new("processed_user_count");
+
+pub const DMSG_CHAIN_LENGTH: Item<Uint256> = Item::new("dmsg_chain_length");
+pub const DMSG_HASHES: Map<Vec<u8>, Uint256> = Map::new("dmsg_hashes");
+pub const STATE_ROOT_BY_DMSG: Map<Vec<u8>, Uint256> = Map::new("state_root_by_dmsg");
+pub const PROCESSED_DMSG_COUNT: Item<Uint256> = Item::new("processed_dmsg_count");
+pub const DNODES: Map<Vec<u8>, Uint256> = Map::new("dnodes");
+pub const DEACTIVATED_COUNT: Item<Uint256> = Item::new("deactivated_count");
+pub const NULLIFIERS: Map<Vec<u8>, bool> = Map::new("nullifiers");
+pub const CURRENT_DEACTIVATE_COMMITMENT: Item<Uint256> = Item::new("current_deactivate_commitment");
+pub const SIGNUPED: Map<Vec<u8>, Uint256> = Map::new("signuped");
 
 #[cw_serde]
 pub struct Groth16ProofStr {
@@ -277,6 +286,8 @@ pub struct Groth16VkeyStr {
 
 pub const GROTH16_PROCESS_VKEYS: Item<Groth16VkeyStr> = Item::new("groth16_process_vkeys");
 pub const GROTH16_TALLY_VKEYS: Item<Groth16VkeyStr> = Item::new("groth16_tally_vkeys");
+pub const GROTH16_DEACTIVATE_VKEYS: Item<Groth16VkeyStr> = Item::new("groth16_deactivate_vkeys");
+pub const GROTH16_NEWKEY_VKEYS: Item<Groth16VkeyStr> = Item::new("groth16_newkey_vkeys");
 
 #[cw_serde]
 pub struct PlonkVkeyStr {

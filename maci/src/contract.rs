@@ -5,11 +5,14 @@ use crate::plonk_parser::{parse_plonk_proof, parse_plonk_vkey};
 use crate::state::{
     Admin, Groth16ProofStr, Groth16VkeyStr, MessageData, Period, PeriodStatus, PlonkProofStr,
     PlonkVkeyStr, PubKey, RoundInfo, StateLeaf, VotingTime, Whitelist, ADMIN, CERTSYSTEM,
-    CIRCUITTYPE, COORDINATORHASH, CURRENT_STATE_COMMITMENT, CURRENT_TALLY_COMMITMENT, FEEGRANTS,
-    GROTH16_PROCESS_VKEYS, GROTH16_TALLY_VKEYS, LEAF_IDX_0, MACIPARAMETERS, MAX_LEAVES_COUNT,
-    MAX_VOTE_OPTIONS, MSG_CHAIN_LENGTH, MSG_HASHES, NODES, NUMSIGNUPS, PERIOD, PLONK_PROCESS_VKEYS,
-    PLONK_TALLY_VKEYS, PROCESSED_MSG_COUNT, PROCESSED_USER_COUNT, QTR_LIB, RESULT, ROUNDINFO,
-    STATEIDXINC, TOTAL_RESULT, VOICECREDITBALANCE, VOTEOPTIONMAP, VOTINGTIME, WHITELIST, ZEROS,
+    CIRCUITTYPE, COORDINATORHASH, CURRENT_DEACTIVATE_COMMITMENT, CURRENT_STATE_COMMITMENT,
+    CURRENT_TALLY_COMMITMENT, DMSG_CHAIN_LENGTH, DMSG_HASHES, DNODES, FEEGRANTS,
+    GROTH16_DEACTIVATE_VKEYS, GROTH16_NEWKEY_VKEYS, GROTH16_PROCESS_VKEYS, GROTH16_TALLY_VKEYS,
+    LEAF_IDX_0, MACIPARAMETERS, MAX_LEAVES_COUNT, MAX_VOTE_OPTIONS, MSG_CHAIN_LENGTH, MSG_HASHES,
+    NODES, NULLIFIERS, NUMSIGNUPS, PERIOD, PLONK_PROCESS_VKEYS, PLONK_TALLY_VKEYS,
+    PROCESSED_DMSG_COUNT, PROCESSED_MSG_COUNT, PROCESSED_USER_COUNT, QTR_LIB, RESULT, ROUNDINFO,
+    SIGNUPED, STATEIDXINC, STATE_ROOT_BY_DMSG, TOTAL_RESULT, VOICECREDITBALANCE, VOTEOPTIONMAP,
+    VOTINGTIME, WHITELIST, ZEROS,
 };
 
 use pairing_ce::bn256::Bn256;
@@ -696,6 +699,361 @@ pub fn execute_publish_message(
             .add_attribute("action", "publish_message")
             .add_attribute("event", "error user."))
     }
+}
+
+// in voting
+pub fn execute_publish_deactivate_message(
+    deps: DepsMut,
+    env: Env,
+    _info: MessageInfo,
+    message: MessageData,
+    enc_pub_key: PubKey,
+) -> Result<Response, ContractError> {
+    let period = PERIOD.load(deps.storage)?;
+    // Check if the period status is Voting
+    if VOTINGTIME.exists(deps.storage) {
+        let voting_time = VOTINGTIME.load(deps.storage)?;
+        check_voting_time(env, Some(voting_time), period.status)?;
+    } else {
+        check_voting_time(env, None, period.status)?;
+    }
+
+    // Load the scalar field value
+    let snark_scalar_field =
+        uint256_from_hex_string("30644e72e131a029b85045b68181585d2833e84879b9709143e1f593f0000001");
+
+    // let snark_scalar_field = uint256_from_decimal_string(
+    //     "21888242871839275222246405745257275088548364400416034343698204186575808495617",
+    // );
+
+    // Check if the encrypted public key is valid
+    if enc_pub_key.x != Uint256::from_u128(0u128)
+        && enc_pub_key.y != Uint256::from_u128(1u128)
+        && enc_pub_key.x < snark_scalar_field
+        && enc_pub_key.y < snark_scalar_field
+    {
+        let mut dmsg_chain_length = DMSG_CHAIN_LENGTH.load(deps.storage)?;
+        let old_msg_hashes =
+            DMSG_HASHES.load(deps.storage, dmsg_chain_length.to_be_bytes().to_vec())?;
+
+        let mut m: [Uint256; 5] = [Uint256::zero(); 5];
+        m[0] = message.data[0];
+        m[1] = message.data[1];
+        m[2] = message.data[2];
+        m[3] = message.data[3];
+        m[4] = message.data[4];
+
+        let mut n: [Uint256; 5] = [Uint256::zero(); 5];
+        n[0] = message.data[5];
+        n[1] = message.data[6];
+        n[2] = enc_pub_key.x;
+        n[3] = enc_pub_key.y;
+        n[4] = old_msg_hashes;
+
+        let m_hash = hash5(m);
+
+        let n_hash = hash5(n);
+        let m_n_hash = hash2([m_hash, n_hash]);
+
+        // Compute the new message hash using the provided message, encrypted public key, and previous hash
+        DMSG_HASHES.save(
+            deps.storage,
+            (dmsg_chain_length + Uint256::from_u128(1u128))
+                .to_be_bytes()
+                .to_vec(),
+            &m_n_hash,
+        )?;
+
+        STATE_ROOT_BY_DMSG.save(
+            deps.storage,
+            (dmsg_chain_length + Uint256::from_u128(1u128))
+                .to_be_bytes()
+                .to_vec(),
+            &state_root(deps.as_ref()),
+        )?;
+
+        let old_chain_length = dmsg_chain_length;
+        // Update the message chain length
+        dmsg_chain_length += Uint256::from_u128(1u128);
+        MSG_CHAIN_LENGTH.save(deps.storage, &dmsg_chain_length)?;
+        // Return a success response
+        Ok(Response::new()
+            .add_attribute("action", "publish_deactivate_message")
+            .add_attribute("dmsg_chain_length", old_chain_length.to_string())
+            .add_attribute("message", format!("{:?}", message.data))
+            .add_attribute(
+                "enc_pub_key",
+                format!(
+                    "{:?},{:?}",
+                    enc_pub_key.x.to_string(),
+                    enc_pub_key.y.to_string()
+                ),
+            ))
+    } else {
+        // Return an error response for invalid user or encrypted public key
+        Ok(Response::new()
+            .add_attribute("action", "publish_deactivate_message")
+            .add_attribute("event", "error user."))
+    }
+}
+
+// in voting
+pub fn execute_process_deactivate_message(
+    deps: DepsMut,
+    env: Env,
+    _info: MessageInfo,
+    size: Uint256,
+    new_deactivate_commitment: Uint256,
+    new_deactivate_root: Uint256,
+    groth16_proof: Groth16ProofType,
+) -> Result<Response, ContractError> {
+    let period = PERIOD.load(deps.storage)?;
+    // Check if the period status is Voting
+    if VOTINGTIME.exists(deps.storage) {
+        let voting_time = VOTINGTIME.load(deps.storage)?;
+        check_voting_time(env, Some(voting_time), period.status)?;
+    } else {
+        check_voting_time(env, None, period.status)?;
+    }
+    let processed_dmsg_count = PROCESSED_DMSG_COUNT.load(deps.storage)?;
+    let dmsg_chain_length = DMSG_CHAIN_LENGTH.load(deps.storage)?;
+    if processed_dmsg_count >= dmsg_chain_length {
+        // Return an error response for invalid user or encrypted public key
+        return Ok(Response::new() // TODO: ERROR
+            .add_attribute("action", "publish_deactivate_message")
+            .add_attribute("event", "error user."));
+    }
+
+    // Load the MACI parameters
+    let parameters = MACIPARAMETERS.load(deps.storage)?;
+    let batch_size = parameters.message_batch_size;
+
+    if size > batch_size {
+        // Return an error response for invalid user or encrypted public key
+        return Ok(Response::new() // TODO: ERROR
+            .add_attribute("action", "publish_deactivate_message")
+            .add_attribute("event", "error user."));
+    }
+
+    let mut dnodes = vec![];
+    dnodes[0] = new_deactivate_root;
+    let mut input: [Uint256; 7] = [Uint256::zero(); 7];
+    input[0] = dnodes[0];
+    input[1] = COORDINATORHASH.load(deps.storage)?;
+    let batch_start_index = processed_dmsg_count;
+    let mut batch_end_index = batch_start_index + size;
+    let dmsg_chain_length = DMSG_CHAIN_LENGTH.load(deps.storage)?;
+    if batch_end_index > dmsg_chain_length {
+        batch_end_index = dmsg_chain_length;
+    }
+
+    input[2] = DMSG_HASHES.load(deps.storage, batch_start_index.to_be_bytes().to_vec())?;
+    input[3] = DMSG_HASHES.load(deps.storage, batch_end_index.to_be_bytes().to_vec())?;
+
+    input[4] = CURRENT_DEACTIVATE_COMMITMENT.load(deps.storage)?;
+    input[5] = new_deactivate_commitment;
+    input[6] = STATE_ROOT_BY_DMSG.load(deps.storage, batch_end_index.to_be_bytes().to_vec())?;
+
+    // Load the scalar field value
+    let snark_scalar_field =
+        uint256_from_hex_string("30644e72e131a029b85045b68181585d2833e84879b9709143e1f593f0000001");
+    // let snark_scalar_field = uint256_from_decimal_string(
+    //     "21888242871839275222246405745257275088548364400416034343698204186575808495617",
+    // );
+
+    // Compute the hash of the input values
+    let input_hash = uint256_from_hex_string(&hash_256_uint256_list(&input)) % snark_scalar_field;
+
+    let mut attributes = vec![];
+
+    // Load the process verification keys
+    let process_vkeys_str = GROTH16_DEACTIVATE_VKEYS.load(deps.storage)?;
+
+    // Parse the SNARK proof
+    let proof_str = Groth16ProofStr {
+        pi_a: hex::decode(groth16_proof.a.clone())
+            .map_err(|_| ContractError::HexDecodingError {})?,
+        pi_b: hex::decode(groth16_proof.b.clone())
+            .map_err(|_| ContractError::HexDecodingError {})?,
+        pi_c: hex::decode(groth16_proof.c.clone())
+            .map_err(|_| ContractError::HexDecodingError {})?,
+    };
+
+    // Parse the verification key and prepare for verification
+    let vkey = parse_groth16_vkey::<Bn256>(process_vkeys_str)?;
+    let pvk = prepare_verifying_key(&vkey);
+
+    // Parse the proof and prepare for verification
+    let pof = parse_groth16_proof::<Bn256>(proof_str.clone())?;
+
+    // Verify the SNARK proof using the input hash
+    let is_passed = groth16_verify(
+        &pvk,
+        &pof,
+        &[Fr::from_str(&input_hash.to_string()).unwrap()],
+    )
+    .unwrap();
+
+    // If the proof verification fails, return an error
+    if !is_passed {
+        return Err(ContractError::InvalidProof {
+            step: String::from("ProcessDeactivate"),
+        });
+    }
+
+    CURRENT_DEACTIVATE_COMMITMENT.save(deps.storage, &new_deactivate_commitment);
+    PROCESSED_DMSG_COUNT.save(
+        deps.storage,
+        &(processed_dmsg_count + batch_end_index - batch_start_index),
+    );
+    attributes = vec![
+        attr("zk_verify", is_passed.to_string()),
+        attr("commitment", new_deactivate_commitment.to_string()),
+        attr("proof", format!("{:?}", groth16_proof)),
+        attr("certification_system", "groth16"),
+    ];
+
+    Ok(Response::new()
+        .add_attribute("action", "process_message")
+        .add_attributes(attributes))
+}
+
+// in voting
+pub fn execute_add_new_key(
+    deps: DepsMut,
+    env: Env,
+    _info: MessageInfo,
+    pubkey: PubKey,
+    nullifier: Uint256,
+    d: [Uint256; 4],
+    groth16_proof: Groth16ProofType,
+) -> Result<Response, ContractError> {
+    let period = PERIOD.load(deps.storage)?;
+    // Check if the period status is Voting
+    if VOTINGTIME.exists(deps.storage) {
+        let voting_time = VOTINGTIME.load(deps.storage)?;
+        check_voting_time(env, Some(voting_time), period.status)?;
+    } else {
+        check_voting_time(env, None, period.status)?;
+    }
+
+    let nullifiers = NULLIFIERS.load(deps.storage, nullifier.to_be_bytes().to_vec())?;
+
+    if NULLIFIERS.has(deps.storage, nullifier.to_be_bytes().to_vec()) {
+        // Return an error response for invalid user or encrypted public key
+        return Ok(Response::new() // TODO: ERROR
+            .add_attribute("action", "publish_deactivate_message")
+            .add_attribute("event", "error user."));
+    }
+
+    NULLIFIERS.save(deps.storage, nullifier.to_be_bytes().to_vec(), &true);
+
+    if NULLIFIERS.has(deps.storage, nullifier.to_be_bytes().to_vec()) {
+        // Return an error response for invalid user or encrypted public key
+        return Ok(Response::new() // TODO: ERROR
+            .add_attribute("action", "publish_deactivate_message")
+            .add_attribute("event", "error user."));
+    }
+
+    let mut num_sign_ups = NUMSIGNUPS.load(deps.storage)?;
+
+    let max_leaves_count = MAX_LEAVES_COUNT.load(deps.storage)?;
+
+    // // Load the scalar field value
+    let snark_scalar_field =
+        uint256_from_hex_string("30644e72e131a029b85045b68181585d2833e84879b9709143e1f593f0000001");
+
+    assert!(num_sign_ups < max_leaves_count, "full");
+    // Check if the pubkey values are within the allowed range
+    assert!(
+        pubkey.x < snark_scalar_field && pubkey.y < snark_scalar_field,
+        "MACI: pubkey values should be less than the snark scalar field"
+    );
+
+    let mut input: [Uint256; 7] = [Uint256::zero(); 7];
+    input[0] = DNODES.load(
+        deps.storage,
+        Uint256::from_u128(0u128).to_be_bytes().to_vec(),
+    )?;
+    input[1] = COORDINATORHASH.load(deps.storage)?;
+    input[2] = nullifier;
+    input[3] = d[0];
+    input[4] = d[1];
+    input[5] = d[2];
+    input[6] = d[3];
+
+    // Load the scalar field value
+    let snark_scalar_field =
+        uint256_from_hex_string("30644e72e131a029b85045b68181585d2833e84879b9709143e1f593f0000001");
+    //     "21888242871839275222246405745257275088548364400416034343698204186575808495617",
+
+    // Compute the hash of the input values
+    let input_hash = uint256_from_hex_string(&hash_256_uint256_list(&input)) % snark_scalar_field; // input hash
+
+    // Load the process verification keys
+    let process_vkeys_str = GROTH16_NEWKEY_VKEYS.load(deps.storage)?;
+
+    // Parse the SNARK proof
+    let proof_str = Groth16ProofStr {
+        pi_a: hex::decode(groth16_proof.a.clone())
+            .map_err(|_| ContractError::HexDecodingError {})?,
+        pi_b: hex::decode(groth16_proof.b.clone())
+            .map_err(|_| ContractError::HexDecodingError {})?,
+        pi_c: hex::decode(groth16_proof.c.clone())
+            .map_err(|_| ContractError::HexDecodingError {})?,
+    };
+
+    // Parse the verification key and prepare for verification
+    let vkey = parse_groth16_vkey::<Bn256>(process_vkeys_str)?;
+    let pvk = prepare_verifying_key(&vkey);
+
+    // Parse the proof and prepare for verification
+    let pof = parse_groth16_proof::<Bn256>(proof_str.clone())?;
+
+    // Verify the SNARK proof using the input hash
+    let is_passed = groth16_verify(
+        &pvk,
+        &pof,
+        &[Fr::from_str(&input_hash.to_string()).unwrap()],
+    )
+    .unwrap();
+
+    // If the proof verification fails, return an error
+    if !is_passed {
+        return Err(ContractError::InvalidProof {
+            step: String::from("NewKey"),
+        });
+    }
+
+    let user_balance = user_balance_of(deps.as_ref(), info.sender.as_ref())?;
+    if user_balance == Uint256::from_u128(0u128) {
+        return Err(ContractError::Unauthorized {});
+    }
+
+    // let voice_credit_balance = VOICECREDITBALANCE.load(deps.storage, )
+    // Create a state leaf with the provided pubkey and amount
+    let state_leaf = StateLeaf {
+        pub_key: pubkey.clone(),
+        voice_credit_balance: user_balance,
+        vote_option_tree_root: Uint256::from_u128(0),
+        nonce: Uint256::from_u128(0),
+    }
+    .hash_state_leaf();
+
+    let state_index = num_sign_ups;
+    // Enqueue the state leaf
+    state_enqueue(&mut deps, state_leaf)?;
+
+    SIGNUPED.save(deps.storage, pubkey.x.to_be_bytes().to_vec(), &num_sign_ups)?;
+
+    Ok(Response::new()
+        .add_attribute("action", "sign_up")
+        .add_attribute("state_idx", state_index.to_string())
+        .add_attribute(
+            "pubkey",
+            format!("{:?},{:?}", pubkey.x.to_string(), pubkey.y.to_string()),
+        )
+        .add_attribute("balance", user_balance.to_string()))
 }
 
 pub fn execute_stop_voting_period(
