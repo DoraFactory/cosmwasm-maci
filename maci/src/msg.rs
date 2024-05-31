@@ -1,9 +1,20 @@
 use crate::state::{
     MaciParameters, MessageData, PeriodStatus, PubKey, QuinaryTreeRoot, RoundInfo, VotingTime,
-    Whitelist,
+    WhitelistConfig,
 };
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Addr, Uint128, Uint256};
+
+#[cw_serde]
+pub struct WhitelistBase {
+    pub addr: String,
+    pub balance: Uint256,
+}
+
+#[cw_serde]
+pub struct Whitelist {
+    pub users: Vec<WhitelistBase>,
+}
 
 #[cw_serde]
 pub struct InstantiateMsg {
@@ -113,8 +124,11 @@ pub enum ExecuteMsg {
     },
     Grant {
         max_amount: Uint128,
+        whitelists: Whitelist,
     },
-    Revoke {},
+    Revoke {
+        whitelists: Whitelist,
+    },
     Bond {},
     Withdraw {
         amount: Option<Uint128>,
@@ -156,8 +170,6 @@ pub enum QueryMsg {
     #[returns(Uint256)]
     GetVoiceCreditBalance { index: Uint256 },
 
-    #[returns(Whitelist)]
-    WhiteList {},
     /// Checks permissions of the caller on this proxy.
     /// If CanExecute returns true then a call to `Execute` with the same message,
     /// before any further state changes, should also succeed.
@@ -166,6 +178,9 @@ pub enum QueryMsg {
 
     #[returns(Uint256)]
     WhiteBalanceOf { sender: String },
+
+    #[returns(WhitelistConfig)]
+    WhiteInfo { sender: String },
 
     #[returns(Vec<String>)]
     VoteOptionMap {},

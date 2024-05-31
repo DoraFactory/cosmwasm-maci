@@ -1,15 +1,18 @@
 use crate::error::ContractError;
 use crate::groth16_parser::{parse_groth16_proof, parse_groth16_vkey};
-use crate::msg::{ExecuteMsg, Groth16ProofType, InstantiateMsg, PlonkProofType, QueryMsg};
+use crate::msg::{
+    ExecuteMsg, Groth16ProofType, InstantiateMsg, PlonkProofType, QueryMsg, Whitelist,
+};
 use crate::plonk_parser::{parse_plonk_proof, parse_plonk_vkey};
 use crate::state::{
     Admin, Groth16ProofStr, Groth16VkeyStr, MessageData, Period, PeriodStatus, PlonkProofStr,
-    PlonkVkeyStr, PubKey, RoundInfo, StateLeaf, VotingTime, Whitelist, ADMIN, CERTSYSTEM,
+    PlonkVkeyStr, PubKey, RoundInfo, StateLeaf, VotingTime, WhitelistConfig, ADMIN, CERTSYSTEM,
     CIRCUITTYPE, COORDINATORHASH, CURRENT_STATE_COMMITMENT, CURRENT_TALLY_COMMITMENT, FEEGRANTS,
     GROTH16_PROCESS_VKEYS, GROTH16_TALLY_VKEYS, LEAF_IDX_0, MACIPARAMETERS, MAX_LEAVES_COUNT,
-    MAX_VOTE_OPTIONS, MSG_CHAIN_LENGTH, MSG_HASHES, NODES, NUMSIGNUPS, PERIOD, PLONK_PROCESS_VKEYS,
-    PLONK_TALLY_VKEYS, PROCESSED_MSG_COUNT, PROCESSED_USER_COUNT, QTR_LIB, RESULT, ROUNDINFO,
-    STATEIDXINC, TOTAL_RESULT, VOICECREDITBALANCE, VOTEOPTIONMAP, VOTINGTIME, WHITELIST, ZEROS,
+    MAX_VOTE_OPTIONS, MAX_WHITELIST_NUM, MSG_CHAIN_LENGTH, MSG_HASHES, NODES, NUMSIGNUPS, PERIOD,
+    PLONK_PROCESS_VKEYS, PLONK_TALLY_VKEYS, PROCESSED_MSG_COUNT, PROCESSED_USER_COUNT, QTR_LIB,
+    RESULT, ROUNDINFO, STATEIDXINC, TOTAL_RESULT, VOICECREDITBALANCE, VOTEOPTIONMAP, VOTINGTIME,
+    WHITELIST, ZEROS,
 };
 
 use pairing_ce::bn256::Bn256;
@@ -30,7 +33,7 @@ use cosmos_sdk_proto::Any;
 use prost_types::Timestamp as SdkTimestamp;
 
 use cosmwasm_std::{
-    attr, coins, to_json_binary, BankMsg, Binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo,
+    attr, coins, to_json_binary, Addr, BankMsg, Binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo,
     Response, StdResult, Uint128, Uint256,
 };
 
@@ -232,10 +235,23 @@ pub fn instantiate(
     VOTEOPTIONMAP.save(deps.storage, &vote_option_map)?;
     ROUNDINFO.save(deps.storage, &msg.round_info)?;
     CIRCUITTYPE.save(deps.storage, &msg.circuit_type)?;
-
     match msg.whitelist {
-        Some(content) => WHITELIST.save(deps.storage, &content)?,
-        None => {}
+        Some(content) => {
+            for i in 0..content.users.len() {
+                let data = WhitelistConfig {
+                    balance: content.users[i].balance,
+                    is_register: false,
+                    fee_amount: Uint128::from(0u128),
+                    fee_grant: false,
+                };
+                let addr = &Addr::unchecked(&content.users[i].addr);
+                WHITELIST.save(deps.storage, addr, &data)?;
+                MAX_WHITELIST_NUM.save(deps.storage, &(content.users.len() as u128))?;
+            }
+        }
+        None => {
+            MAX_WHITELIST_NUM.save(deps.storage, &0u128)?;
+        }
     }
 
     match msg.voting_time {
@@ -331,8 +347,11 @@ pub fn execute(
         ExecuteMsg::StopTallyingPeriod { results, salt } => {
             execute_stop_tallying_period(deps, env, info, results, salt)
         }
-        ExecuteMsg::Grant { max_amount } => execute_grant(deps, env, info, max_amount),
-        ExecuteMsg::Revoke {} => execute_revoke(deps, env, info),
+        ExecuteMsg::Grant {
+            max_amount,
+            whitelists,
+        } => execute_grant(deps, env, info, max_amount, whitelists),
+        ExecuteMsg::Revoke { whitelists } => execute_revoke(deps, env, info, whitelists),
         ExecuteMsg::Bond {} => execute_bond(deps, env, info),
         ExecuteMsg::Withdraw { amount } => execute_withdraw(deps, env, info, amount),
     }
@@ -477,9 +496,9 @@ pub fn execute_set_whitelists(
 ) -> Result<Response, ContractError> {
     let period = PERIOD.load(deps.storage)?;
 
-    if FEEGRANTS.exists(deps.storage) {
-        return Err(ContractError::FeeGrantAlreadyExists);
-    }
+    // if FEEGRANTS.exists(deps.storage) {
+    //     return Err(ContractError::FeeGrantAlreadyExists);
+    // }
 
     if VOTINGTIME.exists(deps.storage) {
         let voting_time = VOTINGTIME.load(deps.storage)?;
@@ -505,8 +524,24 @@ pub fn execute_set_whitelists(
     if !can_execute(deps.as_ref(), info.sender.as_ref())? {
         Err(ContractError::Unauthorized {})
     } else {
-        WHITELIST.save(deps.storage, &whitelists)?;
-        let res = Response::new().add_attribute("action", "set_whitelists");
+        for i in 0..whitelists.users.len() {
+            let data = WhitelistConfig {
+                balance: whitelists.users[i].balance,
+                is_register: false,
+                fee_amount: Uint128::from(0u128),
+                fee_grant: false,
+            };
+            let addr = &Addr::unchecked(&whitelists.users[i].addr);
+            WHITELIST.save(deps.storage, addr, &data)?
+        }
+
+        let max_whitelist_num = MAX_WHITELIST_NUM.load(deps.storage)?;
+        let update_max_num = max_whitelist_num + whitelists.users.len() as u128;
+        MAX_WHITELIST_NUM.save(deps.storage, &update_max_num)?;
+        let res = Response::new()
+            .add_attribute("action", "set_whitelists")
+            .add_attribute("max_whitelist_num", update_max_num.to_string())
+            .add_attribute("update_num", whitelists.users.len().to_string());
         Ok(res)
     }
 }
@@ -615,9 +650,9 @@ pub fn execute_sign_up(
     )?;
     NUMSIGNUPS.save(deps.storage, &num_sign_ups)?;
 
-    let mut white_curr = WHITELIST.load(deps.storage)?;
-    white_curr.register(info.sender);
-    WHITELIST.save(deps.storage, &white_curr)?;
+    let mut white_curr = WHITELIST.load(deps.storage, &info.sender)?;
+    white_curr.register();
+    WHITELIST.save(deps.storage, &info.sender, &white_curr)?;
 
     Ok(Response::new()
         .add_attribute("action", "sign_up")
@@ -1281,7 +1316,8 @@ fn execute_grant(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
-    max_amount: Uint128,
+    base_amount: Uint128,
+    whitelists: Whitelist,
 ) -> Result<Response, ContractError> {
     // Check if the sender is authorized to execute the function
     if !can_execute(deps.as_ref(), info.sender.as_ref())? {
@@ -1296,9 +1332,9 @@ fn execute_grant(
         check_voting_time(env.clone(), None, period.status)?;
     }
 
-    if FEEGRANTS.exists(deps.storage) {
-        return Err(ContractError::FeeGrantAlreadyExists {});
-    }
+    // if FEEGRANTS.exists(deps.storage) {
+    //     return Err(ContractError::FeeGrantAlreadyExists {});
+    // }
 
     let denom = "peaka".to_string();
 
@@ -1309,11 +1345,13 @@ fn execute_grant(
             amount = fund.amount;
         }
     });
-    FEEGRANTS.save(deps.storage, &max_amount)?;
+    // FEEGRANTS.save(deps.storage, &max_amount)?;
 
-    let whitelist = WHITELIST.load(deps.storage)?;
+    let feegrants = FEEGRANTS.load(deps.storage)?;
 
-    let base_amount = max_amount / Uint128::from(whitelist.users.len() as u128);
+    // let whitelist = WHITELIST.load(deps.storage)?;z
+
+    // let base_amount = max_amount / Uint128::from(whitelist.users.len() as u128);
 
     let mut expiration_time: Option<SdkTimestamp> = None;
 
@@ -1345,56 +1383,79 @@ fn execute_grant(
     };
 
     let mut messages = vec![];
-    for i in 0..whitelist.users.len() {
-        let grant_msg = MsgGrantAllowance {
-            granter: env.contract.address.to_string(),
-            grantee: whitelist.users[i].addr.to_string(),
-            allowance: Some(Any {
-                type_url: AllowedMsgAllowance::TYPE_URL.to_string(),
-                value: allowed_allowance.encode_to_vec(),
-            }),
-        };
+    let mut update_amount = Uint128::from(0u128);
+    for i in 0..whitelists.users.len() {
+        let addr_str = whitelists.users[i].addr.to_string();
+        let addr = &Addr::unchecked(&addr_str);
+        let mut curr = WHITELIST.load(deps.storage, addr)?;
+        if curr.fee_grant == false {
+            let grant_msg = MsgGrantAllowance {
+                granter: env.contract.address.to_string(),
+                grantee: addr_str.to_string(),
+                allowance: Some(Any {
+                    type_url: AllowedMsgAllowance::TYPE_URL.to_string(),
+                    value: allowed_allowance.encode_to_vec(),
+                }),
+            };
 
-        let message = CosmosMsg::Stargate {
-            type_url: MsgGrantAllowance::TYPE_URL.to_string(),
-            value: grant_msg.encode_to_vec().into(),
-        };
-        messages.push(message);
+            let message = CosmosMsg::Stargate {
+                type_url: MsgGrantAllowance::TYPE_URL.to_string(),
+                value: grant_msg.encode_to_vec().into(),
+            };
+            messages.push(message);
+
+            update_amount += base_amount;
+            curr.grant(base_amount);
+            WHITELIST.save(deps.storage, addr, &curr)?;
+        }
     }
+
+    let total_feegrant_amount = feegrants + update_amount;
+    FEEGRANTS.save(deps.storage, &total_feegrant_amount)?;
 
     Ok(Response::default().add_messages(messages).add_attributes([
         ("action", "grant"),
-        ("max_amount", max_amount.to_string().as_str()),
+        ("total_amount", total_feegrant_amount.to_string().as_str()),
+        ("update_amount", update_amount.to_string().as_str()),
         ("base_amount", base_amount.to_string().as_str()),
         ("bond_amount", amount.to_string().as_str()),
     ]))
 }
 
-fn execute_revoke(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, ContractError> {
+fn execute_revoke(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    whitelists: Whitelist,
+) -> Result<Response, ContractError> {
     // Check if the sender is authorized to execute the function
     if !can_execute(deps.as_ref(), info.sender.as_ref())? {
         return Err(ContractError::Unauthorized {});
     }
 
-    if !FEEGRANTS.exists(deps.storage) {
-        return Err(ContractError::FeeGrantIsNotExists {});
-    }
-
-    let whitelist = WHITELIST.load(deps.storage)?;
-
     let mut messages = vec![];
-    for i in 0..whitelist.users.len() {
-        let revoke_msg = MsgRevokeAllowance {
-            granter: env.contract.address.to_string(),
-            grantee: whitelist.users[i].addr.to_string(),
-        };
-        let message = CosmosMsg::Stargate {
-            type_url: MsgRevokeAllowance::TYPE_URL.to_string(),
-            value: revoke_msg.encode_to_vec().into(),
-        };
-        messages.push(message);
+    // let mut update_amount = Uint128::from(0u128);
+    for i in 0..whitelists.users.len() {
+        let addr_str = whitelists.users[i].addr.to_string();
+        let addr = &Addr::unchecked(&addr_str);
+        let mut curr = WHITELIST.load(deps.storage, addr)?;
+        if curr.fee_grant == true {
+            let revoke_msg = MsgRevokeAllowance {
+                granter: env.contract.address.to_string(),
+                grantee: whitelists.users[i].addr.to_string(),
+            };
+            let message = CosmosMsg::Stargate {
+                type_url: MsgRevokeAllowance::TYPE_URL.to_string(),
+                value: revoke_msg.encode_to_vec().into(),
+            };
+            messages.push(message);
+        }
+        curr.revoke();
+        WHITELIST.save(deps.storage, addr, &curr)?;
     }
-    FEEGRANTS.remove(deps.storage);
+
+    // let total_feegrant_amount = feegrants + update_amount;
+    // FEEGRANTS.save(deps.storage, &total_feegrant_amount)?;
 
     Ok(Response::default()
         .add_messages(messages)
@@ -1451,14 +1512,17 @@ fn execute_withdraw(
 }
 
 fn can_sign_up(deps: Deps, sender: &str) -> StdResult<bool> {
-    let cfg = WHITELIST.load(deps.storage)?;
-    let can = cfg.is_whitelist(&sender);
-    Ok(can)
+    let addr = Addr::unchecked(sender);
+    Ok(WHITELIST.has(deps.storage, &addr))
 }
 
 fn user_balance_of(deps: Deps, sender: &str) -> StdResult<Uint256> {
-    let cfg = WHITELIST.load(deps.storage)?;
-    let balance = cfg.balance_of(&sender);
+    let addr = Addr::unchecked(sender);
+    let mut balance = Uint256::from_u128(0u128);
+    if WHITELIST.has(deps.storage, &addr) {
+        let cfg = WHITELIST.load(deps.storage, &addr)?;
+        balance = cfg.balance_of();
+    }
     Ok(balance)
 }
 
@@ -1644,13 +1708,17 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
                 .load(deps.storage, index.to_be_bytes().to_vec())
                 .unwrap(),
         ),
-        QueryMsg::WhiteList {} => to_json_binary::<Whitelist>(&query_white_list(deps)?),
         QueryMsg::IsWhiteList { sender } => {
             to_json_binary::<bool>(&query_can_sign_up(deps, sender)?)
         }
         QueryMsg::WhiteBalanceOf { sender } => {
             to_json_binary::<Uint256>(&query_user_balance_of(deps, sender)?)
         }
+        QueryMsg::WhiteInfo { sender } => to_json_binary::<WhitelistConfig>(
+            &WHITELIST
+                .load(deps.storage, &Addr::unchecked(sender))
+                .unwrap(),
+        ),
         QueryMsg::VoteOptionMap {} => {
             to_json_binary::<Vec<String>>(&VOTEOPTIONMAP.load(deps.storage).unwrap())
         }
@@ -1667,13 +1735,6 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
             to_json_binary::<Uint256>(&CERTSYSTEM.may_load(deps.storage)?.unwrap_or_default())
         }
     }
-}
-
-pub fn query_white_list(deps: Deps) -> StdResult<Whitelist> {
-    let cfg = WHITELIST.load(deps.storage)?;
-    Ok(Whitelist {
-        users: cfg.users.into_iter().map(|a| a.into()).collect(),
-    })
 }
 
 pub fn query_can_sign_up(deps: Deps, sender: String) -> StdResult<bool> {

@@ -3,10 +3,9 @@ mod tests;
 
 use anyhow::Result as AnyResult;
 
-use crate::msg::Groth16VKeyType;
+use crate::msg::{Groth16VKeyType, Whitelist};
 use crate::state::{
-    MaciParameters, MessageData, Period, PubKey, QuinaryTreeRoot, RoundInfo, VotingTime, Whitelist,
-    WhitelistConfig,
+    MaciParameters, MessageData, Period, PubKey, QuinaryTreeRoot, RoundInfo, VotingTime,
 };
 use crate::utils::uint256_from_hex_string;
 use crate::{
@@ -115,11 +114,11 @@ impl MaciCodeId {
         };
         let whitelist = Some(Whitelist {
             users: vec![
-                WhitelistConfig {
+                WhitelistBase {
                     addr: user1.to_string(),
                     balance: Uint256::from_u128(100u128),
                 },
-                WhitelistConfig {
+                WhitelistBase {
                     addr: user2.to_string(),
                     balance: Uint256::from_u128(80u128),
                 },
@@ -158,11 +157,11 @@ impl MaciCodeId {
         };
         let whitelist = Some(Whitelist {
             users: vec![
-                WhitelistConfig {
+                WhitelistBase {
                     addr: user1.to_string(),
                     balance: Uint256::from_u128(100u128),
                 },
-                WhitelistConfig {
+                WhitelistBase {
                     addr: user2.to_string(),
                     balance: Uint256::from_u128(80u128),
                 },
@@ -201,11 +200,11 @@ impl MaciCodeId {
         };
         let whitelist = Some(Whitelist {
             users: vec![
-                WhitelistConfig {
+                WhitelistBase {
                     addr: user1.to_string(),
                     balance: Uint256::from_u128(100u128),
                 },
-                WhitelistConfig {
+                WhitelistBase {
                     addr: user2.to_string(),
                     balance: Uint256::from_u128(80u128),
                 },
@@ -244,11 +243,11 @@ impl MaciCodeId {
         };
         let whitelist = Some(Whitelist {
             users: vec![
-                WhitelistConfig {
+                WhitelistBase {
                     addr: user1.to_string(),
                     balance: Uint256::from_u128(100u128),
                 },
-                WhitelistConfig {
+                WhitelistBase {
                     addr: user2.to_string(),
                     balance: Uint256::from_u128(80u128),
                 },
@@ -288,11 +287,11 @@ impl MaciCodeId {
         };
         let whitelist = Some(Whitelist {
             users: vec![
-                WhitelistConfig {
+                WhitelistBase {
                     addr: user1.to_string(),
                     balance: Uint256::from_u128(100u128),
                 },
-                WhitelistConfig {
+                WhitelistBase {
                     addr: user2.to_string(),
                     balance: Uint256::from_u128(80u128),
                 },
@@ -362,11 +361,11 @@ impl MaciCodeId {
         };
         let whitelist = Some(Whitelist {
             users: vec![
-                WhitelistConfig {
+                WhitelistBase {
                     addr: user1.to_string(),
                     balance: Uint256::from_u128(100u128),
                 },
-                WhitelistConfig {
+                WhitelistBase {
                     addr: user2.to_string(),
                     balance: Uint256::from_u128(80u128),
                 },
@@ -693,11 +692,11 @@ impl MaciContract {
             &ExecuteMsg::SetWhitelists {
                 whitelists: Whitelist {
                     users: vec![
-                        WhitelistConfig {
+                        WhitelistBase {
                             addr: user1().to_string(),
                             balance: Uint256::from_u128(100u128),
                         },
-                        WhitelistConfig {
+                        WhitelistBase {
                             addr: user2().to_string(),
                             balance: Uint256::from_u128(80u128),
                         },
@@ -854,22 +853,22 @@ impl MaciContract {
         )
     }
 
-    #[track_caller]
-    pub fn grant(&self, app: &mut App, sender: Addr, sent: &[Coin]) -> AnyResult<AppResponse> {
-        app.execute_contract(
-            sender,
-            self.addr(),
-            &ExecuteMsg::Grant {
-                max_amount: Uint128::from(10000000000000u128),
-            },
-            sent,
-        )
-    }
+    // #[track_caller]
+    // pub fn grant(&self, app: &mut App, sender: Addr, sent: &[Coin]) -> AnyResult<AppResponse> {
+    //     app.execute_contract(
+    //         sender,
+    //         self.addr(),
+    //         &ExecuteMsg::Grant {
+    //             max_amount: Uint128::from(10000000000000u128),
+    //         },
+    //         sent,
+    //     )
+    // }
 
-    #[track_caller]
-    pub fn revoke(&self, app: &mut App, sender: Addr) -> AnyResult<AppResponse> {
-        app.execute_contract(sender, self.addr(), &ExecuteMsg::Revoke {}, &[])
-    }
+    // #[track_caller]
+    // pub fn revoke(&self, app: &mut App, sender: Addr) -> AnyResult<AppResponse> {
+    //     app.execute_contract(sender, self.addr(), &ExecuteMsg::Revoke {}, &[])
+    // }
 
     #[track_caller]
     pub fn bond(&self, app: &mut App, sender: Addr, sent: &[Coin]) -> AnyResult<AppResponse> {

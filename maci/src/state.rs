@@ -198,48 +198,36 @@ pub const QTR_LIB: Item<QuinaryTreeRoot> = Item::new("qtr_lib");
 
 #[cw_serde]
 pub struct WhitelistConfig {
-    pub addr: String,
     pub balance: Uint256,
+    pub is_register: bool,
+    pub fee_amount: Uint128,
+    pub fee_grant: bool,
 }
 
-#[cw_serde]
-pub struct Whitelist {
-    pub users: Vec<WhitelistConfig>,
-}
-
-impl Whitelist {
-    pub fn is_whitelist(&self, addr: impl AsRef<str>) -> bool {
-        let addr = addr.as_ref();
-        self.users.iter().any(|a| a.addr == addr)
+impl WhitelistConfig {
+    pub fn register(&mut self) {
+        self.is_register = true;
+        self.balance = Uint256::from_u128(0u128);
     }
 
-    pub fn register(&mut self, addr: impl AsRef<str>) {
-        let addr = addr.as_ref();
-        self.users = self
-            .users
-            .clone()
-            .into_iter()
-            .map(|mut user| {
-                if user.addr == addr {
-                    user.balance = Uint256::from_u128(0u128);
-                }
-                user
-            })
-            .collect();
+    pub fn grant(&mut self, amount: Uint128) {
+        self.fee_grant = true;
+        self.fee_amount = amount;
     }
 
-    pub fn balance_of(&self, addr: impl AsRef<str>) -> Uint256 {
-        let addr = addr.as_ref();
+    pub fn revoke(&mut self) {
+        self.fee_grant = false;
+        self.fee_amount = Uint128::from(0u128);
+    }
 
-        let user = self.users.iter().find(|a| a.addr == addr);
-        match user {
-            Some(user) => user.balance,
-            None => Uint256::from_u128(0u128),
-        }
+    pub fn balance_of(&self) -> Uint256 {
+        return self.balance;
     }
 }
 
-pub const WHITELIST: Item<Whitelist> = Item::new("whitelist");
+pub const WHITELIST: Map<&Addr, WhitelistConfig> = Map::new("whitelist");
+
+pub const MAX_WHITELIST_NUM: Item<u128> = Item::new("max_whitelist_num");
 
 pub const FEEGRANTS: Item<Uint128> = Item::new("fee_grants");
 
