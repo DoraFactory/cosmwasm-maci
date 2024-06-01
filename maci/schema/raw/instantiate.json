@@ -311,13 +311,13 @@
         "users": {
           "type": "array",
           "items": {
-            "$ref": "#/definitions/WhitelistConfig"
+            "$ref": "#/definitions/WhitelistBase"
           }
         }
       },
       "additionalProperties": false
     },
-    "WhitelistConfig": {
+    "WhitelistBase": {
       "type": "object",
       "required": [
         "addr",

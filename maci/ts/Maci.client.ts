@@ -6,7 +6,7 @@
 
 import { CosmWasmClient, SigningCosmWasmClient, ExecuteResult } from "@cosmjs/cosmwasm-stargate";
 import { Coin, StdFee } from "@cosmjs/amino";
-import { Uint256, Timestamp, Uint64, InstantiateMsg, PubKey, Groth16VKeyType, MaciParameters, PlonkVKeyType, QuinaryTreeRoot, RoundInfo, VotingTime, Whitelist, WhitelistConfig, ExecuteMsg, Uint128, MessageData, Groth16ProofType, PlonkProofType, QueryMsg, Addr, PeriodStatus, Period, Boolean, ArrayOfString } from "./Maci.types";
+import { Uint256, Timestamp, Uint64, InstantiateMsg, PubKey, Groth16VKeyType, MaciParameters, PlonkVKeyType, QuinaryTreeRoot, RoundInfo, VotingTime, Whitelist, WhitelistBase, ExecuteMsg, Uint128, MessageData, Groth16ProofType, PlonkProofType, QueryMsg, Addr, PeriodStatus, Period, Boolean, ArrayOfString, WhitelistConfig } from "./Maci.types";
 export interface MaciReadOnlyInterface {
   contractAddress: string;
   getRoundInfo: () => Promise<RoundInfo>;
@@ -30,7 +30,6 @@ export interface MaciReadOnlyInterface {
   }: {
     index: Uint256;
   }) => Promise<Uint256>;
-  whiteList: () => Promise<Whitelist>;
   isWhiteList: ({
     sender
   }: {
@@ -41,6 +40,11 @@ export interface MaciReadOnlyInterface {
   }: {
     sender: string;
   }) => Promise<Uint256>;
+  whiteInfo: ({
+    sender
+  }: {
+    sender: string;
+  }) => Promise<WhitelistConfig>;
   voteOptionMap: () => Promise<ArrayOfString>;
   maxVoteOptions: () => Promise<Uint256>;
   queryTotalFeeGrant: () => Promise<Uint128>;
@@ -63,9 +67,9 @@ export class MaciQueryClient implements MaciReadOnlyInterface {
     this.getAllResult = this.getAllResult.bind(this);
     this.getStateIdxInc = this.getStateIdxInc.bind(this);
     this.getVoiceCreditBalance = this.getVoiceCreditBalance.bind(this);
-    this.whiteList = this.whiteList.bind(this);
     this.isWhiteList = this.isWhiteList.bind(this);
     this.whiteBalanceOf = this.whiteBalanceOf.bind(this);
+    this.whiteInfo = this.whiteInfo.bind(this);
     this.voteOptionMap = this.voteOptionMap.bind(this);
     this.maxVoteOptions = this.maxVoteOptions.bind(this);
     this.queryTotalFeeGrant = this.queryTotalFeeGrant.bind(this);
@@ -136,11 +140,6 @@ export class MaciQueryClient implements MaciReadOnlyInterface {
       }
     });
   };
-  whiteList = async (): Promise<Whitelist> => {
-    return this.client.queryContractSmart(this.contractAddress, {
-      white_list: {}
-    });
-  };
   isWhiteList = async ({
     sender
   }: {
@@ -159,6 +158,17 @@ export class MaciQueryClient implements MaciReadOnlyInterface {
   }): Promise<Uint256> => {
     return this.client.queryContractSmart(this.contractAddress, {
       white_balance_of: {
+        sender
+      }
+    });
+  };
+  whiteInfo = async ({
+    sender
+  }: {
+    sender: string;
+  }): Promise<WhitelistConfig> => {
+    return this.client.queryContractSmart(this.contractAddress, {
+      white_info: {
         sender
       }
     });
@@ -260,11 +270,17 @@ export interface MaciInterface extends MaciReadOnlyInterface {
     salt: Uint256;
   }, fee?: number | StdFee | "auto", memo?: string, _funds?: Coin[]) => Promise<ExecuteResult>;
   grant: ({
-    maxAmount
+    maxAmount,
+    whitelists
   }: {
     maxAmount: Uint128;
+    whitelists: Whitelist;
   }, fee?: number | StdFee | "auto", memo?: string, _funds?: Coin[]) => Promise<ExecuteResult>;
-  revoke: (fee?: number | StdFee | "auto", memo?: string, _funds?: Coin[]) => Promise<ExecuteResult>;
+  revoke: ({
+    whitelists
+  }: {
+    whitelists: Whitelist;
+  }, fee?: number | StdFee | "auto", memo?: string, _funds?: Coin[]) => Promise<ExecuteResult>;
   bond: (fee?: number | StdFee | "auto", memo?: string, _funds?: Coin[]) => Promise<ExecuteResult>;
   withdraw: ({
     amount
@@ -448,19 +464,28 @@ export class MaciClient extends MaciQueryClient implements MaciInterface {
     }, fee, memo, _funds);
   };
   grant = async ({
-    maxAmount
+    maxAmount,
+    whitelists
   }: {
     maxAmount: Uint128;
+    whitelists: Whitelist;
   }, fee: number | StdFee | "auto" = "auto", memo?: string, _funds?: Coin[]): Promise<ExecuteResult> => {
     return await this.client.execute(this.sender, this.contractAddress, {
       grant: {
-        max_amount: maxAmount
+        max_amount: maxAmount,
+        whitelists
       }
     }, fee, memo, _funds);
   };
-  revoke = async (fee: number | StdFee | "auto" = "auto", memo?: string, _funds?: Coin[]): Promise<ExecuteResult> => {
+  revoke = async ({
+    whitelists
+  }: {
+    whitelists: Whitelist;
+  }, fee: number | StdFee | "auto" = "auto", memo?: string, _funds?: Coin[]): Promise<ExecuteResult> => {
     return await this.client.execute(this.sender, this.contractAddress, {
-      revoke: {}
+      revoke: {
+        whitelists
+      }
     }, fee, memo, _funds);
   };
   bond = async (fee: number | StdFee | "auto" = "auto", memo?: string, _funds?: Coin[]): Promise<ExecuteResult> => {

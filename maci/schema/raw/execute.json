@@ -318,11 +318,15 @@
         "grant": {
           "type": "object",
           "required": [
-            "max_amount"
+            "max_amount",
+            "whitelists"
           ],
           "properties": {
             "max_amount": {
               "$ref": "#/definitions/Uint128"
+            },
+            "whitelists": {
+              "$ref": "#/definitions/Whitelist"
             }
           },
           "additionalProperties": false
@@ -338,6 +342,14 @@
       "properties": {
         "revoke": {
           "type": "object",
+          "required": [
+            "whitelists"
+          ],
+          "properties": {
+            "whitelists": {
+              "$ref": "#/definitions/Whitelist"
+            }
+          },
           "additionalProperties": false
         }
       },
@@ -559,13 +571,13 @@
         "users": {
           "type": "array",
           "items": {
-            "$ref": "#/definitions/WhitelistConfig"
+            "$ref": "#/definitions/WhitelistBase"
           }
         }
       },
       "additionalProperties": false
     },
-    "WhitelistConfig": {
+    "WhitelistBase": {
       "type": "object",
       "required": [
         "addr",

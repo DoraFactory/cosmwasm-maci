@@ -62,9 +62,9 @@ export interface VotingTime {
   start_time?: Timestamp | null;
 }
 export interface Whitelist {
-  users: WhitelistConfig[];
+  users: WhitelistBase[];
 }
-export interface WhitelistConfig {
+export interface WhitelistBase {
   addr: string;
   balance: Uint256;
 }
@@ -124,9 +124,12 @@ export type ExecuteMsg = {
 } | {
   grant: {
     max_amount: Uint128;
+    whitelists: Whitelist;
   };
 } | {
-  revoke: {};
+  revoke: {
+    whitelists: Whitelist;
+  };
 } | {
   bond: {};
 } | {
@@ -184,13 +187,15 @@ export type QueryMsg = {
     index: Uint256;
   };
 } | {
-  white_list: {};
-} | {
   is_white_list: {
     sender: string;
   };
 } | {
   white_balance_of: {
+    sender: string;
+  };
+} | {
+  white_info: {
     sender: string;
   };
 } | {
@@ -211,3 +216,9 @@ export interface Period {
 }
 export type Boolean = boolean;
 export type ArrayOfString = string[];
+export interface WhitelistConfig {
+  balance: Uint256;
+  fee_amount: Uint128;
+  fee_grant: boolean;
+  is_register: boolean;
+}

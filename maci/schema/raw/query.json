@@ -144,19 +144,6 @@
       "additionalProperties": false
     },
     {
-      "type": "object",
-      "required": [
-        "white_list"
-      ],
-      "properties": {
-        "white_list": {
-          "type": "object",
-          "additionalProperties": false
-        }
-      },
-      "additionalProperties": false
-    },
-    {
       "description": "Checks permissions of the caller on this proxy. If CanExecute returns true then a call to `Execute` with the same message, before any further state changes, should also succeed.",
       "type": "object",
       "required": [
@@ -185,6 +172,27 @@
       ],
       "properties": {
         "white_balance_of": {
+          "type": "object",
+          "required": [
+            "sender"
+          ],
+          "properties": {
+            "sender": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "white_info"
+      ],
+      "properties": {
+        "white_info": {
           "type": "object",
           "required": [
             "sender"
