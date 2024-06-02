@@ -738,7 +738,7 @@ pub fn execute_publish_message(
 }
 
 pub fn execute_stop_voting_period(
-    deps: DepsMut,
+    mut deps: DepsMut,
     env: Env,
     info: MessageInfo,
     // max_vote_options: Uint256,
@@ -782,6 +782,15 @@ pub fn execute_stop_voting_period(
             None => {}
         }
 
+        // let leaf_idx_0 = LEAF_IDX_0.load(deps.storage)?;
+        // let num_sign_ups = NUMSIGNUPS.load(deps.storage)?;
+
+        // let _ = state_update_at(
+        //     &mut deps,
+        //     leaf_idx_0 + num_sign_ups - Uint256::from_u128(1u128),
+        //     true,
+        // );
+
         // Return a success response
         Ok(Response::new()
             .add_attribute("action", "stop_voting_period")
@@ -790,7 +799,7 @@ pub fn execute_stop_voting_period(
 }
 
 pub fn execute_start_process_period(
-    deps: DepsMut,
+    mut deps: DepsMut,
     env: Env,
     info: MessageInfo,
 ) -> Result<Response, ContractError> {
@@ -820,6 +829,15 @@ pub fn execute_start_process_period(
     if !can_execute(deps.as_ref(), info.sender.as_ref())? {
         Err(ContractError::Unauthorized {})
     } else {
+        let leaf_idx_0 = LEAF_IDX_0.load(deps.storage)?;
+        let num_sign_ups = NUMSIGNUPS.load(deps.storage)?;
+
+        let _ = state_update_at(
+            &mut deps,
+            leaf_idx_0 + num_sign_ups - Uint256::from_u128(1u128),
+            true,
+        );
+
         // Update the period status to Processing
         let period = Period {
             status: PeriodStatus::Processing,
@@ -1548,11 +1566,11 @@ fn state_enqueue(deps: &mut DepsMut, leaf: Uint256) -> Result<bool, ContractErro
 
     let leaf_idx = leaf_idx0 + num_sign_ups;
     NODES.save(deps.storage, leaf_idx.to_be_bytes().to_vec(), &leaf)?;
-    state_update_at(deps, leaf_idx)
+    state_update_at(deps, leaf_idx, false)
 }
 
 // Updates the state at the given index in the tree
-fn state_update_at(deps: &mut DepsMut, index: Uint256) -> Result<bool, ContractError> {
+fn state_update_at(deps: &mut DepsMut, index: Uint256, full: bool) -> Result<bool, ContractError> {
     let leaf_idx0 = LEAF_IDX_0.load(deps.storage).unwrap();
     if index < leaf_idx0 {
         return Err(ContractError::MustUpdate {});
@@ -1564,7 +1582,9 @@ fn state_update_at(deps: &mut DepsMut, index: Uint256) -> Result<bool, ContractE
 
     let zeros = ZEROS.load(deps.storage).unwrap();
 
-    while idx > Uint256::from_u128(0u128) {
+    while idx > Uint256::from_u128(0u128)
+        && (full || idx % Uint256::from_u128(5u128) == Uint256::from_u128(0u128))
+    {
         let parent_idx = (idx - Uint256::one()) / Uint256::from(5u8);
         let children_idx0 = parent_idx * Uint256::from(5u8) + Uint256::one();
 
