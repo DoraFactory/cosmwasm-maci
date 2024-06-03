@@ -738,7 +738,7 @@ pub fn execute_publish_message(
 }
 
 pub fn execute_stop_voting_period(
-    mut deps: DepsMut,
+    deps: DepsMut,
     env: Env,
     info: MessageInfo,
     // max_vote_options: Uint256,
