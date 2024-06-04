@@ -123,7 +123,7 @@ pub enum ExecuteMsg {
         salt: Uint256,
     },
     Grant {
-        max_amount: Uint128,
+        base_amount: Uint128,
         whitelists: Whitelist,
     },
     Revoke {
@@ -181,6 +181,9 @@ pub enum QueryMsg {
 
     #[returns(WhitelistConfig)]
     WhiteInfo { sender: String },
+
+    #[returns(u128)]
+    MaxWhitelistNum {},
 
     #[returns(Vec<String>)]
     VoteOptionMap {},

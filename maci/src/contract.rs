@@ -258,6 +258,8 @@ pub fn instantiate(
         }
     }
 
+    FEEGRANTS.save(deps.storage, &Uint128::from(0u128))?;
+
     match msg.voting_time {
         Some(content) => {
             if let (Some(start_time), Some(end_time)) = (content.start_time, content.end_time) {
@@ -352,9 +354,9 @@ pub fn execute(
             execute_stop_tallying_period(deps, env, info, results, salt)
         }
         ExecuteMsg::Grant {
-            max_amount,
+            base_amount,
             whitelists,
-        } => execute_grant(deps, env, info, max_amount, whitelists),
+        } => execute_grant(deps, env, info, base_amount, whitelists),
         ExecuteMsg::Revoke { whitelists } => execute_revoke(deps, env, info, whitelists),
         ExecuteMsg::Bond {} => execute_bond(deps, env, info),
         ExecuteMsg::Withdraw { amount } => execute_withdraw(deps, env, info, amount),
@@ -1742,6 +1744,11 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
             &WHITELIST
                 .load(deps.storage, &Addr::unchecked(sender))
                 .unwrap(),
+        ),
+        QueryMsg::MaxWhitelistNum {} => to_json_binary::<u128>(
+            &MAX_WHITELIST_NUM
+                .may_load(deps.storage)?
+                .unwrap_or_default(),
         ),
         QueryMsg::VoteOptionMap {} => {
             to_json_binary::<Vec<String>>(&VOTEOPTIONMAP.load(deps.storage).unwrap())
