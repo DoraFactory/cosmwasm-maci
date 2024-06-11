@@ -56,8 +56,8 @@ pub struct MaciParameters {
     pub vote_option_tree_depth: Uint256,
 }
 
+pub const VOICE_CREDIT_AMOUNT: Item<Uint256> = Item::new("voice_credit_amount");
 pub const STATEIDXINC: Map<&Addr, Uint256> = Map::new("state_idx_inc");
-
 pub const ADMIN: Item<Admin> = Item::new("admin");
 pub const PERIOD: Item<Period> = Item::new("period");
 pub const MACIPARAMETERS: Item<MaciParameters> = Item::new("maci_param");

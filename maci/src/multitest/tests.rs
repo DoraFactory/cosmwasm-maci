@@ -192,18 +192,18 @@ mod test {
             Uint256::from_u128(3u128)
         );
 
-        let sign_up_after_voting_end_error = contract
-            .sign_up(
-                &mut app,
-                Addr::unchecked(0.to_string()),
-                test_pubkey.clone(),
-            )
-            .unwrap_err();
-        assert_eq!(
-            // 注册之后不能再进行注册
-            ContractError::Unauthorized {},
-            sign_up_after_voting_end_error.downcast().unwrap()
-        );
+        // let sign_up_after_voting_end_error = contract
+        //     .sign_up(
+        //         &mut app,
+        //         Addr::unchecked(0.to_string()),
+        //         test_pubkey.clone(),
+        //     )
+        //     .unwrap_err();
+        // assert_eq!(
+        //     // 注册之后不能再进行注册
+        //     ContractError::Unauthorized {},
+        //     sign_up_after_voting_end_error.downcast().unwrap()
+        // );
 
         // Stop Voting Period
         _ = contract.stop_voting(&mut app, owner());
@@ -467,18 +467,18 @@ mod test {
             _ = contract.publish_message(&mut app, user2(), message, enc_pub);
         }
 
-        let sign_up_after_voting_end_error = contract
-            .sign_up(
-                &mut app,
-                Addr::unchecked(0.to_string()),
-                test_pubkey.clone(),
-            )
-            .unwrap_err();
-        assert_eq!(
-            // 注册之后不能再进行注册
-            ContractError::Unauthorized {},
-            sign_up_after_voting_end_error.downcast().unwrap()
-        );
+        // let sign_up_after_voting_end_error = contract
+        //     .sign_up(
+        //         &mut app,
+        //         Addr::unchecked(0.to_string()),
+        //         test_pubkey.clone(),
+        //     )
+        //     .unwrap_err();
+        // assert_eq!(
+        //     // 注册之后不能再进行注册
+        //     ContractError::Unauthorized {},
+        //     sign_up_after_voting_end_error.downcast().unwrap()
+        // );
 
         assert_eq!(
             contract.num_sign_up(&app).unwrap(),
@@ -733,18 +733,18 @@ mod test {
             Uint256::from_u128(3u128)
         );
 
-        let sign_up_after_voting_end_error = contract
-            .sign_up(
-                &mut app,
-                Addr::unchecked(0.to_string()),
-                test_pubkey.clone(),
-            )
-            .unwrap_err();
-        assert_eq!(
-            // 注册之后不能再进行注册
-            ContractError::Unauthorized {},
-            sign_up_after_voting_end_error.downcast().unwrap()
-        );
+        // let sign_up_after_voting_end_error = contract
+        //     .sign_up(
+        //         &mut app,
+        //         Addr::unchecked(0.to_string()),
+        //         test_pubkey.clone(),
+        //     )
+        //     .unwrap_err();
+        // assert_eq!(
+        //     // 注册之后不能再进行注册
+        //     ContractError::Unauthorized {},
+        //     sign_up_after_voting_end_error.downcast().unwrap()
+        // );
 
         // Stop Voting Period
         // app.update_block(next_block);
@@ -963,18 +963,18 @@ mod test {
             Uint256::from_u128(3u128)
         );
 
-        let sign_up_after_voting_end_error = contract
-            .sign_up(
-                &mut app,
-                Addr::unchecked(0.to_string()),
-                test_pubkey.clone(),
-            )
-            .unwrap_err();
-        assert_eq!(
-            // 注册之后不能再进行注册
-            ContractError::Unauthorized {},
-            sign_up_after_voting_end_error.downcast().unwrap()
-        );
+        // let sign_up_after_voting_end_error = contract
+        //     .sign_up(
+        //         &mut app,
+        //         Addr::unchecked(0.to_string()),
+        //         test_pubkey.clone(),
+        //     )
+        //     .unwrap_err();
+        // assert_eq!(
+        //     // 注册之后不能再进行注册
+        //     ContractError::Unauthorized {},
+        //     sign_up_after_voting_end_error.downcast().unwrap()
+        // );
 
         // Stop Voting Period
         app.update_block(next_block);
@@ -1222,18 +1222,18 @@ mod test {
             _ = contract.publish_message(&mut app, user2(), message, enc_pub);
         }
 
-        let sign_up_after_voting_end_error = contract
-            .sign_up(
-                &mut app,
-                Addr::unchecked(0.to_string()),
-                test_pubkey.clone(),
-            )
-            .unwrap_err();
-        assert_eq!(
-            // 注册之后不能再进行注册
-            ContractError::Unauthorized {},
-            sign_up_after_voting_end_error.downcast().unwrap()
-        );
+        // let sign_up_after_voting_end_error = contract
+        //     .sign_up(
+        //         &mut app,
+        //         Addr::unchecked(0.to_string()),
+        //         test_pubkey.clone(),
+        //     )
+        //     .unwrap_err();
+        // assert_eq!(
+        //     // 注册之后不能再进行注册
+        //     ContractError::Unauthorized {},
+        //     sign_up_after_voting_end_error.downcast().unwrap()
+        // );
 
         assert_eq!(
             contract.num_sign_up(&app).unwrap(),
@@ -1506,18 +1506,18 @@ mod test {
             _ = contract.publish_message(&mut app, user2(), message, enc_pub);
         }
 
-        let sign_up_after_voting_end_error = contract
-            .sign_up(
-                &mut app,
-                Addr::unchecked(0.to_string()),
-                test_pubkey.clone(),
-            )
-            .unwrap_err();
-        assert_eq!(
-            // 注册之后不能再进行注册
-            ContractError::Unauthorized {},
-            sign_up_after_voting_end_error.downcast().unwrap()
-        );
+        // let sign_up_after_voting_end_error = contract
+        //     .sign_up(
+        //         &mut app,
+        //         Addr::unchecked(0.to_string()),
+        //         test_pubkey.clone(),
+        //     )
+        //     .unwrap_err();
+        // assert_eq!(
+        //     // 注册之后不能再进行注册
+        //     ContractError::Unauthorized {},
+        //     sign_up_after_voting_end_error.downcast().unwrap()
+        // );
 
         assert_eq!(
             contract.num_sign_up(&app).unwrap(),

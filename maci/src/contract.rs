@@ -2,18 +2,7 @@ use crate::error::ContractError;
 use crate::groth16_parser::{parse_groth16_proof, parse_groth16_vkey};
 use crate::msg::{ExecuteMsg, Groth16ProofType, InstantiateMsg, PlonkProofType, QueryMsg};
 use crate::plonk_parser::{parse_plonk_proof, parse_plonk_vkey};
-use crate::state::{
-    Admin, Groth16ProofStr, Groth16VkeyStr, MessageData, Period, PeriodStatus, PlonkProofStr,
-    PlonkVkeyStr, PubKey, RoundInfo, StateLeaf, VotingTime, Whitelist, ADMIN, CERTSYSTEM,
-    CIRCUITTYPE, COORDINATORHASH, CURRENT_DEACTIVATE_COMMITMENT, CURRENT_STATE_COMMITMENT,
-    CURRENT_TALLY_COMMITMENT, DMSG_CHAIN_LENGTH, DMSG_HASHES, DNODES, FEEGRANTS,
-    GROTH16_DEACTIVATE_VKEYS, GROTH16_NEWKEY_VKEYS, GROTH16_PROCESS_VKEYS, GROTH16_TALLY_VKEYS,
-    LEAF_IDX_0, MACIPARAMETERS, MAX_LEAVES_COUNT, MAX_VOTE_OPTIONS, MSG_CHAIN_LENGTH, MSG_HASHES,
-    NODES, NULLIFIERS, NUMSIGNUPS, PERIOD, PLONK_PROCESS_VKEYS, PLONK_TALLY_VKEYS,
-    PROCESSED_DMSG_COUNT, PROCESSED_MSG_COUNT, PROCESSED_USER_COUNT, QTR_LIB, RESULT, ROUNDINFO,
-    SIGNUPED, STATEIDXINC, STATE_ROOT_BY_DMSG, TOTAL_RESULT, VOICECREDITBALANCE, VOTEOPTIONMAP,
-    VOTINGTIME, WHITELIST, ZEROS,
-};
+use crate::state::{Admin, Groth16ProofStr, Groth16VkeyStr, MessageData, Period, PeriodStatus, PlonkProofStr, PlonkVkeyStr, PubKey, RoundInfo, StateLeaf, VotingTime, Whitelist, ADMIN, CERTSYSTEM, CIRCUITTYPE, COORDINATORHASH, CURRENT_DEACTIVATE_COMMITMENT, CURRENT_STATE_COMMITMENT, CURRENT_TALLY_COMMITMENT, DMSG_CHAIN_LENGTH, DMSG_HASHES, DNODES, FEEGRANTS, GROTH16_DEACTIVATE_VKEYS, GROTH16_NEWKEY_VKEYS, GROTH16_PROCESS_VKEYS, GROTH16_TALLY_VKEYS, LEAF_IDX_0, MACIPARAMETERS, MAX_LEAVES_COUNT, MAX_VOTE_OPTIONS, MSG_CHAIN_LENGTH, MSG_HASHES, NODES, NULLIFIERS, NUMSIGNUPS, PERIOD, PLONK_PROCESS_VKEYS, PLONK_TALLY_VKEYS, PROCESSED_DMSG_COUNT, PROCESSED_MSG_COUNT, PROCESSED_USER_COUNT, QTR_LIB, RESULT, ROUNDINFO, SIGNUPED, STATEIDXINC, STATE_ROOT_BY_DMSG, TOTAL_RESULT, VOICECREDITBALANCE, VOTEOPTIONMAP, VOTINGTIME, WHITELIST, ZEROS, VOICE_CREDIT_AMOUNT};
 
 use pairing_ce::bn256::Bn256;
 use pairing_ce::bn256::Bn256 as MBn256;
@@ -227,6 +216,7 @@ pub fn instantiate(
     PROCESSED_USER_COUNT.save(deps.storage, &Uint256::from_u128(0u128))?;
     NUMSIGNUPS.save(deps.storage, &Uint256::from_u128(0u128))?;
     MAX_VOTE_OPTIONS.save(deps.storage, &msg.max_vote_options)?;
+    VOICE_CREDIT_AMOUNT.save(deps.storage, &msg.voice_credit_amount)?;
 
     let mut vote_option_map: Vec<String> = Vec::new();
     for _ in 0..msg.max_vote_options.to_string().parse().unwrap() {
@@ -570,10 +560,11 @@ pub fn execute_sign_up(
         check_voting_time(env, None, period.status)?;
     }
 
-    let user_balance = user_balance_of(deps.as_ref(), info.sender.as_ref())?;
-    if user_balance == Uint256::from_u128(0u128) {
-        return Err(ContractError::Unauthorized {});
-    }
+    // let user_balance = user_balance_of(deps.as_ref(), info.sender.as_ref())?;
+    // if user_balance == Uint256::from_u128(0u128) {
+    //     return Err(ContractError::Unauthorized {});
+    // }
+    let voice_credit_amount = VOICE_CREDIT_AMOUNT.load(deps.storage)?;
 
     let mut num_sign_ups = NUMSIGNUPS.load(deps.storage)?;
 
@@ -597,7 +588,7 @@ pub fn execute_sign_up(
     // Create a state leaf with the provided pubkey and amount
     let state_leaf = StateLeaf {
         pub_key: pubkey.clone(),
-        voice_credit_balance: user_balance,
+        voice_credit_balance: voice_credit_amount,
         vote_option_tree_root: Uint256::from_u128(0),
         nonce: Uint256::from_u128(0),
     }
@@ -614,7 +605,7 @@ pub fn execute_sign_up(
     VOICECREDITBALANCE.save(
         deps.storage,
         state_index.to_be_bytes().to_vec(),
-        &user_balance,
+        &voice_credit_amount,
     )?;
     NUMSIGNUPS.save(deps.storage, &num_sign_ups)?;
 
@@ -629,7 +620,7 @@ pub fn execute_sign_up(
             "pubkey",
             format!("{:?},{:?}", pubkey.x.to_string(), pubkey.y.to_string()),
         )
-        .add_attribute("balance", user_balance.to_string()))
+        .add_attribute("balance", voice_credit_amount.to_string()))
 }
 
 // in voting
@@ -764,12 +755,14 @@ pub fn execute_publish_deactivate_message(
             &m_n_hash,
         )?;
 
+        let state_root = state_root(deps.as_ref());
+
         STATE_ROOT_BY_DMSG.save(
             deps.storage,
             (dmsg_chain_length + Uint256::from_u128(1u128))
                 .to_be_bytes()
                 .to_vec(),
-            &state_root(deps.as_ref()),
+            &state_root,
         )?;
 
         let old_chain_length = dmsg_chain_length;
@@ -920,7 +913,7 @@ pub fn execute_process_deactivate_message(
 
 // in voting
 pub fn execute_add_new_key(
-    deps: DepsMut,
+    mut deps: DepsMut,
     env: Env,
     _info: MessageInfo,
     pubkey: PubKey,
@@ -955,7 +948,7 @@ pub fn execute_add_new_key(
             .add_attribute("event", "error user."));
     }
 
-    let mut num_sign_ups = NUMSIGNUPS.load(deps.storage)?;
+    let num_sign_ups = NUMSIGNUPS.load(deps.storage)?;
 
     let max_leaves_count = MAX_LEAVES_COUNT.load(deps.storage)?;
 
@@ -1025,16 +1018,18 @@ pub fn execute_add_new_key(
         });
     }
 
-    let user_balance = user_balance_of(deps.as_ref(), info.sender.as_ref())?;
-    if user_balance == Uint256::from_u128(0u128) {
-        return Err(ContractError::Unauthorized {});
-    }
+    // let user_balance = user_balance_of(deps.as_ref(), info.sender.as_ref())?;
+    // if user_balance == Uint256::from_u128(0u128) {
+    //     return Err(ContractError::Unauthorized {});
+    // }
+
+    let voice_credit_amount = VOICE_CREDIT_AMOUNT.load(deps.storage)?;
 
     // let voice_credit_balance = VOICECREDITBALANCE.load(deps.storage, )
     // Create a state leaf with the provided pubkey and amount
     let state_leaf = StateLeaf {
         pub_key: pubkey.clone(),
-        voice_credit_balance: user_balance,
+        voice_credit_balance: voice_credit_amount,
         vote_option_tree_root: Uint256::from_u128(0),
         nonce: Uint256::from_u128(0),
     }
@@ -1047,13 +1042,13 @@ pub fn execute_add_new_key(
     SIGNUPED.save(deps.storage, pubkey.x.to_be_bytes().to_vec(), &num_sign_ups)?;
 
     Ok(Response::new()
-        .add_attribute("action", "sign_up")
+        .add_attribute("action", "add_new_key")
         .add_attribute("state_idx", state_index.to_string())
         .add_attribute(
             "pubkey",
             format!("{:?},{:?}", pubkey.x.to_string(), pubkey.y.to_string()),
         )
-        .add_attribute("balance", user_balance.to_string()))
+        .add_attribute("balance", voice_credit_amount.to_string()))
 }
 
 pub fn execute_stop_voting_period(

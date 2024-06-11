@@ -479,6 +479,7 @@ impl MaciContract {
                             plonk_tally_vkey: None,
                             certification_system: Uint256::from_u128(0u128),
                             max_vote_options: Uint256::from_u128(5u128),
+                            voice_credit_amount: Uint256::from_u128(50u128),
                             round_info,
                             whitelist,
                             voting_time,
@@ -612,6 +613,7 @@ impl MaciContract {
                                 }),
                                 certification_system: Uint256::from_u128(1u128), // plonk system
                                 max_vote_options: Uint256::from_u128(5u128),
+                                voice_credit_amount: Uint256::from_u128(50u128),
                                 round_info,
                                 whitelist,
                                 voting_time,

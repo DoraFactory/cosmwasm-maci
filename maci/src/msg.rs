@@ -15,6 +15,7 @@ pub struct InstantiateMsg {
     pub plonk_process_vkey: Option<PlonkVKeyType>,
     pub plonk_tally_vkey: Option<PlonkVKeyType>,
     pub max_vote_options: Uint256,
+    pub voice_credit_amount: Uint256,
 
     pub round_info: RoundInfo,
     pub voting_time: Option<VotingTime>,
