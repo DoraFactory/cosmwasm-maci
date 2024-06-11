@@ -52,122 +52,45 @@ pub fn instantiate(
 
     // Save the qtr_lib value to storage
     QTR_LIB.save(deps.storage, &msg.qtr_lib)?;
-    CERTSYSTEM.save(deps.storage, &msg.certification_system)?;
 
-    if msg.certification_system == Uint256::from_u128(0u128) {
-        // groth16
-        if let Some(groth16_process_vkey) = msg.groth16_process_vkey {
-            // Create a process_vkeys struct from the process_vkey in the message
-            let groth16_process_vkeys = Groth16VkeyStr {
-                alpha_1: hex::decode(groth16_process_vkey.vk_alpha1)
-                    .map_err(|_| ContractError::HexDecodingError {})?,
-                beta_2: hex::decode(groth16_process_vkey.vk_beta_2)
-                    .map_err(|_| ContractError::HexDecodingError {})?,
-                gamma_2: hex::decode(groth16_process_vkey.vk_gamma_2)
-                    .map_err(|_| ContractError::HexDecodingError {})?,
-                delta_2: hex::decode(groth16_process_vkey.vk_delta_2)
-                    .map_err(|_| ContractError::HexDecodingError {})?,
-                ic0: hex::decode(groth16_process_vkey.vk_ic0)
-                    .map_err(|_| ContractError::HexDecodingError {})?,
-                ic1: hex::decode(groth16_process_vkey.vk_ic1)
-                    .map_err(|_| ContractError::HexDecodingError {})?,
-            };
-            let _ = parse_groth16_vkey::<Bn256>(groth16_process_vkeys.clone())?;
-            GROTH16_PROCESS_VKEYS.save(deps.storage, &groth16_process_vkeys)?;
-        }
+    let groth16_process_vkey = msg.groth16_process_vkey;
+    // Create a process_vkeys struct from the process_vkey in the message
+    let groth16_process_vkeys = Groth16VkeyStr {
+        alpha_1: hex::decode(groth16_process_vkey.vk_alpha1)
+            .map_err(|_| ContractError::HexDecodingError {})?,
+        beta_2: hex::decode(groth16_process_vkey.vk_beta_2)
+            .map_err(|_| ContractError::HexDecodingError {})?,
+        gamma_2: hex::decode(groth16_process_vkey.vk_gamma_2)
+            .map_err(|_| ContractError::HexDecodingError {})?,
+        delta_2: hex::decode(groth16_process_vkey.vk_delta_2)
+            .map_err(|_| ContractError::HexDecodingError {})?,
+        ic0: hex::decode(groth16_process_vkey.vk_ic0)
+            .map_err(|_| ContractError::HexDecodingError {})?,
+        ic1: hex::decode(groth16_process_vkey.vk_ic1)
+            .map_err(|_| ContractError::HexDecodingError {})?,
+    };
+    let _ = parse_groth16_vkey::<Bn256>(groth16_process_vkeys.clone())?;
+    GROTH16_PROCESS_VKEYS.save(deps.storage, &groth16_process_vkeys)?;
 
-        // Create a tally_vkeys struct from the tally_vkey in the message
-        if let Some(groth16_tally_vkey) = msg.groth16_tally_vkey {
-            // Create a process_vkeys struct from the process_vkey in the message
-            let groth16_tally_vkeys = Groth16VkeyStr {
-                alpha_1: hex::decode(groth16_tally_vkey.vk_alpha1)
-                    .map_err(|_| ContractError::HexDecodingError {})?,
-                beta_2: hex::decode(groth16_tally_vkey.vk_beta_2)
-                    .map_err(|_| ContractError::HexDecodingError {})?,
-                gamma_2: hex::decode(groth16_tally_vkey.vk_gamma_2)
-                    .map_err(|_| ContractError::HexDecodingError {})?,
-                delta_2: hex::decode(groth16_tally_vkey.vk_delta_2)
-                    .map_err(|_| ContractError::HexDecodingError {})?,
-                ic0: hex::decode(groth16_tally_vkey.vk_ic0)
-                    .map_err(|_| ContractError::HexDecodingError {})?,
-                ic1: hex::decode(groth16_tally_vkey.vk_ic1)
-                    .map_err(|_| ContractError::HexDecodingError {})?,
-            };
-            let _ = parse_groth16_vkey::<Bn256>(groth16_tally_vkeys.clone())?;
-            GROTH16_TALLY_VKEYS.save(deps.storage, &groth16_tally_vkeys)?;
-        }
-    } else {
-        // plonk
-        if let Some(plonk_process_vkey) = msg.plonk_process_vkey {
-            // Create a process_vkeys struct from the process_vkey in the message
-            let plonk_process_vkeys = PlonkVkeyStr {
-                n: plonk_process_vkey.n,
-                num_inputs: plonk_process_vkey.num_inputs,
-                selector_commitments: plonk_process_vkey
-                    .selector_commitments
-                    .into_iter()
-                    .map(|x| hex::decode(x).unwrap())
-                    .collect(),
-                next_step_selector_commitments: plonk_process_vkey
-                    .next_step_selector_commitments
-                    .into_iter()
-                    .map(|x| hex::decode(x).unwrap())
-                    .collect(),
-                permutation_commitments: plonk_process_vkey
-                    .permutation_commitments
-                    .into_iter()
-                    .map(|x| hex::decode(x).unwrap())
-                    .collect(),
-                non_residues: plonk_process_vkey.non_residues,
-                g2_elements: plonk_process_vkey
-                    .g2_elements
-                    .into_iter()
-                    .map(|x| hex::decode(x).unwrap())
-                    .collect(),
-            };
-
-            // jsut check the vkey is valid
-            let _ = parse_plonk_vkey::<MBn256, PlonkCsWidth4WithNextStepParams>(
-                plonk_process_vkeys.clone(),
-            )?;
-            PLONK_PROCESS_VKEYS.save(deps.storage, &plonk_process_vkeys)?;
-        }
-
-        if let Some(plonk_tally_vkey) = msg.plonk_tally_vkey {
-            // Create a tally_vkeys struct from the tally_vkey in the message
-            let plonk_tally_vkeys = PlonkVkeyStr {
-                n: plonk_tally_vkey.n,
-                num_inputs: plonk_tally_vkey.num_inputs,
-                selector_commitments: plonk_tally_vkey
-                    .selector_commitments
-                    .into_iter()
-                    .map(|x| hex::decode(x).unwrap())
-                    .collect(),
-                next_step_selector_commitments: plonk_tally_vkey
-                    .next_step_selector_commitments
-                    .into_iter()
-                    .map(|x| hex::decode(x).unwrap())
-                    .collect(),
-                permutation_commitments: plonk_tally_vkey
-                    .permutation_commitments
-                    .into_iter()
-                    .map(|x| hex::decode(x).unwrap())
-                    .collect(),
-                non_residues: plonk_tally_vkey.non_residues,
-                g2_elements: plonk_tally_vkey
-                    .g2_elements
-                    .into_iter()
-                    .map(|x| hex::decode(x).unwrap())
-                    .collect(),
-            };
-
-            // jsut check the vkey is valid
-            let _ = parse_plonk_vkey::<MBn256, PlonkCsWidth4WithNextStepParams>(
-                plonk_tally_vkeys.clone(),
-            )?;
-            PLONK_TALLY_VKEYS.save(deps.storage, &plonk_tally_vkeys)?;
-        }
-    }
+    // Create a tally_vkeys struct from the tally_vkey in the message
+    let groth16_tally_vkey = msg.groth16_tally_vkey;
+    // Create a process_vkeys struct from the process_vkey in the message
+    let groth16_tally_vkeys = Groth16VkeyStr {
+        alpha_1: hex::decode(groth16_tally_vkey.vk_alpha1)
+            .map_err(|_| ContractError::HexDecodingError {})?,
+        beta_2: hex::decode(groth16_tally_vkey.vk_beta_2)
+            .map_err(|_| ContractError::HexDecodingError {})?,
+        gamma_2: hex::decode(groth16_tally_vkey.vk_gamma_2)
+            .map_err(|_| ContractError::HexDecodingError {})?,
+        delta_2: hex::decode(groth16_tally_vkey.vk_delta_2)
+            .map_err(|_| ContractError::HexDecodingError {})?,
+        ic0: hex::decode(groth16_tally_vkey.vk_ic0)
+            .map_err(|_| ContractError::HexDecodingError {})?,
+        ic1: hex::decode(groth16_tally_vkey.vk_ic1)
+            .map_err(|_| ContractError::HexDecodingError {})?,
+    };
+    let _ = parse_groth16_vkey::<Bn256>(groth16_tally_vkeys.clone())?;
+    GROTH16_TALLY_VKEYS.save(deps.storage, &groth16_tally_vkeys)?;
 
     // Compute the coordinator hash from the coordinator values in the message
     let coordinator_hash = hash2([msg.coordinator.x, msg.coordinator.y]);
@@ -609,9 +532,9 @@ pub fn execute_sign_up(
     )?;
     NUMSIGNUPS.save(deps.storage, &num_sign_ups)?;
 
-    let mut white_curr = WHITELIST.load(deps.storage)?;
-    white_curr.register(info.sender);
-    WHITELIST.save(deps.storage, &white_curr)?;
+    // let mut white_curr = WHITELIST.load(deps.storage)?;
+    // // white_curr.register(info.sender);
+    // WHITELIST.save(deps.storage, &white_curr)?;
 
     Ok(Response::new()
         .add_attribute("action", "sign_up")
@@ -1809,11 +1732,11 @@ fn can_sign_up(deps: Deps, sender: &str) -> StdResult<bool> {
     Ok(can)
 }
 
-fn user_balance_of(deps: Deps, sender: &str) -> StdResult<Uint256> {
-    let cfg = WHITELIST.load(deps.storage)?;
-    let balance = cfg.balance_of(&sender);
-    Ok(balance)
-}
+// fn user_balance_of(deps: Deps, sender: &str) -> StdResult<Uint256> {
+//     let cfg = WHITELIST.load(deps.storage)?;
+//     let balance = cfg.balance_of(&sender);
+//     Ok(balance)
+// }
 
 // Load the root node of the state tree
 fn state_root(deps: Deps) -> Uint256 {
@@ -2001,9 +1924,9 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::IsWhiteList { sender } => {
             to_json_binary::<bool>(&query_can_sign_up(deps, sender)?)
         }
-        QueryMsg::WhiteBalanceOf { sender } => {
-            to_json_binary::<Uint256>(&query_user_balance_of(deps, sender)?)
-        }
+        // QueryMsg::WhiteBalanceOf { sender } => {
+        //     to_json_binary::<Uint256>(&query_user_balance_of(deps, sender)?)
+        // }
         QueryMsg::VoteOptionMap {} => {
             to_json_binary::<Vec<String>>(&VOTEOPTIONMAP.load(deps.storage).unwrap())
         }
@@ -2033,9 +1956,9 @@ pub fn query_can_sign_up(deps: Deps, sender: String) -> StdResult<bool> {
     Ok(can_sign_up(deps, &sender)?)
 }
 
-pub fn query_user_balance_of(deps: Deps, sender: String) -> StdResult<Uint256> {
-    Ok(user_balance_of(deps, &sender)?)
-}
+// pub fn query_user_balance_of(deps: Deps, sender: String) -> StdResult<Uint256> {
+//     Ok(user_balance_of(deps, &sender)?)
+// }
 
 #[cfg(test)]
 mod tests {}

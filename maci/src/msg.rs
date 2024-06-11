@@ -10,10 +10,8 @@ pub struct InstantiateMsg {
     pub parameters: MaciParameters,
     pub coordinator: PubKey,
     pub qtr_lib: QuinaryTreeRoot,
-    pub groth16_process_vkey: Option<Groth16VKeyType>,
-    pub groth16_tally_vkey: Option<Groth16VKeyType>,
-    pub plonk_process_vkey: Option<PlonkVKeyType>,
-    pub plonk_tally_vkey: Option<PlonkVKeyType>,
+    pub groth16_process_vkey: Groth16VKeyType,
+    pub groth16_tally_vkey: Groth16VKeyType,
     pub max_vote_options: Uint256,
     pub voice_credit_amount: Uint256,
 
@@ -21,7 +19,7 @@ pub struct InstantiateMsg {
     pub voting_time: Option<VotingTime>,
     pub whitelist: Option<Whitelist>,
     pub circuit_type: Uint256,         // <0: 1p1v | 1: pv>
-    pub certification_system: Uint256, // <0: groth16 | 1: plonk>
+    // pub certification_system: Uint256, // <0: groth16 | 1: plonk>
 }
 
 #[cw_serde]
@@ -165,8 +163,8 @@ pub enum QueryMsg {
     #[returns(bool)]
     IsWhiteList { sender: String },
 
-    #[returns(Uint256)]
-    WhiteBalanceOf { sender: String },
+    // #[returns(Uint256)]
+    // WhiteBalanceOf { sender: String },
 
     #[returns(Vec<String>)]
     VoteOptionMap {},
