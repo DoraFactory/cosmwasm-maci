@@ -12,14 +12,16 @@ pub struct InstantiateMsg {
     pub qtr_lib: QuinaryTreeRoot,
     pub groth16_process_vkey: Groth16VKeyType,
     pub groth16_tally_vkey: Groth16VKeyType,
+    pub groth16_deactivate_vkey: Groth16VKeyType,
+    pub groth16_add_key_vkey: Groth16VKeyType,
     pub max_vote_options: Uint256,
     pub voice_credit_amount: Uint256,
 
     pub round_info: RoundInfo,
     pub voting_time: Option<VotingTime>,
     pub whitelist: Option<Whitelist>,
-    pub circuit_type: Uint256,         // <0: 1p1v | 1: pv>
-    // pub certification_system: Uint256, // <0: groth16 | 1: plonk>
+    pub circuit_type: Uint256, // <0: 1p1v | 1: pv>
+                               // pub certification_system: Uint256, // <0: groth16 | 1: plonk>
 }
 
 #[cw_serde]
@@ -91,20 +93,34 @@ pub enum ExecuteMsg {
     },
     StartProcessPeriod {},
     StopVotingPeriod {},
+    PublishDeactivateMessage {
+        message: MessageData,
+        enc_pub_key: PubKey,
+    },
+    ProcessDeactivateMessage {
+        size: Uint256,
+        new_deactivate_commitment: Uint256,
+        new_deactivate_root: Uint256,
+        groth16_proof: Groth16ProofType,
+    },
+    AddNewKey {
+        pubkey: PubKey,
+        nullifier: Uint256,
+        d: [Uint256; 4],
+        groth16_proof: Groth16ProofType,
+    },
     PublishMessage {
         message: MessageData,
         enc_pub_key: PubKey,
     },
     ProcessMessage {
         new_state_commitment: Uint256,
-        groth16_proof: Option<Groth16ProofType>,
-        plonk_proof: Option<PlonkProofType>,
+        groth16_proof: Groth16ProofType,
     },
     StopProcessingPeriod {},
     ProcessTally {
         new_tally_commitment: Uint256,
-        groth16_proof: Option<Groth16ProofType>,
-        plonk_proof: Option<PlonkProofType>,
+        groth16_proof: Groth16ProofType,
     },
     StopTallyingPeriod {
         results: Vec<Uint256>,
@@ -144,6 +160,9 @@ pub enum QueryMsg {
     GetMsgChainLength {},
 
     #[returns(Uint256)]
+    GetDMsgChainLength {},
+
+    #[returns(Uint256)]
     GetResult { index: Uint256 },
 
     #[returns(Uint256)]
@@ -165,7 +184,6 @@ pub enum QueryMsg {
 
     // #[returns(Uint256)]
     // WhiteBalanceOf { sender: String },
-
     #[returns(Vec<String>)]
     VoteOptionMap {},
 

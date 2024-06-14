@@ -109,6 +109,7 @@ pub const MAX_LEAVES_COUNT: Item<Uint256> = Item::new("max_leaves_count");
 pub const LEAF_IDX_0: Item<Uint256> = Item::new("leaf_idx_0");
 pub const COORDINATORHASH: Item<Uint256> = Item::new("coordinator_hash");
 pub const ZEROS: Item<[Uint256; 8]> = Item::new("zeros");
+pub const ZEROS_H10: Item<[Uint256; 7]> = Item::new("zeros_h10");
 
 #[cw_serde]
 pub struct MessageData {

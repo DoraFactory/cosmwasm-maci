@@ -1,8 +1,17 @@
 use crate::error::ContractError;
 use crate::groth16_parser::{parse_groth16_proof, parse_groth16_vkey};
-use crate::msg::{ExecuteMsg, Groth16ProofType, InstantiateMsg, PlonkProofType, QueryMsg};
-use crate::plonk_parser::{parse_plonk_proof, parse_plonk_vkey};
-use crate::state::{Admin, Groth16ProofStr, Groth16VkeyStr, MessageData, Period, PeriodStatus, PlonkProofStr, PlonkVkeyStr, PubKey, RoundInfo, StateLeaf, VotingTime, Whitelist, ADMIN, CERTSYSTEM, CIRCUITTYPE, COORDINATORHASH, CURRENT_DEACTIVATE_COMMITMENT, CURRENT_STATE_COMMITMENT, CURRENT_TALLY_COMMITMENT, DMSG_CHAIN_LENGTH, DMSG_HASHES, DNODES, FEEGRANTS, GROTH16_DEACTIVATE_VKEYS, GROTH16_NEWKEY_VKEYS, GROTH16_PROCESS_VKEYS, GROTH16_TALLY_VKEYS, LEAF_IDX_0, MACIPARAMETERS, MAX_LEAVES_COUNT, MAX_VOTE_OPTIONS, MSG_CHAIN_LENGTH, MSG_HASHES, NODES, NULLIFIERS, NUMSIGNUPS, PERIOD, PLONK_PROCESS_VKEYS, PLONK_TALLY_VKEYS, PROCESSED_DMSG_COUNT, PROCESSED_MSG_COUNT, PROCESSED_USER_COUNT, QTR_LIB, RESULT, ROUNDINFO, SIGNUPED, STATEIDXINC, STATE_ROOT_BY_DMSG, TOTAL_RESULT, VOICECREDITBALANCE, VOTEOPTIONMAP, VOTINGTIME, WHITELIST, ZEROS, VOICE_CREDIT_AMOUNT};
+use crate::msg::{ExecuteMsg, Groth16ProofType, InstantiateMsg, QueryMsg};
+use crate::state::{
+    Admin, Groth16ProofStr, Groth16VkeyStr, MessageData, Period, PeriodStatus, PubKey, RoundInfo,
+    StateLeaf, VotingTime, Whitelist, ADMIN, CERTSYSTEM, CIRCUITTYPE, COORDINATORHASH,
+    CURRENT_DEACTIVATE_COMMITMENT, CURRENT_STATE_COMMITMENT, CURRENT_TALLY_COMMITMENT,
+    DMSG_CHAIN_LENGTH, DMSG_HASHES, DNODES, FEEGRANTS, GROTH16_DEACTIVATE_VKEYS,
+    GROTH16_NEWKEY_VKEYS, GROTH16_PROCESS_VKEYS, GROTH16_TALLY_VKEYS, LEAF_IDX_0, MACIPARAMETERS,
+    MAX_LEAVES_COUNT, MAX_VOTE_OPTIONS, MSG_CHAIN_LENGTH, MSG_HASHES, NODES, NULLIFIERS,
+    NUMSIGNUPS, PERIOD, PROCESSED_DMSG_COUNT, PROCESSED_MSG_COUNT, PROCESSED_USER_COUNT, QTR_LIB,
+    RESULT, ROUNDINFO, SIGNUPED, STATEIDXINC, STATE_ROOT_BY_DMSG, TOTAL_RESULT, VOICECREDITBALANCE,
+    VOICE_CREDIT_AMOUNT, VOTEOPTIONMAP, VOTINGTIME, WHITELIST, ZEROS, ZEROS_H10,
+};
 
 use pairing_ce::bn256::Bn256;
 use pairing_ce::bn256::Bn256 as MBn256;
@@ -92,6 +101,46 @@ pub fn instantiate(
     let _ = parse_groth16_vkey::<Bn256>(groth16_tally_vkeys.clone())?;
     GROTH16_TALLY_VKEYS.save(deps.storage, &groth16_tally_vkeys)?;
 
+    // Create a tally_vkeys struct from the tally_vkey in the message
+    let groth16_deactivate_vkey = msg.groth16_deactivate_vkey;
+    // Create a process_vkeys struct from the process_vkey in the message
+    let groth16_deactivate_vkeys = Groth16VkeyStr {
+        alpha_1: hex::decode(groth16_deactivate_vkey.vk_alpha1)
+            .map_err(|_| ContractError::HexDecodingError {})?,
+        beta_2: hex::decode(groth16_deactivate_vkey.vk_beta_2)
+            .map_err(|_| ContractError::HexDecodingError {})?,
+        gamma_2: hex::decode(groth16_deactivate_vkey.vk_gamma_2)
+            .map_err(|_| ContractError::HexDecodingError {})?,
+        delta_2: hex::decode(groth16_deactivate_vkey.vk_delta_2)
+            .map_err(|_| ContractError::HexDecodingError {})?,
+        ic0: hex::decode(groth16_deactivate_vkey.vk_ic0)
+            .map_err(|_| ContractError::HexDecodingError {})?,
+        ic1: hex::decode(groth16_deactivate_vkey.vk_ic1)
+            .map_err(|_| ContractError::HexDecodingError {})?,
+    };
+    let _ = parse_groth16_vkey::<Bn256>(groth16_deactivate_vkeys.clone())?;
+    GROTH16_DEACTIVATE_VKEYS.save(deps.storage, &groth16_deactivate_vkeys)?;
+
+    // Create a tally_vkeys struct from the tally_vkey in the message
+    let groth16_add_new_key_vkey = msg.groth16_add_key_vkey;
+    // Create a process_vkeys struct from the process_vkey in the message
+    let groth16_add_new_key_vkeys = Groth16VkeyStr {
+        alpha_1: hex::decode(groth16_add_new_key_vkey.vk_alpha1)
+            .map_err(|_| ContractError::HexDecodingError {})?,
+        beta_2: hex::decode(groth16_add_new_key_vkey.vk_beta_2)
+            .map_err(|_| ContractError::HexDecodingError {})?,
+        gamma_2: hex::decode(groth16_add_new_key_vkey.vk_gamma_2)
+            .map_err(|_| ContractError::HexDecodingError {})?,
+        delta_2: hex::decode(groth16_add_new_key_vkey.vk_delta_2)
+            .map_err(|_| ContractError::HexDecodingError {})?,
+        ic0: hex::decode(groth16_add_new_key_vkey.vk_ic0)
+            .map_err(|_| ContractError::HexDecodingError {})?,
+        ic1: hex::decode(groth16_add_new_key_vkey.vk_ic1)
+            .map_err(|_| ContractError::HexDecodingError {})?,
+    };
+    let _ = parse_groth16_vkey::<Bn256>(groth16_add_new_key_vkeys.clone())?;
+    GROTH16_NEWKEY_VKEYS.save(deps.storage, &groth16_add_new_key_vkeys)?;
+
     // Compute the coordinator hash from the coordinator values in the message
     let coordinator_hash = hash2([msg.coordinator.x, msg.coordinator.y]);
     COORDINATORHASH.save(deps.storage, &coordinator_hash)?;
@@ -106,7 +155,27 @@ pub fn instantiate(
     LEAF_IDX_0.save(deps.storage, &leaf_idx0)?;
 
     // Define an array of zero values
+    let zeros_h10: [Uint256; 7] = [
+        uint256_from_hex_string("26318ec8cdeef483522c15e9b226314ae39b86cde2a430dabf6ed19791917c47"),
+        //     "17275449213996161510934492606295966958609980169974699290756906233261208992839",
+        uint256_from_hex_string("28413250bf1cc56fabffd2fa32b52624941da885248fd1e015319e02c02abaf2"),
+        //     "18207706266780806924962529690397914300960241391319167935582599262189180861170",
+        uint256_from_hex_string("16738da97527034e095ac32bfab88497ca73a7b310a2744ab43971e82215cb6d"),
+        //     "10155047796084846065379877743510757035594500557216694906214808863463609584493",
+        uint256_from_hex_string("28140849348769fde6e971eec1424a5a162873a3d8adcbfdfc188e9c9d25faa3"),
+        //     "18127908072205049515869530689345374790252438412920611306083118152373728836259",
+        uint256_from_hex_string("1a07af159d19f68ed2aed0df224dabcc2e2321595968769f7c9e26591377ed9a"),
+        //     "11773710380932653545559747058052522704305757415195021025284143362529247620506",
+        uint256_from_hex_string("205cd249acba8f95f2e32ed51fa9c3d8e6f0d021892225d3efa9cd84c8fc1cad"),
+        //     "14638012437623529368951445143647110672059367053598285839401224214917416754349",
+        uint256_from_hex_string("b21c625cd270e71c2ee266c939361515e690be27e26cfc852a30b24e83504b0"),
+        //     "5035114852453394843899296226690566678263173670465782309520655898931824493744",
+    ];
+    ZEROS_H10.save(deps.storage, &zeros_h10)?;
+
+    // Define an array of zero values
     let zeros: [Uint256; 8] = [
+        Uint256::from_u128(0u128),
         uint256_from_hex_string("2066be41bebe6caf7e079360abe14fbf9118c62eabc42e2fe75e342b160a95bc"),
         //     "14655542659562014735865511769057053982292279840403315552050801315682099828156",
         uint256_from_hex_string("2a956d37d8e73692877b104630a08cc6840036f235f2134b0606769a369d85c1"),
@@ -121,7 +190,7 @@ pub fn instantiate(
         //     "2612442706402737973181840577010736087708621987282725873936541279764292204086",
         uint256_from_hex_string("272b3425fcc3b2c45015559b9941fde27527aab5226045bf9b0a6c1fe902d601"),
         //     "17716535433480122581515618850811568065658392066947958324371350481921422579201",
-        uint256_from_hex_string("268d82cc07023a1d5e7c987cbd0328b34762c9ea21369bea418f08b71b16846a"),
+        // uint256_from_hex_string("268d82cc07023a1d5e7c987cbd0328b34762c9ea21369bea418f08b71b16846a"),
         //     "17437916409890180001398333108882255895598851862997171508841759030332444017770",
     ];
     ZEROS.save(deps.storage, &zeros)?;
@@ -140,6 +209,59 @@ pub fn instantiate(
     NUMSIGNUPS.save(deps.storage, &Uint256::from_u128(0u128))?;
     MAX_VOTE_OPTIONS.save(deps.storage, &msg.max_vote_options)?;
     VOICE_CREDIT_AMOUNT.save(deps.storage, &msg.voice_credit_amount)?;
+
+    PROCESSED_DMSG_COUNT.save(deps.storage, &Uint256::from_u128(0u128))?;
+    DMSG_CHAIN_LENGTH.save(deps.storage, &Uint256::from_u128(0u128))?;
+
+    println!(
+        "i: {:?}",
+        msg.parameters
+            .state_tree_depth
+            .to_string()
+            .parse::<usize>()
+            .unwrap()
+    );
+
+    println!(
+        "idata: {:?}",
+        zeros[msg
+            .parameters
+            .state_tree_depth
+            .to_string()
+            .parse::<usize>()
+            .unwrap()]
+    );
+    let current_dcommitment = &hash2([
+        zeros[msg
+            .parameters
+            .state_tree_depth
+            .to_string()
+            .parse::<usize>()
+            .unwrap()],
+        zeros[msg
+            .parameters
+            .state_tree_depth
+            .to_string()
+            .parse::<usize>()
+            .unwrap()],
+    ]);
+    println!("hashes: {:?}", current_dcommitment);
+    CURRENT_DEACTIVATE_COMMITMENT.save(deps.storage, current_dcommitment)?;
+    DMSG_HASHES.save(
+        deps.storage,
+        Uint256::from_u128(0u128).to_be_bytes().to_vec(),
+        &Uint256::from_u128(0u128),
+    )?;
+    STATE_ROOT_BY_DMSG.save(
+        deps.storage,
+        Uint256::from_u128(0u128).to_be_bytes().to_vec(),
+        &Uint256::from_u128(0u128),
+    )?;
+    DNODES.save(
+        deps.storage,
+        Uint256::from_u128(0u128).to_be_bytes().to_vec(),
+        &Uint256::from_u128(0u128),
+    )?;
 
     let mut vote_option_map: Vec<String> = Vec::new();
     for _ in 0..msg.max_vote_options.to_string().parse().unwrap() {
@@ -214,6 +336,30 @@ pub fn execute(
         ExecuteMsg::StartVotingPeriod {} => execute_start_voting_period(deps, env, info),
         ExecuteMsg::SignUp { pubkey } => execute_sign_up(deps, env, info, pubkey),
         ExecuteMsg::StopVotingPeriod {} => execute_stop_voting_period(deps, env, info),
+        ExecuteMsg::PublishDeactivateMessage {
+            message,
+            enc_pub_key,
+        } => execute_publish_deactivate_message(deps, env, info, message, enc_pub_key),
+        ExecuteMsg::ProcessDeactivateMessage {
+            size,
+            new_deactivate_commitment,
+            new_deactivate_root,
+            groth16_proof,
+        } => execute_process_deactivate_message(
+            deps,
+            env,
+            info,
+            size,
+            new_deactivate_commitment,
+            new_deactivate_root,
+            groth16_proof,
+        ),
+        ExecuteMsg::AddNewKey {
+            pubkey,
+            nullifier,
+            d,
+            groth16_proof,
+        } => execute_add_new_key(deps, env, info, pubkey, nullifier, d, groth16_proof),
         ExecuteMsg::PublishMessage {
             message,
             enc_pub_key,
@@ -222,28 +368,12 @@ pub fn execute(
         ExecuteMsg::ProcessMessage {
             new_state_commitment,
             groth16_proof,
-            plonk_proof,
-        } => execute_process_message(
-            deps,
-            env,
-            info,
-            new_state_commitment,
-            groth16_proof,
-            plonk_proof,
-        ),
+        } => execute_process_message(deps, env, info, new_state_commitment, groth16_proof),
         ExecuteMsg::StopProcessingPeriod {} => execute_stop_processing_period(deps, env, info),
         ExecuteMsg::ProcessTally {
             new_tally_commitment,
             groth16_proof,
-            plonk_proof,
-        } => execute_process_tally(
-            deps,
-            env,
-            info,
-            new_tally_commitment,
-            groth16_proof,
-            plonk_proof,
-        ),
+        } => execute_process_tally(deps, env, info, new_tally_commitment, groth16_proof),
         ExecuteMsg::StopTallyingPeriod { results, salt } => {
             execute_stop_tallying_period(deps, env, info, results, salt)
         }
@@ -639,16 +769,19 @@ pub fn execute_publish_deactivate_message(
     // let snark_scalar_field = uint256_from_decimal_string(
     //     "21888242871839275222246405745257275088548364400416034343698204186575808495617",
     // );
-
+    println!("---- publish dmsg 0");
     // Check if the encrypted public key is valid
     if enc_pub_key.x != Uint256::from_u128(0u128)
         && enc_pub_key.y != Uint256::from_u128(1u128)
         && enc_pub_key.x < snark_scalar_field
         && enc_pub_key.y < snark_scalar_field
     {
+        println!("---- publish dmsg 1");
+
         let mut dmsg_chain_length = DMSG_CHAIN_LENGTH.load(deps.storage)?;
         let old_msg_hashes =
             DMSG_HASHES.load(deps.storage, dmsg_chain_length.to_be_bytes().to_vec())?;
+        println!("---- publish dmsg 2");
 
         let mut m: [Uint256; 5] = [Uint256::zero(); 5];
         m[0] = message.data[0];
@@ -668,6 +801,7 @@ pub fn execute_publish_deactivate_message(
 
         let n_hash = hash5(n);
         let m_n_hash = hash2([m_hash, n_hash]);
+        println!("---- publish dmsg 3");
 
         // Compute the new message hash using the provided message, encrypted public key, and previous hash
         DMSG_HASHES.save(
@@ -691,7 +825,7 @@ pub fn execute_publish_deactivate_message(
         let old_chain_length = dmsg_chain_length;
         // Update the message chain length
         dmsg_chain_length += Uint256::from_u128(1u128);
-        MSG_CHAIN_LENGTH.save(deps.storage, &dmsg_chain_length)?;
+        DMSG_CHAIN_LENGTH.save(deps.storage, &dmsg_chain_length)?;
         // Return a success response
         Ok(Response::new()
             .add_attribute("action", "publish_deactivate_message")
@@ -733,12 +867,15 @@ pub fn execute_process_deactivate_message(
     }
     let processed_dmsg_count = PROCESSED_DMSG_COUNT.load(deps.storage)?;
     let dmsg_chain_length = DMSG_CHAIN_LENGTH.load(deps.storage)?;
+    println!("--- 0");
     if processed_dmsg_count >= dmsg_chain_length {
         // Return an error response for invalid user or encrypted public key
         return Ok(Response::new() // TODO: ERROR
             .add_attribute("action", "publish_deactivate_message")
             .add_attribute("event", "error user."));
     }
+
+    println!("--- 1");
 
     // Load the MACI parameters
     let parameters = MACIPARAMETERS.load(deps.storage)?;
@@ -750,11 +887,13 @@ pub fn execute_process_deactivate_message(
             .add_attribute("action", "publish_deactivate_message")
             .add_attribute("event", "error user."));
     }
-
-    let mut dnodes = vec![];
-    dnodes[0] = new_deactivate_root;
+    DNODES.save(
+        deps.storage,
+        Uint256::from_u128(0u128).to_be_bytes().to_vec(),
+        &new_deactivate_root,
+    )?;
     let mut input: [Uint256; 7] = [Uint256::zero(); 7];
-    input[0] = dnodes[0];
+    input[0] = new_deactivate_root;
     input[1] = COORDINATORHASH.load(deps.storage)?;
     let batch_start_index = processed_dmsg_count;
     let mut batch_end_index = batch_start_index + size;
@@ -762,6 +901,8 @@ pub fn execute_process_deactivate_message(
     if batch_end_index > dmsg_chain_length {
         batch_end_index = dmsg_chain_length;
     }
+    println!("batch_start_index ---- {:?}", batch_start_index);
+    println!("batch_end_index ---- {:?}", batch_end_index);
 
     input[2] = DMSG_HASHES.load(deps.storage, batch_start_index.to_be_bytes().to_vec())?;
     input[3] = DMSG_HASHES.load(deps.storage, batch_end_index.to_be_bytes().to_vec())?;
@@ -776,11 +917,15 @@ pub fn execute_process_deactivate_message(
     // let snark_scalar_field = uint256_from_decimal_string(
     //     "21888242871839275222246405745257275088548364400416034343698204186575808495617",
     // );
-
+    println!("input[0]: {:?}", &input[0]);
+    println!("input[1]: {:?}", &input[1]);
+    println!("input[2]: {:?}", &input[2]);
+    println!("input[3]: {:?}", &input[3]);
+    println!("input[4]: {:?}", &input[4]);
+    println!("input[5]: {:?}", &input[5]);
+    println!("input[6]: {:?}", &input[6]);
     // Compute the hash of the input values
     let input_hash = uint256_from_hex_string(&hash_256_uint256_list(&input)) % snark_scalar_field;
-
-    let mut attributes = vec![];
 
     // Load the process verification keys
     let process_vkeys_str = GROTH16_DEACTIVATE_VKEYS.load(deps.storage)?;
@@ -810,6 +955,10 @@ pub fn execute_process_deactivate_message(
     )
     .unwrap();
 
+    println!(
+        "process_deactivate_message proof result: {:?}",
+        is_passed.clone()
+    );
     // If the proof verification fails, return an error
     if !is_passed {
         return Err(ContractError::InvalidProof {
@@ -817,12 +966,12 @@ pub fn execute_process_deactivate_message(
         });
     }
 
-    CURRENT_DEACTIVATE_COMMITMENT.save(deps.storage, &new_deactivate_commitment);
+    CURRENT_DEACTIVATE_COMMITMENT.save(deps.storage, &new_deactivate_commitment)?;
     PROCESSED_DMSG_COUNT.save(
         deps.storage,
         &(processed_dmsg_count + batch_end_index - batch_start_index),
-    );
-    attributes = vec![
+    )?;
+    let attributes = vec![
         attr("zk_verify", is_passed.to_string()),
         attr("commitment", new_deactivate_commitment.to_string()),
         attr("proof", format!("{:?}", groth16_proof)),
@@ -853,8 +1002,6 @@ pub fn execute_add_new_key(
         check_voting_time(env, None, period.status)?;
     }
 
-    let nullifiers = NULLIFIERS.load(deps.storage, nullifier.to_be_bytes().to_vec())?;
-
     if NULLIFIERS.has(deps.storage, nullifier.to_be_bytes().to_vec()) {
         // Return an error response for invalid user or encrypted public key
         return Ok(Response::new() // TODO: ERROR
@@ -862,14 +1009,7 @@ pub fn execute_add_new_key(
             .add_attribute("event", "error user."));
     }
 
-    NULLIFIERS.save(deps.storage, nullifier.to_be_bytes().to_vec(), &true);
-
-    if NULLIFIERS.has(deps.storage, nullifier.to_be_bytes().to_vec()) {
-        // Return an error response for invalid user or encrypted public key
-        return Ok(Response::new() // TODO: ERROR
-            .add_attribute("action", "publish_deactivate_message")
-            .add_attribute("event", "error user."));
-    }
+    NULLIFIERS.save(deps.storage, nullifier.to_be_bytes().to_vec(), &true)?;
 
     let num_sign_ups = NUMSIGNUPS.load(deps.storage)?;
 
@@ -1081,8 +1221,7 @@ pub fn execute_process_message(
     _env: Env,
     _info: MessageInfo,
     new_state_commitment: Uint256,
-    groth16_proof: Option<Groth16ProofType>,
-    plonk_proof: Option<PlonkProofType>,
+    groth16_proof: Groth16ProofType,
 ) -> Result<Response, ContractError> {
     let period = PERIOD.load(deps.storage)?;
     // Check if the period status is Processing
@@ -1153,113 +1292,48 @@ pub fn execute_process_message(
     // Compute the hash of the input values
     let input_hash = uint256_from_hex_string(&hash_256_uint256_list(&input)) % snark_scalar_field; // input hash
 
-    let mut attributes = vec![];
+    let groth16_proof_data = groth16_proof;
+    // Load the process verification keys
+    let process_vkeys_str = GROTH16_PROCESS_VKEYS.load(deps.storage)?;
 
-    if let Some(groth16_proof_data) = groth16_proof {
-        // Load the process verification keys
-        let process_vkeys_str = GROTH16_PROCESS_VKEYS.load(deps.storage)?;
-
-        // Parse the SNARK proof
-        let proof_str = Groth16ProofStr {
-            pi_a: hex::decode(groth16_proof_data.a.clone())
-                .map_err(|_| ContractError::HexDecodingError {})?,
-            pi_b: hex::decode(groth16_proof_data.b.clone())
-                .map_err(|_| ContractError::HexDecodingError {})?,
-            pi_c: hex::decode(groth16_proof_data.c.clone())
-                .map_err(|_| ContractError::HexDecodingError {})?,
-        };
-
-        // Parse the verification key and prepare for verification
-        let vkey = parse_groth16_vkey::<Bn256>(process_vkeys_str)?;
-        let pvk = prepare_verifying_key(&vkey);
-
-        // Parse the proof and prepare for verification
-        let pof = parse_groth16_proof::<Bn256>(proof_str.clone())?;
-
-        // Verify the SNARK proof using the input hash
-        let is_passed = groth16_verify(
-            &pvk,
-            &pof,
-            &[Fr::from_str(&input_hash.to_string()).unwrap()],
-        )
-        .unwrap();
-
-        // If the proof verification fails, return an error
-        if !is_passed {
-            return Err(ContractError::InvalidProof {
-                step: String::from("Process"),
-            });
-        }
-
-        attributes = vec![
-            attr("zk_verify", is_passed.to_string()),
-            attr("commitment", new_state_commitment.to_string()),
-            attr("proof", format!("{:?}", groth16_proof_data)),
-            attr("certification_system", "groth16"),
-        ];
-    }
-
-    if let Some(plonk_proof_data) = plonk_proof {
-        // Load the process verification keys
-        let process_vkeys_str = PLONK_PROCESS_VKEYS.load(deps.storage)?;
-
-        // Parse the SNARK proof
-        let proof_str = PlonkProofStr {
-            num_inputs: plonk_proof_data.num_inputs.clone(),
-            n: plonk_proof_data.n.clone(),
-            input_values: plonk_proof_data.input_values.clone(),
-            wire_commitments: plonk_proof_data
-                .wire_commitments
-                .clone()
-                .into_iter()
-                .map(|x| hex::decode(x).unwrap())
-                .collect(),
-            grand_product_commitment: hex::decode(
-                plonk_proof_data.grand_product_commitment.clone(),
-            )
+    // Parse the SNARK proof
+    let proof_str = Groth16ProofStr {
+        pi_a: hex::decode(groth16_proof_data.a.clone())
             .map_err(|_| ContractError::HexDecodingError {})?,
-            quotient_poly_commitments: plonk_proof_data
-                .quotient_poly_commitments
-                .clone()
-                .into_iter()
-                .map(|x| hex::decode(x).unwrap())
-                .collect(),
-            wire_values_at_z: plonk_proof_data.wire_values_at_z.clone(),
-            wire_values_at_z_omega: plonk_proof_data.wire_values_at_z_omega.clone(),
-            grand_product_at_z_omega: plonk_proof_data.grand_product_at_z_omega.clone(),
-            quotient_polynomial_at_z: plonk_proof_data.quotient_polynomial_at_z.clone(),
-            linearization_polynomial_at_z: plonk_proof_data.linearization_polynomial_at_z.clone(),
-            permutation_polynomials_at_z: plonk_proof_data.permutation_polynomials_at_z.clone(),
-            opening_at_z_proof: hex::decode(&plonk_proof_data.opening_at_z_proof)
-                .map_err(|_| ContractError::HexDecodingError {})?,
-            opening_at_z_omega_proof: hex::decode(&plonk_proof_data.opening_at_z_omega_proof)
-                .map_err(|_| ContractError::HexDecodingError {})?,
-        };
+        pi_b: hex::decode(groth16_proof_data.b.clone())
+            .map_err(|_| ContractError::HexDecodingError {})?,
+        pi_c: hex::decode(groth16_proof_data.c.clone())
+            .map_err(|_| ContractError::HexDecodingError {})?,
+    };
 
-        // Parse the verification key and prepare for verification
-        let vkey = parse_plonk_vkey::<MBn256, PlonkCsWidth4WithNextStepParams>(process_vkeys_str)?;
+    // Parse the verification key and prepare for verification
+    let vkey = parse_groth16_vkey::<Bn256>(process_vkeys_str)?;
+    let pvk = prepare_verifying_key(&vkey);
 
-        let pof = parse_plonk_proof::<MBn256, PlonkCsWidth4WithNextStepParams>(proof_str.clone())?;
+    // Parse the proof and prepare for verification
+    let pof = parse_groth16_proof::<Bn256>(proof_str.clone())?;
 
-        // Verify the SNARK proof using the input hash
-        let is_passed =
-            plonk_verify::<_, _, RollingKeccakTranscript<pairing_ce::bn256::Fr>>(&pof, &vkey, None)
-                .map_err(|_| ContractError::SynthesisError {})?;
+    // Verify the SNARK proof using the input hash
+    let is_passed = groth16_verify(
+        &pvk,
+        &pof,
+        &[Fr::from_str(&input_hash.to_string()).unwrap()],
+    )
+    .unwrap();
 
-        // If the proof verification fails, return an error
-        if !is_passed {
-            return Err(ContractError::InvalidProof {
-                step: String::from("Process"),
-            });
-        }
-
-        attributes = vec![
-            attr("zk_verify", is_passed.to_string()),
-            attr("commitment", new_state_commitment.to_string()),
-            attr("proof", format!("{:?}", plonk_proof_data)),
-            attr("certification_system", "plonk"),
-        ];
+    // If the proof verification fails, return an error
+    if !is_passed {
+        return Err(ContractError::InvalidProof {
+            step: String::from("Process"),
+        });
     }
+
+    let attributes = vec![
+        attr("zk_verify", is_passed.to_string()),
+        attr("commitment", new_state_commitment.to_string()),
+        attr("proof", format!("{:?}", groth16_proof_data)),
+        attr("certification_system", "groth16"),
+    ];
 
     // Proof verify success
     // Update the current state commitment
@@ -1305,8 +1379,7 @@ pub fn execute_process_tally(
     _env: Env,
     _info: MessageInfo,
     new_tally_commitment: Uint256,
-    groth16_proof: Option<Groth16ProofType>,
-    plonk_proof: Option<PlonkProofType>,
+    groth16_proof: Groth16ProofType,
 ) -> Result<Response, ContractError> {
     let period = PERIOD.load(deps.storage)?;
     // Check if the period status is Tallying
@@ -1353,112 +1426,49 @@ pub fn execute_process_tally(
     let input_hash = uint256_from_hex_string(&hash_256_uint256_list(&input)) % snark_scalar_field;
 
     let mut attributes = vec![];
-    let is_passed;
-    if let Some(groth16_proof_data) = groth16_proof {
-        // Load the tally verification keys
-        let tally_vkeys_str = GROTH16_TALLY_VKEYS.load(deps.storage)?;
 
-        // Parse the SNARK proof
-        let proof_str = Groth16ProofStr {
-            pi_a: hex::decode(groth16_proof_data.a.clone())
-                .map_err(|_| ContractError::HexDecodingError {})?,
-            pi_b: hex::decode(groth16_proof_data.b.clone())
-                .map_err(|_| ContractError::HexDecodingError {})?,
-            pi_c: hex::decode(groth16_proof_data.c.clone())
-                .map_err(|_| ContractError::HexDecodingError {})?,
-        };
+    let groth16_proof_data = groth16_proof;
+    // Load the tally verification keys
+    let tally_vkeys_str = GROTH16_TALLY_VKEYS.load(deps.storage)?;
 
-        // Parse the verification key and prepare for verification
-        let vkey = parse_groth16_vkey::<Bn256>(tally_vkeys_str)?;
-        let pvk = prepare_verifying_key(&vkey);
-
-        // Parse the proof and prepare for verification
-        let pof = parse_groth16_proof::<Bn256>(proof_str.clone())?;
-
-        // Verify the SNARK proof using the input hash
-        let is_passed = groth16_verify(
-            &pvk,
-            &pof,
-            &[Fr::from_str(&input_hash.to_string()).unwrap()],
-        )
-        .unwrap();
-
-        // If the proof verification fails, return an error
-        if !is_passed {
-            return Err(ContractError::InvalidProof {
-                step: String::from("Tally"),
-            });
-        }
-
-        attributes = vec![
-            attr("zk_verify", is_passed.to_string()),
-            attr("commitment", new_tally_commitment.to_string()),
-            attr("proof", format!("{:?}", groth16_proof_data)),
-            attr("certification_system", "groth16"),
-        ];
-    }
-
-    if let Some(plonk_proof_data) = plonk_proof {
-        // Load the tally verification keys
-        let tally_vkeys_str = PLONK_TALLY_VKEYS.load(deps.storage)?;
-
-        // Parse the SNARK proof
-        let proof_str = PlonkProofStr {
-            num_inputs: plonk_proof_data.num_inputs.clone(),
-            n: plonk_proof_data.n.clone(),
-            input_values: plonk_proof_data.input_values.clone(),
-            wire_commitments: plonk_proof_data
-                .wire_commitments
-                .clone()
-                .into_iter()
-                .map(|x| hex::decode(x).unwrap())
-                .collect(),
-            grand_product_commitment: hex::decode(
-                plonk_proof_data.grand_product_commitment.clone(),
-            )
+    // Parse the SNARK proof
+    let proof_str = Groth16ProofStr {
+        pi_a: hex::decode(groth16_proof_data.a.clone())
             .map_err(|_| ContractError::HexDecodingError {})?,
-            quotient_poly_commitments: plonk_proof_data
-                .quotient_poly_commitments
-                .clone()
-                .into_iter()
-                .map(|x| hex::decode(x).unwrap())
-                .collect(),
-            wire_values_at_z: plonk_proof_data.wire_values_at_z.clone(),
-            wire_values_at_z_omega: plonk_proof_data.wire_values_at_z_omega.clone(),
-            grand_product_at_z_omega: plonk_proof_data.grand_product_at_z_omega.clone(),
-            quotient_polynomial_at_z: plonk_proof_data.quotient_polynomial_at_z.clone(),
-            linearization_polynomial_at_z: plonk_proof_data.linearization_polynomial_at_z.clone(),
-            permutation_polynomials_at_z: plonk_proof_data.permutation_polynomials_at_z.clone(),
-            opening_at_z_proof: hex::decode(&plonk_proof_data.opening_at_z_proof)
-                .map_err(|_| ContractError::HexDecodingError {})?,
-            opening_at_z_omega_proof: hex::decode(&plonk_proof_data.opening_at_z_omega_proof)
-                .map_err(|_| ContractError::HexDecodingError {})?,
-        };
+        pi_b: hex::decode(groth16_proof_data.b.clone())
+            .map_err(|_| ContractError::HexDecodingError {})?,
+        pi_c: hex::decode(groth16_proof_data.c.clone())
+            .map_err(|_| ContractError::HexDecodingError {})?,
+    };
 
-        // Parse the verification key and prepare for verification
-        let vkey = parse_plonk_vkey::<MBn256, PlonkCsWidth4WithNextStepParams>(tally_vkeys_str)?;
+    // Parse the verification key and prepare for verification
+    let vkey = parse_groth16_vkey::<Bn256>(tally_vkeys_str)?;
+    let pvk = prepare_verifying_key(&vkey);
 
-        let pof = parse_plonk_proof::<MBn256, PlonkCsWidth4WithNextStepParams>(proof_str.clone())?;
+    // Parse the proof and prepare for verification
+    let pof = parse_groth16_proof::<Bn256>(proof_str.clone())?;
 
-        // Verify the SNARK proof using the input hash
-        is_passed =
-            plonk_verify::<_, _, RollingKeccakTranscript<pairing_ce::bn256::Fr>>(&pof, &vkey, None)
-                .map_err(|_| ContractError::SynthesisError {})?;
+    // Verify the SNARK proof using the input hash
+    let is_passed = groth16_verify(
+        &pvk,
+        &pof,
+        &[Fr::from_str(&input_hash.to_string()).unwrap()],
+    )
+    .unwrap();
 
-        // If the proof verification fails, return an error
-        if !is_passed {
-            return Err(ContractError::InvalidProof {
-                step: String::from("Process"),
-            });
-        }
-
-        attributes = vec![
-            attr("zk_verify", is_passed.to_string()),
-            attr("commitment", new_tally_commitment.to_string()),
-            attr("proof", format!("{:?}", plonk_proof_data)),
-            attr("certification_system", "plonk"),
-        ];
+    // If the proof verification fails, return an error
+    if !is_passed {
+        return Err(ContractError::InvalidProof {
+            step: String::from("Tally"),
+        });
     }
+
+    attributes = vec![
+        attr("zk_verify", is_passed.to_string()),
+        attr("commitment", new_tally_commitment.to_string()),
+        attr("proof", format!("{:?}", groth16_proof_data)),
+        attr("certification_system", "groth16"),
+    ];
 
     // Proof verify success
     // Update the current tally commitment
@@ -1770,7 +1780,7 @@ fn state_update_at(deps: &mut DepsMut, index: Uint256) -> Result<bool, ContractE
 
     let mut height = 0;
 
-    let zeros = ZEROS.load(deps.storage).unwrap();
+    let zeros = ZEROS_H10.load(deps.storage).unwrap();
 
     while idx > Uint256::from_u128(0u128) {
         let parent_idx = (idx - Uint256::one()) / Uint256::from(5u8);
@@ -1902,6 +1912,11 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::GetMsgChainLength {} => {
             to_json_binary::<Uint256>(&MSG_CHAIN_LENGTH.may_load(deps.storage)?.unwrap_or_default())
         }
+        QueryMsg::GetDMsgChainLength {} => to_json_binary::<Uint256>(
+            &DMSG_CHAIN_LENGTH
+                .may_load(deps.storage)?
+                .unwrap_or_default(),
+        ),
         QueryMsg::GetResult { index } => to_json_binary::<Uint256>(
             &RESULT
                 .may_load(deps.storage, index.to_be_bytes().to_vec())?
