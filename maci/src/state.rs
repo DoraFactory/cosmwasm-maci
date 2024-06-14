@@ -1,4 +1,4 @@
-use crate::utils::hash5;
+use crate::utils::{hash2, hash5, uint256_from_hex_string};
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, Timestamp, Uint128, Uint256};
 use cw_storage_plus::{Item, Map};
@@ -101,6 +101,20 @@ impl StateLeaf {
         plaintext[3] = self.vote_option_tree_root;
         plaintext[4] = self.nonce;
         return hash5(plaintext);
+    }
+
+    pub fn hash_decativate_state_leaf(&self) -> Uint256 {
+        let mut plaintext: [Uint256; 5] = [Uint256::from_u128(0); 5];
+
+        plaintext[0] = self.pub_key.x;
+        plaintext[1] = self.pub_key.y;
+        plaintext[2] = self.voice_credit_balance;
+        return hash2([
+            hash5(plaintext),
+            uint256_from_hex_string(
+                "2066be41bebe6caf7e079360abe14fbf9118c62eabc42e2fe75e342b160a95bc",
+            ),
+        ]);
     }
 }
 

@@ -645,7 +645,7 @@ pub fn execute_sign_up(
         vote_option_tree_root: Uint256::from_u128(0),
         nonce: Uint256::from_u128(0),
     }
-    .hash_state_leaf();
+    .hash_decativate_state_leaf();
 
     let state_index = num_sign_ups;
     // Enqueue the state leaf
@@ -871,7 +871,7 @@ pub fn execute_process_deactivate_message(
     if processed_dmsg_count >= dmsg_chain_length {
         // Return an error response for invalid user or encrypted public key
         return Ok(Response::new() // TODO: ERROR
-            .add_attribute("action", "publish_deactivate_message")
+            .add_attribute("action", "process_deactivate_message")
             .add_attribute("event", "error user."));
     }
 
@@ -884,7 +884,7 @@ pub fn execute_process_deactivate_message(
     if size > batch_size {
         // Return an error response for invalid user or encrypted public key
         return Ok(Response::new() // TODO: ERROR
-            .add_attribute("action", "publish_deactivate_message")
+            .add_attribute("action", "process_deactivate_message")
             .add_attribute("event", "error user."));
     }
     DNODES.save(
@@ -910,6 +910,27 @@ pub fn execute_process_deactivate_message(
     input[4] = CURRENT_DEACTIVATE_COMMITMENT.load(deps.storage)?;
     input[5] = new_deactivate_commitment;
     input[6] = STATE_ROOT_BY_DMSG.load(deps.storage, batch_end_index.to_be_bytes().to_vec())?;
+    println!(
+        "0: {:?}",
+        STATE_ROOT_BY_DMSG.load(
+            deps.storage,
+            Uint256::from_u128(0u128).to_be_bytes().to_vec(),
+        )?,
+    );
+    println!(
+        "1: {:?}",
+        STATE_ROOT_BY_DMSG.load(
+            deps.storage,
+            Uint256::from_u128(1u128).to_be_bytes().to_vec(),
+        )?,
+    );
+    println!(
+        "2: {:?}",
+        STATE_ROOT_BY_DMSG.load(
+            deps.storage,
+            Uint256::from_u128(2u128).to_be_bytes().to_vec(),
+        )?,
+    );
 
     // Load the scalar field value
     let snark_scalar_field =
