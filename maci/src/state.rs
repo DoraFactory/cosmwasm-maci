@@ -116,6 +116,18 @@ impl StateLeaf {
             ),
         ]);
     }
+
+    pub fn hash_new_key_state_leaf(&self, d: [Uint256; 4]) -> Uint256 {
+        let mut plaintext: [Uint256; 5] = [Uint256::from_u128(0); 5];
+
+        plaintext[0] = self.pub_key.x;
+        plaintext[1] = self.pub_key.y;
+        plaintext[2] = self.voice_credit_balance;
+        return hash2([
+            hash5(plaintext),
+            hash5([d[0], d[1], d[2], d[3], Uint256::from_u128(0u128)]),
+        ]);
+    }
 }
 
 // Init Data

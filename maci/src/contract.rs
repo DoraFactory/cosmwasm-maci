@@ -37,8 +37,6 @@ use cosmwasm_std::{
 
 use crate::utils::{hash2, hash5, hash_256_uint256_list, uint256_from_hex_string};
 
-use bellman_ce::plonk::better_cs::verifier::verify as plonk_verify;
-use bellman_ce::plonk::commitments::transcript::keccak_transcript::RollingKeccakTranscript;
 use bellman_ce_verifier::{prepare_verifying_key, verify_proof as groth16_verify};
 
 use ff_ce::PrimeField as Fr;
@@ -213,24 +211,6 @@ pub fn instantiate(
     PROCESSED_DMSG_COUNT.save(deps.storage, &Uint256::from_u128(0u128))?;
     DMSG_CHAIN_LENGTH.save(deps.storage, &Uint256::from_u128(0u128))?;
 
-    println!(
-        "i: {:?}",
-        msg.parameters
-            .state_tree_depth
-            .to_string()
-            .parse::<usize>()
-            .unwrap()
-    );
-
-    println!(
-        "idata: {:?}",
-        zeros[msg
-            .parameters
-            .state_tree_depth
-            .to_string()
-            .parse::<usize>()
-            .unwrap()]
-    );
     let current_dcommitment = &hash2([
         zeros[msg
             .parameters
@@ -245,7 +225,6 @@ pub fn instantiate(
             .parse::<usize>()
             .unwrap()],
     ]);
-    println!("hashes: {:?}", current_dcommitment);
     CURRENT_DEACTIVATE_COMMITMENT.save(deps.storage, current_dcommitment)?;
     DMSG_HASHES.save(
         deps.storage,
@@ -654,13 +633,14 @@ pub fn execute_sign_up(
 
     // Save the updated state index, voice credit balance, and number of sign-ups
     // STATEIDXINC.save(deps.storage, &info.sender, &num_sign_ups)?;
-    STATEIDXINC.save(deps.storage, &info.sender, &num_sign_ups)?;
-    VOICECREDITBALANCE.save(
-        deps.storage,
-        state_index.to_be_bytes().to_vec(),
-        &voice_credit_amount,
-    )?;
+    // STATEIDXINC.save(deps.storage, &info.sender, &num_sign_ups)?;
+    // VOICECREDITBALANCE.save(
+    //     deps.storage,
+    //     state_index.to_be_bytes().to_vec(),
+    //     &voice_credit_amount,
+    // )?;
     NUMSIGNUPS.save(deps.storage, &num_sign_ups)?;
+    SIGNUPED.save(deps.storage, pubkey.x.to_be_bytes().to_vec(), &num_sign_ups)?;
 
     // let mut white_curr = WHITELIST.load(deps.storage)?;
     // // white_curr.register(info.sender);
@@ -769,19 +749,15 @@ pub fn execute_publish_deactivate_message(
     // let snark_scalar_field = uint256_from_decimal_string(
     //     "21888242871839275222246405745257275088548364400416034343698204186575808495617",
     // );
-    println!("---- publish dmsg 0");
     // Check if the encrypted public key is valid
     if enc_pub_key.x != Uint256::from_u128(0u128)
         && enc_pub_key.y != Uint256::from_u128(1u128)
         && enc_pub_key.x < snark_scalar_field
         && enc_pub_key.y < snark_scalar_field
     {
-        println!("---- publish dmsg 1");
-
         let mut dmsg_chain_length = DMSG_CHAIN_LENGTH.load(deps.storage)?;
         let old_msg_hashes =
             DMSG_HASHES.load(deps.storage, dmsg_chain_length.to_be_bytes().to_vec())?;
-        println!("---- publish dmsg 2");
 
         let mut m: [Uint256; 5] = [Uint256::zero(); 5];
         m[0] = message.data[0];
@@ -801,7 +777,6 @@ pub fn execute_publish_deactivate_message(
 
         let n_hash = hash5(n);
         let m_n_hash = hash2([m_hash, n_hash]);
-        println!("---- publish dmsg 3");
 
         // Compute the new message hash using the provided message, encrypted public key, and previous hash
         DMSG_HASHES.save(
@@ -867,15 +842,12 @@ pub fn execute_process_deactivate_message(
     }
     let processed_dmsg_count = PROCESSED_DMSG_COUNT.load(deps.storage)?;
     let dmsg_chain_length = DMSG_CHAIN_LENGTH.load(deps.storage)?;
-    println!("--- 0");
     if processed_dmsg_count >= dmsg_chain_length {
         // Return an error response for invalid user or encrypted public key
         return Ok(Response::new() // TODO: ERROR
             .add_attribute("action", "process_deactivate_message")
             .add_attribute("event", "error user."));
     }
-
-    println!("--- 1");
 
     // Load the MACI parameters
     let parameters = MACIPARAMETERS.load(deps.storage)?;
@@ -901,8 +873,6 @@ pub fn execute_process_deactivate_message(
     if batch_end_index > dmsg_chain_length {
         batch_end_index = dmsg_chain_length;
     }
-    println!("batch_start_index ---- {:?}", batch_start_index);
-    println!("batch_end_index ---- {:?}", batch_end_index);
 
     input[2] = DMSG_HASHES.load(deps.storage, batch_start_index.to_be_bytes().to_vec())?;
     input[3] = DMSG_HASHES.load(deps.storage, batch_end_index.to_be_bytes().to_vec())?;
@@ -910,27 +880,6 @@ pub fn execute_process_deactivate_message(
     input[4] = CURRENT_DEACTIVATE_COMMITMENT.load(deps.storage)?;
     input[5] = new_deactivate_commitment;
     input[6] = STATE_ROOT_BY_DMSG.load(deps.storage, batch_end_index.to_be_bytes().to_vec())?;
-    println!(
-        "0: {:?}",
-        STATE_ROOT_BY_DMSG.load(
-            deps.storage,
-            Uint256::from_u128(0u128).to_be_bytes().to_vec(),
-        )?,
-    );
-    println!(
-        "1: {:?}",
-        STATE_ROOT_BY_DMSG.load(
-            deps.storage,
-            Uint256::from_u128(1u128).to_be_bytes().to_vec(),
-        )?,
-    );
-    println!(
-        "2: {:?}",
-        STATE_ROOT_BY_DMSG.load(
-            deps.storage,
-            Uint256::from_u128(2u128).to_be_bytes().to_vec(),
-        )?,
-    );
 
     // Load the scalar field value
     let snark_scalar_field =
@@ -938,18 +887,12 @@ pub fn execute_process_deactivate_message(
     // let snark_scalar_field = uint256_from_decimal_string(
     //     "21888242871839275222246405745257275088548364400416034343698204186575808495617",
     // );
-    println!("input[0]: {:?}", &input[0]);
-    println!("input[1]: {:?}", &input[1]);
-    println!("input[2]: {:?}", &input[2]);
-    println!("input[3]: {:?}", &input[3]);
-    println!("input[4]: {:?}", &input[4]);
-    println!("input[5]: {:?}", &input[5]);
-    println!("input[6]: {:?}", &input[6]);
+
     // Compute the hash of the input values
     let input_hash = uint256_from_hex_string(&hash_256_uint256_list(&input)) % snark_scalar_field;
 
     // Load the process verification keys
-    let process_vkeys_str = GROTH16_DEACTIVATE_VKEYS.load(deps.storage)?;
+    let deactivate_vkeys_str = GROTH16_DEACTIVATE_VKEYS.load(deps.storage)?;
 
     // Parse the SNARK proof
     let proof_str = Groth16ProofStr {
@@ -962,7 +905,7 @@ pub fn execute_process_deactivate_message(
     };
 
     // Parse the verification key and prepare for verification
-    let vkey = parse_groth16_vkey::<Bn256>(process_vkeys_str)?;
+    let vkey = parse_groth16_vkey::<Bn256>(deactivate_vkeys_str)?;
     let pvk = prepare_verifying_key(&vkey);
 
     // Parse the proof and prepare for verification
@@ -976,10 +919,6 @@ pub fn execute_process_deactivate_message(
     )
     .unwrap();
 
-    println!(
-        "process_deactivate_message proof result: {:?}",
-        is_passed.clone()
-    );
     // If the proof verification fails, return an error
     if !is_passed {
         return Err(ContractError::InvalidProof {
@@ -1000,7 +939,7 @@ pub fn execute_process_deactivate_message(
     ];
 
     Ok(Response::new()
-        .add_attribute("action", "process_message")
+        .add_attribute("action", "process_deactivate_message")
         .add_attributes(attributes))
 }
 
@@ -1032,7 +971,7 @@ pub fn execute_add_new_key(
 
     NULLIFIERS.save(deps.storage, nullifier.to_be_bytes().to_vec(), &true)?;
 
-    let num_sign_ups = NUMSIGNUPS.load(deps.storage)?;
+    let mut num_sign_ups = NUMSIGNUPS.load(deps.storage)?;
 
     let max_leaves_count = MAX_LEAVES_COUNT.load(deps.storage)?;
 
@@ -1117,12 +1056,15 @@ pub fn execute_add_new_key(
         vote_option_tree_root: Uint256::from_u128(0),
         nonce: Uint256::from_u128(0),
     }
-    .hash_state_leaf();
+    .hash_new_key_state_leaf(d);
 
     let state_index = num_sign_ups;
     // Enqueue the state leaf
     state_enqueue(&mut deps, state_leaf)?;
 
+    num_sign_ups += Uint256::from_u128(1u128);
+
+    NUMSIGNUPS.save(deps.storage, &num_sign_ups)?;
     SIGNUPED.save(deps.storage, pubkey.x.to_be_bytes().to_vec(), &num_sign_ups)?;
 
     Ok(Response::new()
@@ -1225,7 +1167,7 @@ pub fn execute_start_process_period(
         PERIOD.save(deps.storage, &period)?;
         // Compute the state root
         let state_root = state_root(deps.as_ref());
-
+        println!("------ start_process_period --------");
         // Compute the current state commitment as the hash of the state root and 0
         CURRENT_STATE_COMMITMENT.save(
             deps.storage,
@@ -1259,7 +1201,7 @@ pub fn execute_process_message(
     );
 
     // Create an array to store the input values for the SNARK proof
-    let mut input: [Uint256; 6] = [Uint256::zero(); 6];
+    let mut input: [Uint256; 7] = [Uint256::zero(); 7];
 
     let num_sign_ups = NUMSIGNUPS.load(deps.storage)?;
     let max_vote_options = MAX_VOTE_OPTIONS.load(deps.storage)?;
@@ -1304,6 +1246,7 @@ pub fn execute_process_message(
 
     // Set the new state commitment
     input[5] = new_state_commitment;
+    input[6] = CURRENT_DEACTIVATE_COMMITMENT.load(deps.storage)?;
 
     // Load the scalar field value
     let snark_scalar_field =

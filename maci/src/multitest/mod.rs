@@ -343,6 +343,7 @@ impl MaciCodeId {
         sender: Addr,
         user1: Addr,
         user2: Addr,
+        user3: Addr,
         label: &str,
     ) -> AnyResult<MaciContract> {
         let round_info = RoundInfo {
@@ -357,6 +358,9 @@ impl MaciCodeId {
                 },
                 WhitelistConfig {
                     addr: user2.to_string(),
+                },
+                WhitelistConfig {
+                    addr: user3.to_string(),
                 },
             ],
         });
@@ -943,6 +947,10 @@ pub fn user1() -> Addr {
 
 pub fn user2() -> Addr {
     Addr::unchecked("1")
+}
+
+pub fn user3() -> Addr {
+    Addr::unchecked("2")
 }
 
 pub fn owner() -> Addr {
