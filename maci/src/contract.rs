@@ -14,9 +14,6 @@ use crate::state::{
 };
 
 use pairing_ce::bn256::Bn256;
-use pairing_ce::bn256::Bn256 as MBn256;
-
-use bellman_ce::plonk::better_cs::cs::PlonkCsWidth4WithNextStepParams;
 
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
@@ -1388,8 +1385,6 @@ pub fn execute_process_tally(
     // Compute the hash of the input values
     let input_hash = uint256_from_hex_string(&hash_256_uint256_list(&input)) % snark_scalar_field;
 
-    let mut attributes = vec![];
-
     let groth16_proof_data = groth16_proof;
     // Load the tally verification keys
     let tally_vkeys_str = GROTH16_TALLY_VKEYS.load(deps.storage)?;
@@ -1426,7 +1421,7 @@ pub fn execute_process_tally(
         });
     }
 
-    attributes = vec![
+    let attributes = vec![
         attr("zk_verify", is_passed.to_string()),
         attr("commitment", new_tally_commitment.to_string()),
         attr("proof", format!("{:?}", groth16_proof_data)),
