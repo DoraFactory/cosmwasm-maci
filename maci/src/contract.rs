@@ -581,7 +581,7 @@ pub fn execute_set_vote_options_map(
 pub fn execute_sign_up(
     mut deps: DepsMut,
     env: Env,
-    info: MessageInfo,
+    _info: MessageInfo,
     pubkey: PubKey,
 ) -> Result<Response, ContractError> {
     let period = PERIOD.load(deps.storage)?;
@@ -842,23 +842,23 @@ pub fn execute_process_deactivate_message(
     }
     let processed_dmsg_count = PROCESSED_DMSG_COUNT.load(deps.storage)?;
     let dmsg_chain_length = DMSG_CHAIN_LENGTH.load(deps.storage)?;
-    if processed_dmsg_count >= dmsg_chain_length {
-        // Return an error response for invalid user or encrypted public key
-        return Ok(Response::new() // TODO: ERROR
-            .add_attribute("action", "process_deactivate_message")
-            .add_attribute("event", "error user."));
-    }
+
+    assert!(
+        processed_dmsg_count < dmsg_chain_length,
+        "all deactivate messages have been processed"
+    );
 
     // Load the MACI parameters
     let parameters = MACIPARAMETERS.load(deps.storage)?;
     let batch_size = parameters.message_batch_size;
 
-    if size > batch_size {
-        // Return an error response for invalid user or encrypted public key
-        return Ok(Response::new() // TODO: ERROR
-            .add_attribute("action", "process_deactivate_message")
-            .add_attribute("event", "error user."));
-    }
+    assert!(size <= batch_size, "size overflow the batchsize");
+    // if size > batch_size {
+    //     // Return an error response for invalid user or encrypted public key
+    //     return Ok(Response::new() // TODO: ERROR
+    //         .add_attribute("action", "process_deactivate_message")
+    //         .add_attribute("event", "error user."));
+    // }
     DNODES.save(
         deps.storage,
         Uint256::from_u128(0u128).to_be_bytes().to_vec(),
@@ -1167,7 +1167,6 @@ pub fn execute_start_process_period(
         PERIOD.save(deps.storage, &period)?;
         // Compute the state root
         let state_root = state_root(deps.as_ref());
-        println!("------ start_process_period --------");
         // Compute the current state commitment as the hash of the state root and 0
         CURRENT_STATE_COMMITMENT.save(
             deps.storage,
