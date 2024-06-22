@@ -798,10 +798,13 @@ pub fn execute_publish_deactivate_message(
         // Update the message chain length
         dmsg_chain_length += Uint256::from_u128(1u128);
         DMSG_CHAIN_LENGTH.save(deps.storage, &dmsg_chain_length)?;
+
+        let num_sign_ups = NUMSIGNUPS.load(deps.storage)?;
         // Return a success response
         Ok(Response::new()
             .add_attribute("action", "publish_deactivate_message")
             .add_attribute("dmsg_chain_length", old_chain_length.to_string())
+            .add_attribute("num_sign_ups", num_sign_ups.to_string())
             .add_attribute("message", format!("{:?}", message.data))
             .add_attribute(
                 "enc_pub_key",
@@ -962,7 +965,7 @@ pub fn execute_add_new_key(
     if NULLIFIERS.has(deps.storage, nullifier.to_be_bytes().to_vec()) {
         // Return an error response for invalid user or encrypted public key
         return Ok(Response::new() // TODO: ERROR
-            .add_attribute("action", "publish_deactivate_message")
+            .add_attribute("action", "add_new_key")
             .add_attribute("event", "error user."));
     }
 
@@ -1071,7 +1074,11 @@ pub fn execute_add_new_key(
             "pubkey",
             format!("{:?},{:?}", pubkey.x.to_string(), pubkey.y.to_string()),
         )
-        .add_attribute("balance", voice_credit_amount.to_string()))
+        .add_attribute("balance", voice_credit_amount.to_string())
+        .add_attribute("d0", d[0].to_string())
+        .add_attribute("d1", d[1].to_string())
+        .add_attribute("d2", d[2].to_string())
+        .add_attribute("d3", d[3].to_string()))
 }
 
 pub fn execute_stop_voting_period(
