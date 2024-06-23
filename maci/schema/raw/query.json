@@ -70,6 +70,19 @@
     {
       "type": "object",
       "required": [
+        "get_d_msg_chain_length"
+      ],
+      "properties": {
+        "get_d_msg_chain_length": {
+          "type": "object",
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
         "get_result"
       ],
       "properties": {
@@ -164,27 +177,6 @@
       ],
       "properties": {
         "is_white_list": {
-          "type": "object",
-          "required": [
-            "sender"
-          ],
-          "properties": {
-            "sender": {
-              "type": "string"
-            }
-          },
-          "additionalProperties": false
-        }
-      },
-      "additionalProperties": false
-    },
-    {
-      "type": "object",
-      "required": [
-        "white_balance_of"
-      ],
-      "properties": {
-        "white_balance_of": {
           "type": "object",
           "required": [
             "sender"

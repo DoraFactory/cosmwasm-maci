@@ -8,17 +8,17 @@ export type Uint256 = string;
 export type Timestamp = Uint64;
 export type Uint64 = string;
 export interface InstantiateMsg {
-  certification_system: Uint256;
   circuit_type: Uint256;
   coordinator: PubKey;
-  groth16_process_vkey?: Groth16VKeyType | null;
-  groth16_tally_vkey?: Groth16VKeyType | null;
+  groth16_add_key_vkey: Groth16VKeyType;
+  groth16_deactivate_vkey: Groth16VKeyType;
+  groth16_process_vkey: Groth16VKeyType;
+  groth16_tally_vkey: Groth16VKeyType;
   max_vote_options: Uint256;
   parameters: MaciParameters;
-  plonk_process_vkey?: PlonkVKeyType | null;
-  plonk_tally_vkey?: PlonkVKeyType | null;
   qtr_lib: QuinaryTreeRoot;
   round_info: RoundInfo;
+  voice_credit_amount: Uint256;
   voting_time?: VotingTime | null;
   whitelist?: Whitelist | null;
 }
@@ -40,15 +40,6 @@ export interface MaciParameters {
   state_tree_depth: Uint256;
   vote_option_tree_depth: Uint256;
 }
-export interface PlonkVKeyType {
-  g2_elements: string[];
-  n: number;
-  next_step_selector_commitments: string[];
-  non_residues: string[];
-  num_inputs: number;
-  permutation_commitments: string[];
-  selector_commitments: string[];
-}
 export interface QuinaryTreeRoot {
   zeros: [Uint256, Uint256, Uint256, Uint256, Uint256, Uint256, Uint256, Uint256, Uint256];
 }
@@ -66,7 +57,6 @@ export interface Whitelist {
 }
 export interface WhitelistConfig {
   addr: string;
-  balance: Uint256;
 }
 export type ExecuteMsg = {
   set_params: {
@@ -98,23 +88,40 @@ export type ExecuteMsg = {
 } | {
   stop_voting_period: {};
 } | {
+  publish_deactivate_message: {
+    enc_pub_key: PubKey;
+    message: MessageData;
+  };
+} | {
+  process_deactivate_message: {
+    groth16_proof: Groth16ProofType;
+    new_deactivate_commitment: Uint256;
+    new_deactivate_root: Uint256;
+    size: Uint256;
+  };
+} | {
+  add_new_key: {
+    d: [Uint256, Uint256, Uint256, Uint256];
+    groth16_proof: Groth16ProofType;
+    nullifier: Uint256;
+    pubkey: PubKey;
+  };
+} | {
   publish_message: {
     enc_pub_key: PubKey;
     message: MessageData;
   };
 } | {
   process_message: {
-    groth16_proof?: Groth16ProofType | null;
+    groth16_proof: Groth16ProofType;
     new_state_commitment: Uint256;
-    plonk_proof?: PlonkProofType | null;
   };
 } | {
   stop_processing_period: {};
 } | {
   process_tally: {
-    groth16_proof?: Groth16ProofType | null;
+    groth16_proof: Groth16ProofType;
     new_tally_commitment: Uint256;
-    plonk_proof?: PlonkProofType | null;
   };
 } | {
   stop_tallying_period: {
@@ -143,22 +150,6 @@ export interface Groth16ProofType {
   b: string;
   c: string;
 }
-export interface PlonkProofType {
-  grand_product_at_z_omega: string;
-  grand_product_commitment: string;
-  input_values: string[];
-  linearization_polynomial_at_z: string;
-  n: number;
-  num_inputs: number;
-  opening_at_z_omega_proof: string;
-  opening_at_z_proof: string;
-  permutation_polynomials_at_z: string[];
-  quotient_poly_commitments: string[];
-  quotient_polynomial_at_z: string;
-  wire_commitments: string[];
-  wire_values_at_z: string[];
-  wire_values_at_z_omega: string[];
-}
 export type QueryMsg = {
   get_round_info: {};
 } | {
@@ -169,6 +160,8 @@ export type QueryMsg = {
   get_num_sign_up: {};
 } | {
   get_msg_chain_length: {};
+} | {
+  get_d_msg_chain_length: {};
 } | {
   get_result: {
     index: Uint256;
@@ -187,10 +180,6 @@ export type QueryMsg = {
   white_list: {};
 } | {
   is_white_list: {
-    sender: string;
-  };
-} | {
-  white_balance_of: {
     sender: string;
   };
 } | {

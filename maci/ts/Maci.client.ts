@@ -6,7 +6,7 @@
 
 import { CosmWasmClient, SigningCosmWasmClient, ExecuteResult } from "@cosmjs/cosmwasm-stargate";
 import { Coin, StdFee } from "@cosmjs/amino";
-import { Uint256, Timestamp, Uint64, InstantiateMsg, PubKey, Groth16VKeyType, MaciParameters, PlonkVKeyType, QuinaryTreeRoot, RoundInfo, VotingTime, Whitelist, WhitelistConfig, ExecuteMsg, Uint128, MessageData, Groth16ProofType, PlonkProofType, QueryMsg, Addr, PeriodStatus, Period, Boolean, ArrayOfString } from "./Maci.types";
+import { Uint256, Timestamp, Uint64, InstantiateMsg, PubKey, Groth16VKeyType, MaciParameters, QuinaryTreeRoot, RoundInfo, VotingTime, Whitelist, WhitelistConfig, ExecuteMsg, Uint128, MessageData, Groth16ProofType, QueryMsg, Addr, PeriodStatus, Period, Boolean, ArrayOfString } from "./Maci.types";
 export interface MaciReadOnlyInterface {
   contractAddress: string;
   getRoundInfo: () => Promise<RoundInfo>;
@@ -14,6 +14,7 @@ export interface MaciReadOnlyInterface {
   getPeriod: () => Promise<Period>;
   getNumSignUp: () => Promise<Uint256>;
   getMsgChainLength: () => Promise<Uint256>;
+  getDMsgChainLength: () => Promise<Uint256>;
   getResult: ({
     index
   }: {
@@ -36,11 +37,6 @@ export interface MaciReadOnlyInterface {
   }: {
     sender: string;
   }) => Promise<Boolean>;
-  whiteBalanceOf: ({
-    sender
-  }: {
-    sender: string;
-  }) => Promise<Uint256>;
   voteOptionMap: () => Promise<ArrayOfString>;
   maxVoteOptions: () => Promise<Uint256>;
   queryTotalFeeGrant: () => Promise<Uint128>;
@@ -59,13 +55,13 @@ export class MaciQueryClient implements MaciReadOnlyInterface {
     this.getPeriod = this.getPeriod.bind(this);
     this.getNumSignUp = this.getNumSignUp.bind(this);
     this.getMsgChainLength = this.getMsgChainLength.bind(this);
+    this.getDMsgChainLength = this.getDMsgChainLength.bind(this);
     this.getResult = this.getResult.bind(this);
     this.getAllResult = this.getAllResult.bind(this);
     this.getStateIdxInc = this.getStateIdxInc.bind(this);
     this.getVoiceCreditBalance = this.getVoiceCreditBalance.bind(this);
     this.whiteList = this.whiteList.bind(this);
     this.isWhiteList = this.isWhiteList.bind(this);
-    this.whiteBalanceOf = this.whiteBalanceOf.bind(this);
     this.voteOptionMap = this.voteOptionMap.bind(this);
     this.maxVoteOptions = this.maxVoteOptions.bind(this);
     this.queryTotalFeeGrant = this.queryTotalFeeGrant.bind(this);
@@ -96,6 +92,11 @@ export class MaciQueryClient implements MaciReadOnlyInterface {
   getMsgChainLength = async (): Promise<Uint256> => {
     return this.client.queryContractSmart(this.contractAddress, {
       get_msg_chain_length: {}
+    });
+  };
+  getDMsgChainLength = async (): Promise<Uint256> => {
+    return this.client.queryContractSmart(this.contractAddress, {
+      get_d_msg_chain_length: {}
     });
   };
   getResult = async ({
@@ -148,17 +149,6 @@ export class MaciQueryClient implements MaciReadOnlyInterface {
   }): Promise<Boolean> => {
     return this.client.queryContractSmart(this.contractAddress, {
       is_white_list: {
-        sender
-      }
-    });
-  };
-  whiteBalanceOf = async ({
-    sender
-  }: {
-    sender: string;
-  }): Promise<Uint256> => {
-    return this.client.queryContractSmart(this.contractAddress, {
-      white_balance_of: {
         sender
       }
     });
@@ -226,6 +216,35 @@ export interface MaciInterface extends MaciReadOnlyInterface {
   }, fee?: number | StdFee | "auto", memo?: string, _funds?: Coin[]) => Promise<ExecuteResult>;
   startProcessPeriod: (fee?: number | StdFee | "auto", memo?: string, _funds?: Coin[]) => Promise<ExecuteResult>;
   stopVotingPeriod: (fee?: number | StdFee | "auto", memo?: string, _funds?: Coin[]) => Promise<ExecuteResult>;
+  publishDeactivateMessage: ({
+    encPubKey,
+    message
+  }: {
+    encPubKey: PubKey;
+    message: MessageData;
+  }, fee?: number | StdFee | "auto", memo?: string, _funds?: Coin[]) => Promise<ExecuteResult>;
+  processDeactivateMessage: ({
+    groth16Proof,
+    newDeactivateCommitment,
+    newDeactivateRoot,
+    size
+  }: {
+    groth16Proof: Groth16ProofType;
+    newDeactivateCommitment: Uint256;
+    newDeactivateRoot: Uint256;
+    size: Uint256;
+  }, fee?: number | StdFee | "auto", memo?: string, _funds?: Coin[]) => Promise<ExecuteResult>;
+  addNewKey: ({
+    d,
+    groth16Proof,
+    nullifier,
+    pubkey
+  }: {
+    d: Uint256[];
+    groth16Proof: Groth16ProofType;
+    nullifier: Uint256;
+    pubkey: PubKey;
+  }, fee?: number | StdFee | "auto", memo?: string, _funds?: Coin[]) => Promise<ExecuteResult>;
   publishMessage: ({
     encPubKey,
     message
@@ -235,22 +254,18 @@ export interface MaciInterface extends MaciReadOnlyInterface {
   }, fee?: number | StdFee | "auto", memo?: string, _funds?: Coin[]) => Promise<ExecuteResult>;
   processMessage: ({
     groth16Proof,
-    newStateCommitment,
-    plonkProof
+    newStateCommitment
   }: {
-    groth16Proof?: Groth16ProofType;
+    groth16Proof: Groth16ProofType;
     newStateCommitment: Uint256;
-    plonkProof?: PlonkProofType;
   }, fee?: number | StdFee | "auto", memo?: string, _funds?: Coin[]) => Promise<ExecuteResult>;
   stopProcessingPeriod: (fee?: number | StdFee | "auto", memo?: string, _funds?: Coin[]) => Promise<ExecuteResult>;
   processTally: ({
     groth16Proof,
-    newTallyCommitment,
-    plonkProof
+    newTallyCommitment
   }: {
-    groth16Proof?: Groth16ProofType;
+    groth16Proof: Groth16ProofType;
     newTallyCommitment: Uint256;
-    plonkProof?: PlonkProofType;
   }, fee?: number | StdFee | "auto", memo?: string, _funds?: Coin[]) => Promise<ExecuteResult>;
   stopTallyingPeriod: ({
     results,
@@ -290,6 +305,9 @@ export class MaciClient extends MaciQueryClient implements MaciInterface {
     this.signUp = this.signUp.bind(this);
     this.startProcessPeriod = this.startProcessPeriod.bind(this);
     this.stopVotingPeriod = this.stopVotingPeriod.bind(this);
+    this.publishDeactivateMessage = this.publishDeactivateMessage.bind(this);
+    this.processDeactivateMessage = this.processDeactivateMessage.bind(this);
+    this.addNewKey = this.addNewKey.bind(this);
     this.publishMessage = this.publishMessage.bind(this);
     this.processMessage = this.processMessage.bind(this);
     this.stopProcessingPeriod = this.stopProcessingPeriod.bind(this);
@@ -380,6 +398,60 @@ export class MaciClient extends MaciQueryClient implements MaciInterface {
       stop_voting_period: {}
     }, fee, memo, _funds);
   };
+  publishDeactivateMessage = async ({
+    encPubKey,
+    message
+  }: {
+    encPubKey: PubKey;
+    message: MessageData;
+  }, fee: number | StdFee | "auto" = "auto", memo?: string, _funds?: Coin[]): Promise<ExecuteResult> => {
+    return await this.client.execute(this.sender, this.contractAddress, {
+      publish_deactivate_message: {
+        enc_pub_key: encPubKey,
+        message
+      }
+    }, fee, memo, _funds);
+  };
+  processDeactivateMessage = async ({
+    groth16Proof,
+    newDeactivateCommitment,
+    newDeactivateRoot,
+    size
+  }: {
+    groth16Proof: Groth16ProofType;
+    newDeactivateCommitment: Uint256;
+    newDeactivateRoot: Uint256;
+    size: Uint256;
+  }, fee: number | StdFee | "auto" = "auto", memo?: string, _funds?: Coin[]): Promise<ExecuteResult> => {
+    return await this.client.execute(this.sender, this.contractAddress, {
+      process_deactivate_message: {
+        groth16_proof: groth16Proof,
+        new_deactivate_commitment: newDeactivateCommitment,
+        new_deactivate_root: newDeactivateRoot,
+        size
+      }
+    }, fee, memo, _funds);
+  };
+  addNewKey = async ({
+    d,
+    groth16Proof,
+    nullifier,
+    pubkey
+  }: {
+    d: Uint256[];
+    groth16Proof: Groth16ProofType;
+    nullifier: Uint256;
+    pubkey: PubKey;
+  }, fee: number | StdFee | "auto" = "auto", memo?: string, _funds?: Coin[]): Promise<ExecuteResult> => {
+    return await this.client.execute(this.sender, this.contractAddress, {
+      add_new_key: {
+        d,
+        groth16_proof: groth16Proof,
+        nullifier,
+        pubkey
+      }
+    }, fee, memo, _funds);
+  };
   publishMessage = async ({
     encPubKey,
     message
@@ -396,18 +468,15 @@ export class MaciClient extends MaciQueryClient implements MaciInterface {
   };
   processMessage = async ({
     groth16Proof,
-    newStateCommitment,
-    plonkProof
+    newStateCommitment
   }: {
-    groth16Proof?: Groth16ProofType;
+    groth16Proof: Groth16ProofType;
     newStateCommitment: Uint256;
-    plonkProof?: PlonkProofType;
   }, fee: number | StdFee | "auto" = "auto", memo?: string, _funds?: Coin[]): Promise<ExecuteResult> => {
     return await this.client.execute(this.sender, this.contractAddress, {
       process_message: {
         groth16_proof: groth16Proof,
-        new_state_commitment: newStateCommitment,
-        plonk_proof: plonkProof
+        new_state_commitment: newStateCommitment
       }
     }, fee, memo, _funds);
   };
@@ -418,18 +487,15 @@ export class MaciClient extends MaciQueryClient implements MaciInterface {
   };
   processTally = async ({
     groth16Proof,
-    newTallyCommitment,
-    plonkProof
+    newTallyCommitment
   }: {
-    groth16Proof?: Groth16ProofType;
+    groth16Proof: Groth16ProofType;
     newTallyCommitment: Uint256;
-    plonkProof?: PlonkProofType;
   }, fee: number | StdFee | "auto" = "auto", memo?: string, _funds?: Coin[]): Promise<ExecuteResult> => {
     return await this.client.execute(this.sender, this.contractAddress, {
       process_tally: {
         groth16_proof: groth16Proof,
-        new_tally_commitment: newTallyCommitment,
-        plonk_proof: plonkProof
+        new_tally_commitment: newTallyCommitment
       }
     }, fee, memo, _funds);
   };

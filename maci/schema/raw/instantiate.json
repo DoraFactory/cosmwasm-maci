@@ -3,43 +3,36 @@
   "title": "InstantiateMsg",
   "type": "object",
   "required": [
-    "certification_system",
     "circuit_type",
     "coordinator",
+    "groth16_add_key_vkey",
+    "groth16_deactivate_vkey",
+    "groth16_process_vkey",
+    "groth16_tally_vkey",
     "max_vote_options",
     "parameters",
     "qtr_lib",
-    "round_info"
+    "round_info",
+    "voice_credit_amount"
   ],
   "properties": {
-    "certification_system": {
-      "$ref": "#/definitions/Uint256"
-    },
     "circuit_type": {
       "$ref": "#/definitions/Uint256"
     },
     "coordinator": {
       "$ref": "#/definitions/PubKey"
     },
+    "groth16_add_key_vkey": {
+      "$ref": "#/definitions/Groth16VKeyType"
+    },
+    "groth16_deactivate_vkey": {
+      "$ref": "#/definitions/Groth16VKeyType"
+    },
     "groth16_process_vkey": {
-      "anyOf": [
-        {
-          "$ref": "#/definitions/Groth16VKeyType"
-        },
-        {
-          "type": "null"
-        }
-      ]
+      "$ref": "#/definitions/Groth16VKeyType"
     },
     "groth16_tally_vkey": {
-      "anyOf": [
-        {
-          "$ref": "#/definitions/Groth16VKeyType"
-        },
-        {
-          "type": "null"
-        }
-      ]
+      "$ref": "#/definitions/Groth16VKeyType"
     },
     "max_vote_options": {
       "$ref": "#/definitions/Uint256"
@@ -47,31 +40,14 @@
     "parameters": {
       "$ref": "#/definitions/MaciParameters"
     },
-    "plonk_process_vkey": {
-      "anyOf": [
-        {
-          "$ref": "#/definitions/PlonkVKeyType"
-        },
-        {
-          "type": "null"
-        }
-      ]
-    },
-    "plonk_tally_vkey": {
-      "anyOf": [
-        {
-          "$ref": "#/definitions/PlonkVKeyType"
-        },
-        {
-          "type": "null"
-        }
-      ]
-    },
     "qtr_lib": {
       "$ref": "#/definitions/QuinaryTreeRoot"
     },
     "round_info": {
       "$ref": "#/definitions/RoundInfo"
+    },
+    "voice_credit_amount": {
+      "$ref": "#/definitions/Uint256"
     },
     "voting_time": {
       "anyOf": [
@@ -148,61 +124,6 @@
         },
         "vote_option_tree_depth": {
           "$ref": "#/definitions/Uint256"
-        }
-      },
-      "additionalProperties": false
-    },
-    "PlonkVKeyType": {
-      "type": "object",
-      "required": [
-        "g2_elements",
-        "n",
-        "next_step_selector_commitments",
-        "non_residues",
-        "num_inputs",
-        "permutation_commitments",
-        "selector_commitments"
-      ],
-      "properties": {
-        "g2_elements": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "n": {
-          "type": "integer",
-          "format": "uint",
-          "minimum": 0.0
-        },
-        "next_step_selector_commitments": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "non_residues": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "num_inputs": {
-          "type": "integer",
-          "format": "uint",
-          "minimum": 0.0
-        },
-        "permutation_commitments": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "selector_commitments": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
         }
       },
       "additionalProperties": false
@@ -320,15 +241,11 @@
     "WhitelistConfig": {
       "type": "object",
       "required": [
-        "addr",
-        "balance"
+        "addr"
       ],
       "properties": {
         "addr": {
           "type": "string"
-        },
-        "balance": {
-          "$ref": "#/definitions/Uint256"
         }
       },
       "additionalProperties": false

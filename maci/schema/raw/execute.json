@@ -164,6 +164,102 @@
     {
       "type": "object",
       "required": [
+        "publish_deactivate_message"
+      ],
+      "properties": {
+        "publish_deactivate_message": {
+          "type": "object",
+          "required": [
+            "enc_pub_key",
+            "message"
+          ],
+          "properties": {
+            "enc_pub_key": {
+              "$ref": "#/definitions/PubKey"
+            },
+            "message": {
+              "$ref": "#/definitions/MessageData"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "process_deactivate_message"
+      ],
+      "properties": {
+        "process_deactivate_message": {
+          "type": "object",
+          "required": [
+            "groth16_proof",
+            "new_deactivate_commitment",
+            "new_deactivate_root",
+            "size"
+          ],
+          "properties": {
+            "groth16_proof": {
+              "$ref": "#/definitions/Groth16ProofType"
+            },
+            "new_deactivate_commitment": {
+              "$ref": "#/definitions/Uint256"
+            },
+            "new_deactivate_root": {
+              "$ref": "#/definitions/Uint256"
+            },
+            "size": {
+              "$ref": "#/definitions/Uint256"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "add_new_key"
+      ],
+      "properties": {
+        "add_new_key": {
+          "type": "object",
+          "required": [
+            "d",
+            "groth16_proof",
+            "nullifier",
+            "pubkey"
+          ],
+          "properties": {
+            "d": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/Uint256"
+              },
+              "maxItems": 4,
+              "minItems": 4
+            },
+            "groth16_proof": {
+              "$ref": "#/definitions/Groth16ProofType"
+            },
+            "nullifier": {
+              "$ref": "#/definitions/Uint256"
+            },
+            "pubkey": {
+              "$ref": "#/definitions/PubKey"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
         "publish_message"
       ],
       "properties": {
@@ -195,31 +291,15 @@
         "process_message": {
           "type": "object",
           "required": [
+            "groth16_proof",
             "new_state_commitment"
           ],
           "properties": {
             "groth16_proof": {
-              "anyOf": [
-                {
-                  "$ref": "#/definitions/Groth16ProofType"
-                },
-                {
-                  "type": "null"
-                }
-              ]
+              "$ref": "#/definitions/Groth16ProofType"
             },
             "new_state_commitment": {
               "$ref": "#/definitions/Uint256"
-            },
-            "plonk_proof": {
-              "anyOf": [
-                {
-                  "$ref": "#/definitions/PlonkProofType"
-                },
-                {
-                  "type": "null"
-                }
-              ]
             }
           },
           "additionalProperties": false
@@ -249,31 +329,15 @@
         "process_tally": {
           "type": "object",
           "required": [
+            "groth16_proof",
             "new_tally_commitment"
           ],
           "properties": {
             "groth16_proof": {
-              "anyOf": [
-                {
-                  "$ref": "#/definitions/Groth16ProofType"
-                },
-                {
-                  "type": "null"
-                }
-              ]
+              "$ref": "#/definitions/Groth16ProofType"
             },
             "new_tally_commitment": {
               "$ref": "#/definitions/Uint256"
-            },
-            "plonk_proof": {
-              "anyOf": [
-                {
-                  "$ref": "#/definitions/PlonkProofType"
-                },
-                {
-                  "type": "null"
-                }
-              ]
             }
           },
           "additionalProperties": false
@@ -420,92 +484,6 @@
       },
       "additionalProperties": false
     },
-    "PlonkProofType": {
-      "type": "object",
-      "required": [
-        "grand_product_at_z_omega",
-        "grand_product_commitment",
-        "input_values",
-        "linearization_polynomial_at_z",
-        "n",
-        "num_inputs",
-        "opening_at_z_omega_proof",
-        "opening_at_z_proof",
-        "permutation_polynomials_at_z",
-        "quotient_poly_commitments",
-        "quotient_polynomial_at_z",
-        "wire_commitments",
-        "wire_values_at_z",
-        "wire_values_at_z_omega"
-      ],
-      "properties": {
-        "grand_product_at_z_omega": {
-          "type": "string"
-        },
-        "grand_product_commitment": {
-          "type": "string"
-        },
-        "input_values": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "linearization_polynomial_at_z": {
-          "type": "string"
-        },
-        "n": {
-          "type": "integer",
-          "format": "uint",
-          "minimum": 0.0
-        },
-        "num_inputs": {
-          "type": "integer",
-          "format": "uint",
-          "minimum": 0.0
-        },
-        "opening_at_z_omega_proof": {
-          "type": "string"
-        },
-        "opening_at_z_proof": {
-          "type": "string"
-        },
-        "permutation_polynomials_at_z": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "quotient_poly_commitments": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "quotient_polynomial_at_z": {
-          "type": "string"
-        },
-        "wire_commitments": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "wire_values_at_z": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "wire_values_at_z_omega": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        }
-      },
-      "additionalProperties": false
-    },
     "PubKey": {
       "type": "object",
       "required": [
@@ -568,15 +546,11 @@
     "WhitelistConfig": {
       "type": "object",
       "required": [
-        "addr",
-        "balance"
+        "addr"
       ],
       "properties": {
         "addr": {
           "type": "string"
-        },
-        "balance": {
-          "$ref": "#/definitions/Uint256"
         }
       },
       "additionalProperties": false
