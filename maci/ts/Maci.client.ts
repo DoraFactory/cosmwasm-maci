@@ -15,6 +15,9 @@ export interface MaciReadOnlyInterface {
   getNumSignUp: () => Promise<Uint256>;
   getMsgChainLength: () => Promise<Uint256>;
   getDMsgChainLength: () => Promise<Uint256>;
+  getProcessedDMsgCount: () => Promise<Uint256>;
+  getProcessedMsgCount: () => Promise<Uint256>;
+  getProcessedUserCount: () => Promise<Uint256>;
   getResult: ({
     index
   }: {
@@ -56,6 +59,9 @@ export class MaciQueryClient implements MaciReadOnlyInterface {
     this.getNumSignUp = this.getNumSignUp.bind(this);
     this.getMsgChainLength = this.getMsgChainLength.bind(this);
     this.getDMsgChainLength = this.getDMsgChainLength.bind(this);
+    this.getProcessedDMsgCount = this.getProcessedDMsgCount.bind(this);
+    this.getProcessedMsgCount = this.getProcessedMsgCount.bind(this);
+    this.getProcessedUserCount = this.getProcessedUserCount.bind(this);
     this.getResult = this.getResult.bind(this);
     this.getAllResult = this.getAllResult.bind(this);
     this.getStateIdxInc = this.getStateIdxInc.bind(this);
@@ -97,6 +103,21 @@ export class MaciQueryClient implements MaciReadOnlyInterface {
   getDMsgChainLength = async (): Promise<Uint256> => {
     return this.client.queryContractSmart(this.contractAddress, {
       get_d_msg_chain_length: {}
+    });
+  };
+  getProcessedDMsgCount = async (): Promise<Uint256> => {
+    return this.client.queryContractSmart(this.contractAddress, {
+      get_processed_d_msg_count: {}
+    });
+  };
+  getProcessedMsgCount = async (): Promise<Uint256> => {
+    return this.client.queryContractSmart(this.contractAddress, {
+      get_processed_msg_count: {}
+    });
+  };
+  getProcessedUserCount = async (): Promise<Uint256> => {
+    return this.client.queryContractSmart(this.contractAddress, {
+      get_processed_user_count: {}
     });
   };
   getResult = async ({

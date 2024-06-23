@@ -936,6 +936,7 @@ pub fn execute_process_deactivate_message(
         attr("commitment", new_deactivate_commitment.to_string()),
         attr("proof", format!("{:?}", groth16_proof)),
         attr("certification_system", "groth16"),
+        attr("processed_dmsg_count", processed_dmsg_count.to_string()),
     ];
 
     Ok(Response::new()
@@ -1300,6 +1301,7 @@ pub fn execute_process_message(
         attr("commitment", new_state_commitment.to_string()),
         attr("proof", format!("{:?}", groth16_proof_data)),
         attr("certification_system", "groth16"),
+        attr("processed_msg_count", processed_msg_count.to_string()),
     ];
 
     // Proof verify success
@@ -1433,6 +1435,7 @@ pub fn execute_process_tally(
         attr("commitment", new_tally_commitment.to_string()),
         attr("proof", format!("{:?}", groth16_proof_data)),
         attr("certification_system", "groth16"),
+        attr("processed_user_count", processed_user_count.to_string()),
     ];
 
     // Proof verify success
@@ -1879,6 +1882,21 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
         }
         QueryMsg::GetDMsgChainLength {} => to_json_binary::<Uint256>(
             &DMSG_CHAIN_LENGTH
+                .may_load(deps.storage)?
+                .unwrap_or_default(),
+        ),
+        QueryMsg::GetProcessedDMsgCount {} => to_json_binary::<Uint256>(
+            &PROCESSED_DMSG_COUNT
+                .may_load(deps.storage)?
+                .unwrap_or_default(),
+        ),
+        QueryMsg::GetProcessedMsgCount {} => to_json_binary::<Uint256>(
+            &PROCESSED_MSG_COUNT
+                .may_load(deps.storage)?
+                .unwrap_or_default(),
+        ),
+        QueryMsg::GetProcessedUserCount {} => to_json_binary::<Uint256>(
+            &PROCESSED_USER_COUNT
                 .may_load(deps.storage)?
                 .unwrap_or_default(),
         ),
