@@ -71,4 +71,10 @@ pub enum ContractError {
 
     #[error("SynthesisError of zk verify")]
     SynthesisError {},
+
+    #[error("still have messages left to process.")]
+    MsgLeftProcess {},
+
+    #[error("still have usertally left to process.")]
+    UserTallyLeftProcess {},
 }

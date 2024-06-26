@@ -1750,6 +1750,15 @@ mod test {
                         contract.get_period(&app).unwrap()
                     );
 
+                    let error_stop_processing_with_not_finish_process =
+                        contract.stop_processing(&mut app, owner()).unwrap_err();
+                    assert_eq!(
+                        ContractError::MsgLeftProcess {},
+                        error_stop_processing_with_not_finish_process
+                            .downcast()
+                            .unwrap()
+                    );
+
                     let new_state_commitment =
                         uint256_from_decimal_string(&data.new_state_commitment);
                     let proof = Groth16ProofType {

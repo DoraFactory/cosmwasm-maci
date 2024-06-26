@@ -1137,7 +1137,7 @@ pub fn execute_stop_voting_period(
 pub fn execute_start_process_period(
     deps: DepsMut,
     env: Env,
-    info: MessageInfo,
+    _info: MessageInfo,
 ) -> Result<Response, ContractError> {
     let period = PERIOD.load(deps.storage)?;
     let voting_time = VOTINGTIME.may_load(deps.storage)?;
@@ -1161,26 +1161,21 @@ pub fn execute_start_process_period(
         return Err(ContractError::PeriodError {});
     }
 
-    // Check if the sender is authorized to execute the function
-    if !can_execute(deps.as_ref(), info.sender.as_ref())? {
-        Err(ContractError::Unauthorized {})
-    } else {
-        // Update the period status to Processing
-        let period = Period {
-            status: PeriodStatus::Processing,
-        };
-        PERIOD.save(deps.storage, &period)?;
-        // Compute the state root
-        let state_root = state_root(deps.as_ref());
-        // Compute the current state commitment as the hash of the state root and 0
-        CURRENT_STATE_COMMITMENT.save(
-            deps.storage,
-            &hash2([state_root, Uint256::from_u128(0u128)]),
-        )?;
+    // Update the period status to Processing
+    let period = Period {
+        status: PeriodStatus::Processing,
+    };
+    PERIOD.save(deps.storage, &period)?;
+    // Compute the state root
+    let state_root = state_root(deps.as_ref());
+    // Compute the current state commitment as the hash of the state root and 0
+    CURRENT_STATE_COMMITMENT.save(
+        deps.storage,
+        &hash2([state_root, Uint256::from_u128(0u128)]),
+    )?;
 
-        // Return a success response
-        Ok(Response::new().add_attribute("action", "start_process_period"))
-    }
+    // Return a success response
+    Ok(Response::new().add_attribute("action", "start_process_period"))
 }
 
 pub fn execute_process_message(
@@ -1319,7 +1314,7 @@ pub fn execute_process_message(
 pub fn execute_stop_processing_period(
     deps: DepsMut,
     _env: Env,
-    info: MessageInfo,
+    _info: MessageInfo,
 ) -> Result<Response, ContractError> {
     let period = PERIOD.load(deps.storage)?;
     // Check if the period status is Processing
@@ -1327,20 +1322,22 @@ pub fn execute_stop_processing_period(
         return Err(ContractError::PeriodError {});
     }
 
-    // Check if the sender is authorized to execute the function
-    if !can_execute(deps.as_ref(), info.sender.as_ref())? {
-        Err(ContractError::Unauthorized {})
-    } else {
-        // Update the period status to Tallying
-        let period = Period {
-            status: PeriodStatus::Tallying,
-        };
-        PERIOD.save(deps.storage, &period)?;
+    let processed_msg_count = PROCESSED_MSG_COUNT.load(deps.storage)?;
+    let msg_chain_length = MSG_CHAIN_LENGTH.load(deps.storage)?;
 
-        Ok(Response::new()
-            .add_attribute("action", "stop_processing_period")
-            .add_attribute("period", "Tallying"))
+    if processed_msg_count != msg_chain_length {
+        return Err(ContractError::MsgLeftProcess {});
     }
+    // assert!(processed_msg_count == msg_chain_length,);
+    // Update the period status to Tallying
+    let period = Period {
+        status: PeriodStatus::Tallying,
+    };
+    PERIOD.save(deps.storage, &period)?;
+
+    Ok(Response::new()
+        .add_attribute("action", "stop_processing_period")
+        .add_attribute("period", "Tallying"))
 }
 
 pub fn execute_process_tally(
