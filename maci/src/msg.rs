@@ -21,7 +21,8 @@ pub struct InstantiateMsg {
     pub voting_time: Option<VotingTime>,
     pub whitelist: Option<Whitelist>,
     pub circuit_type: Uint256, // <0: 1p1v | 1: pv>
-                               // pub certification_system: Uint256, // <0: groth16 | 1: plonk>
+    // pub certification_system: Uint256, // <0: groth16 | 1: plonk>
+    pub pre_deactivate_root: Uint256,
 }
 
 #[cw_serde]
@@ -104,6 +105,12 @@ pub enum ExecuteMsg {
         groth16_proof: Groth16ProofType,
     },
     AddNewKey {
+        pubkey: PubKey,
+        nullifier: Uint256,
+        d: [Uint256; 4],
+        groth16_proof: Groth16ProofType,
+    },
+    PreAddNewKey {
         pubkey: PubKey,
         nullifier: Uint256,
         d: [Uint256; 4],

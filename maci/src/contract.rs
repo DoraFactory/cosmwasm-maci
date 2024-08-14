@@ -8,9 +8,10 @@ use crate::state::{
     DMSG_CHAIN_LENGTH, DMSG_HASHES, DNODES, FEEGRANTS, GROTH16_DEACTIVATE_VKEYS,
     GROTH16_NEWKEY_VKEYS, GROTH16_PROCESS_VKEYS, GROTH16_TALLY_VKEYS, LEAF_IDX_0, MACIPARAMETERS,
     MAX_LEAVES_COUNT, MAX_VOTE_OPTIONS, MSG_CHAIN_LENGTH, MSG_HASHES, NODES, NULLIFIERS,
-    NUMSIGNUPS, PERIOD, PROCESSED_DMSG_COUNT, PROCESSED_MSG_COUNT, PROCESSED_USER_COUNT, QTR_LIB,
-    RESULT, ROUNDINFO, SIGNUPED, STATEIDXINC, STATE_ROOT_BY_DMSG, TOTAL_RESULT, VOICECREDITBALANCE,
-    VOICE_CREDIT_AMOUNT, VOTEOPTIONMAP, VOTINGTIME, WHITELIST, ZEROS, ZEROS_H10,
+    NUMSIGNUPS, PERIOD, PRE_DEACTIVATE_ROOT, PROCESSED_DMSG_COUNT, PROCESSED_MSG_COUNT,
+    PROCESSED_USER_COUNT, QTR_LIB, RESULT, ROUNDINFO, SIGNUPED, STATEIDXINC, STATE_ROOT_BY_DMSG,
+    TOTAL_RESULT, VOICECREDITBALANCE, VOICE_CREDIT_AMOUNT, VOTEOPTIONMAP, VOTINGTIME, WHITELIST,
+    ZEROS, ZEROS_H10,
 };
 
 use pairing_ce::bn256::Bn256;
@@ -56,6 +57,9 @@ pub fn instantiate(
 
     // Save the qtr_lib value to storage
     QTR_LIB.save(deps.storage, &msg.qtr_lib)?;
+
+    // Save the pre_deactivate_root value to storage
+    PRE_DEACTIVATE_ROOT.save(deps.storage, &msg.pre_deactivate_root)?;
 
     let groth16_process_vkey = msg.groth16_process_vkey;
     // Create a process_vkeys struct from the process_vkey in the message
@@ -336,6 +340,12 @@ pub fn execute(
             d,
             groth16_proof,
         } => execute_add_new_key(deps, env, info, pubkey, nullifier, d, groth16_proof),
+        ExecuteMsg::PreAddNewKey {
+            pubkey,
+            nullifier,
+            d,
+            groth16_proof,
+        } => execute_pre_add_new_key(deps, env, info, pubkey, nullifier, d, groth16_proof),
         ExecuteMsg::PublishMessage {
             message,
             enc_pub_key,
@@ -1070,6 +1080,143 @@ pub fn execute_add_new_key(
 
     Ok(Response::new()
         .add_attribute("action", "add_new_key")
+        .add_attribute("state_idx", state_index.to_string())
+        .add_attribute(
+            "pubkey",
+            format!("{:?},{:?}", pubkey.x.to_string(), pubkey.y.to_string()),
+        )
+        .add_attribute("balance", voice_credit_amount.to_string())
+        .add_attribute("d0", d[0].to_string())
+        .add_attribute("d1", d[1].to_string())
+        .add_attribute("d2", d[2].to_string())
+        .add_attribute("d3", d[3].to_string()))
+}
+
+// in voting
+pub fn execute_pre_add_new_key(
+    mut deps: DepsMut,
+    env: Env,
+    _info: MessageInfo,
+    pubkey: PubKey,
+    nullifier: Uint256,
+    d: [Uint256; 4],
+    groth16_proof: Groth16ProofType,
+) -> Result<Response, ContractError> {
+    let period = PERIOD.load(deps.storage)?;
+    // Check if the period status is Voting
+    if VOTINGTIME.exists(deps.storage) {
+        let voting_time = VOTINGTIME.load(deps.storage)?;
+        check_voting_time(env, Some(voting_time), period.status)?;
+    } else {
+        check_voting_time(env, None, period.status)?;
+    }
+
+    if NULLIFIERS.has(deps.storage, nullifier.to_be_bytes().to_vec()) {
+        // Return an error response for invalid user or encrypted public key
+        return Ok(Response::new() // TODO: ERROR
+            .add_attribute("action", "add_new_key")
+            .add_attribute("event", "error user."));
+    }
+
+    NULLIFIERS.save(deps.storage, nullifier.to_be_bytes().to_vec(), &true)?;
+
+    let mut num_sign_ups = NUMSIGNUPS.load(deps.storage)?;
+
+    let max_leaves_count = MAX_LEAVES_COUNT.load(deps.storage)?;
+
+    // // Load the scalar field value
+    let snark_scalar_field =
+        uint256_from_hex_string("30644e72e131a029b85045b68181585d2833e84879b9709143e1f593f0000001");
+
+    assert!(num_sign_ups < max_leaves_count, "full");
+    // Check if the pubkey values are within the allowed range
+    assert!(
+        pubkey.x < snark_scalar_field && pubkey.y < snark_scalar_field,
+        "MACI: pubkey values should be less than the snark scalar field"
+    );
+
+    let mut input: [Uint256; 7] = [Uint256::zero(); 7];
+
+    let pre_deactivate_root = PRE_DEACTIVATE_ROOT.load(deps.storage)?;
+    input[0] = DNODES.load(deps.storage, pre_deactivate_root.to_be_bytes().to_vec())?;
+    input[1] = COORDINATORHASH.load(deps.storage)?;
+    input[2] = nullifier;
+    input[3] = d[0];
+    input[4] = d[1];
+    input[5] = d[2];
+    input[6] = d[3];
+
+    // Load the scalar field value
+    let snark_scalar_field =
+        uint256_from_hex_string("30644e72e131a029b85045b68181585d2833e84879b9709143e1f593f0000001");
+    //     "21888242871839275222246405745257275088548364400416034343698204186575808495617",
+
+    // Compute the hash of the input values
+    let input_hash = uint256_from_hex_string(&hash_256_uint256_list(&input)) % snark_scalar_field; // input hash
+
+    // Load the process verification keys
+    let process_vkeys_str = GROTH16_NEWKEY_VKEYS.load(deps.storage)?;
+
+    // Parse the SNARK proof
+    let proof_str = Groth16ProofStr {
+        pi_a: hex::decode(groth16_proof.a.clone())
+            .map_err(|_| ContractError::HexDecodingError {})?,
+        pi_b: hex::decode(groth16_proof.b.clone())
+            .map_err(|_| ContractError::HexDecodingError {})?,
+        pi_c: hex::decode(groth16_proof.c.clone())
+            .map_err(|_| ContractError::HexDecodingError {})?,
+    };
+
+    // Parse the verification key and prepare for verification
+    let vkey = parse_groth16_vkey::<Bn256>(process_vkeys_str)?;
+    let pvk = prepare_verifying_key(&vkey);
+
+    // Parse the proof and prepare for verification
+    let pof = parse_groth16_proof::<Bn256>(proof_str.clone())?;
+
+    // Verify the SNARK proof using the input hash
+    let is_passed = groth16_verify(
+        &pvk,
+        &pof,
+        &[Fr::from_str(&input_hash.to_string()).unwrap()],
+    )
+    .unwrap();
+
+    // If the proof verification fails, return an error
+    if !is_passed {
+        return Err(ContractError::InvalidProof {
+            step: String::from("NewKey"),
+        });
+    }
+
+    // let user_balance = user_balance_of(deps.as_ref(), info.sender.as_ref())?;
+    // if user_balance == Uint256::from_u128(0u128) {
+    //     return Err(ContractError::Unauthorized {});
+    // }
+
+    let voice_credit_amount = VOICE_CREDIT_AMOUNT.load(deps.storage)?;
+
+    // let voice_credit_balance = VOICECREDITBALANCE.load(deps.storage, )
+    // Create a state leaf with the provided pubkey and amount
+    let state_leaf = StateLeaf {
+        pub_key: pubkey.clone(),
+        voice_credit_balance: voice_credit_amount,
+        vote_option_tree_root: Uint256::from_u128(0),
+        nonce: Uint256::from_u128(0),
+    }
+    .hash_new_key_state_leaf(d);
+
+    let state_index = num_sign_ups;
+    // Enqueue the state leaf
+    state_enqueue(&mut deps, state_leaf)?;
+
+    num_sign_ups += Uint256::from_u128(1u128);
+
+    NUMSIGNUPS.save(deps.storage, &num_sign_ups)?;
+    SIGNUPED.save(deps.storage, pubkey.x.to_be_bytes().to_vec(), &num_sign_ups)?;
+
+    Ok(Response::new()
+        .add_attribute("action", "pre_add_new_key")
         .add_attribute("state_idx", state_index.to_string())
         .add_attribute(
             "pubkey",

@@ -156,6 +156,7 @@ pub const DEACTIVATED_COUNT: Item<Uint256> = Item::new("deactivated_count");
 pub const NULLIFIERS: Map<Vec<u8>, bool> = Map::new("nullifiers");
 pub const CURRENT_DEACTIVATE_COMMITMENT: Item<Uint256> = Item::new("current_deactivate_commitment");
 pub const SIGNUPED: Map<Vec<u8>, Uint256> = Map::new("signuped");
+pub const PRE_DEACTIVATE_ROOT: Item<Uint256> = Item::new("pre_deactivate_root");
 
 #[cw_serde]
 pub struct Groth16ProofStr {

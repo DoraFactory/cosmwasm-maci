@@ -374,7 +374,7 @@ impl MaciCodeId {
             self,
             sender,
             round_info,
-            whitelist,
+            None,
             voting_time,
             circuit_type,
             label,
@@ -485,6 +485,7 @@ impl MaciContract {
                             },
                             max_vote_options: Uint256::from_u128(5u128),
                             voice_credit_amount: Uint256::from_u128(100u128),
+                            pre_deactivate_root: Uint256::from_u128(0u128),
                             round_info,
                             whitelist,
                             voting_time,
@@ -589,6 +590,7 @@ impl MaciContract {
             },
             max_vote_options: Uint256::from_u128(5u128),
             voice_credit_amount: Uint256::from_u128(100u128),
+            pre_deactivate_root: Uint256::from_u128(0u128),
             round_info,
             whitelist,
             voting_time,
@@ -762,6 +764,29 @@ impl MaciContract {
             sender,
             self.addr(),
             &ExecuteMsg::AddNewKey {
+                pubkey,
+                nullifier,
+                d,
+                groth16_proof: proof,
+            },
+            &[],
+        )
+    }
+
+    #[track_caller]
+    pub fn pre_add_key(
+        &self,
+        app: &mut App,
+        sender: Addr,
+        pubkey: PubKey,
+        nullifier: Uint256,
+        d: [Uint256; 4],
+        proof: Groth16ProofType,
+    ) -> AnyResult<AppResponse> {
+        app.execute_contract(
+            sender,
+            self.addr(),
+            &ExecuteMsg::PreAddNewKey {
                 pubkey,
                 nullifier,
                 d,
