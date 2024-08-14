@@ -16,6 +16,7 @@ export interface InstantiateMsg {
   groth16_tally_vkey: Groth16VKeyType;
   max_vote_options: Uint256;
   parameters: MaciParameters;
+  pre_deactivate_root: Uint256;
   qtr_lib: QuinaryTreeRoot;
   round_info: RoundInfo;
   voice_credit_amount: Uint256;
@@ -101,6 +102,13 @@ export type ExecuteMsg = {
   };
 } | {
   add_new_key: {
+    d: [Uint256, Uint256, Uint256, Uint256];
+    groth16_proof: Groth16ProofType;
+    nullifier: Uint256;
+    pubkey: PubKey;
+  };
+} | {
+  pre_add_new_key: {
     d: [Uint256, Uint256, Uint256, Uint256];
     groth16_proof: Groth16ProofType;
     nullifier: Uint256;

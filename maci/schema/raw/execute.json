@@ -260,6 +260,44 @@
     {
       "type": "object",
       "required": [
+        "pre_add_new_key"
+      ],
+      "properties": {
+        "pre_add_new_key": {
+          "type": "object",
+          "required": [
+            "d",
+            "groth16_proof",
+            "nullifier",
+            "pubkey"
+          ],
+          "properties": {
+            "d": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/Uint256"
+              },
+              "maxItems": 4,
+              "minItems": 4
+            },
+            "groth16_proof": {
+              "$ref": "#/definitions/Groth16ProofType"
+            },
+            "nullifier": {
+              "$ref": "#/definitions/Uint256"
+            },
+            "pubkey": {
+              "$ref": "#/definitions/PubKey"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
         "publish_message"
       ],
       "properties": {

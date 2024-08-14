@@ -15,6 +15,7 @@
       "groth16_tally_vkey",
       "max_vote_options",
       "parameters",
+      "pre_deactivate_root",
       "qtr_lib",
       "round_info",
       "voice_credit_amount"
@@ -43,6 +44,9 @@
       },
       "parameters": {
         "$ref": "#/definitions/MaciParameters"
+      },
+      "pre_deactivate_root": {
+        "$ref": "#/definitions/Uint256"
       },
       "qtr_lib": {
         "$ref": "#/definitions/QuinaryTreeRoot"
@@ -484,6 +488,44 @@
         ],
         "properties": {
           "add_new_key": {
+            "type": "object",
+            "required": [
+              "d",
+              "groth16_proof",
+              "nullifier",
+              "pubkey"
+            ],
+            "properties": {
+              "d": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/definitions/Uint256"
+                },
+                "maxItems": 4,
+                "minItems": 4
+              },
+              "groth16_proof": {
+                "$ref": "#/definitions/Groth16ProofType"
+              },
+              "nullifier": {
+                "$ref": "#/definitions/Uint256"
+              },
+              "pubkey": {
+                "$ref": "#/definitions/PubKey"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "required": [
+          "pre_add_new_key"
+        ],
+        "properties": {
+          "pre_add_new_key": {
             "type": "object",
             "required": [
               "d",

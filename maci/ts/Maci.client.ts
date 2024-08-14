@@ -266,6 +266,17 @@ export interface MaciInterface extends MaciReadOnlyInterface {
     nullifier: Uint256;
     pubkey: PubKey;
   }, fee?: number | StdFee | "auto", memo?: string, _funds?: Coin[]) => Promise<ExecuteResult>;
+  preAddNewKey: ({
+    d,
+    groth16Proof,
+    nullifier,
+    pubkey
+  }: {
+    d: Uint256[];
+    groth16Proof: Groth16ProofType;
+    nullifier: Uint256;
+    pubkey: PubKey;
+  }, fee?: number | StdFee | "auto", memo?: string, _funds?: Coin[]) => Promise<ExecuteResult>;
   publishMessage: ({
     encPubKey,
     message
@@ -329,6 +340,7 @@ export class MaciClient extends MaciQueryClient implements MaciInterface {
     this.publishDeactivateMessage = this.publishDeactivateMessage.bind(this);
     this.processDeactivateMessage = this.processDeactivateMessage.bind(this);
     this.addNewKey = this.addNewKey.bind(this);
+    this.preAddNewKey = this.preAddNewKey.bind(this);
     this.publishMessage = this.publishMessage.bind(this);
     this.processMessage = this.processMessage.bind(this);
     this.stopProcessingPeriod = this.stopProcessingPeriod.bind(this);
@@ -466,6 +478,26 @@ export class MaciClient extends MaciQueryClient implements MaciInterface {
   }, fee: number | StdFee | "auto" = "auto", memo?: string, _funds?: Coin[]): Promise<ExecuteResult> => {
     return await this.client.execute(this.sender, this.contractAddress, {
       add_new_key: {
+        d,
+        groth16_proof: groth16Proof,
+        nullifier,
+        pubkey
+      }
+    }, fee, memo, _funds);
+  };
+  preAddNewKey = async ({
+    d,
+    groth16Proof,
+    nullifier,
+    pubkey
+  }: {
+    d: Uint256[];
+    groth16Proof: Groth16ProofType;
+    nullifier: Uint256;
+    pubkey: PubKey;
+  }, fee: number | StdFee | "auto" = "auto", memo?: string, _funds?: Coin[]): Promise<ExecuteResult> => {
+    return await this.client.execute(this.sender, this.contractAddress, {
+      pre_add_new_key: {
         d,
         groth16_proof: groth16Proof,
         nullifier,

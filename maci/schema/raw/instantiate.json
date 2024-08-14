@@ -11,6 +11,7 @@
     "groth16_tally_vkey",
     "max_vote_options",
     "parameters",
+    "pre_deactivate_root",
     "qtr_lib",
     "round_info",
     "voice_credit_amount"
@@ -39,6 +40,9 @@
     },
     "parameters": {
       "$ref": "#/definitions/MaciParameters"
+    },
+    "pre_deactivate_root": {
+      "$ref": "#/definitions/Uint256"
     },
     "qtr_lib": {
       "$ref": "#/definitions/QuinaryTreeRoot"
