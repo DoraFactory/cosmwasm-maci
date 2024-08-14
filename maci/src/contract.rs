@@ -1114,7 +1114,7 @@ pub fn execute_pre_add_new_key(
     if NULLIFIERS.has(deps.storage, nullifier.to_be_bytes().to_vec()) {
         // Return an error response for invalid user or encrypted public key
         return Ok(Response::new() // TODO: ERROR
-            .add_attribute("action", "add_new_key")
+            .add_attribute("action", "pre_add_new_key")
             .add_attribute("event", "error user."));
     }
 
@@ -1139,7 +1139,9 @@ pub fn execute_pre_add_new_key(
 
     let pre_deactivate_root = PRE_DEACTIVATE_ROOT.load(deps.storage)?;
     input[0] = DNODES.load(deps.storage, pre_deactivate_root.to_be_bytes().to_vec())?;
-    input[1] = COORDINATORHASH.load(deps.storage)?;
+    // input[1] = COORDINATORHASH.load(deps.storage)?;
+    input[1] =
+        uint256_from_hex_string("d53841ab0494365b341d519dcfaf0f69e375ffa406eb4484d38f55e9bdef10b");
     input[2] = nullifier;
     input[3] = d[0];
     input[4] = d[1];
@@ -1185,14 +1187,9 @@ pub fn execute_pre_add_new_key(
     // If the proof verification fails, return an error
     if !is_passed {
         return Err(ContractError::InvalidProof {
-            step: String::from("NewKey"),
+            step: String::from("PreNewKey"),
         });
     }
-
-    // let user_balance = user_balance_of(deps.as_ref(), info.sender.as_ref())?;
-    // if user_balance == Uint256::from_u128(0u128) {
-    //     return Err(ContractError::Unauthorized {});
-    // }
 
     let voice_credit_amount = VOICE_CREDIT_AMOUNT.load(deps.storage)?;
 
@@ -1204,7 +1201,7 @@ pub fn execute_pre_add_new_key(
         vote_option_tree_root: Uint256::from_u128(0),
         nonce: Uint256::from_u128(0),
     }
-    .hash_new_key_state_leaf(d);
+    .hash_decativate_state_leaf();
 
     let state_index = num_sign_ups;
     // Enqueue the state leaf
@@ -1222,11 +1219,7 @@ pub fn execute_pre_add_new_key(
             "pubkey",
             format!("{:?},{:?}", pubkey.x.to_string(), pubkey.y.to_string()),
         )
-        .add_attribute("balance", voice_credit_amount.to_string())
-        .add_attribute("d0", d[0].to_string())
-        .add_attribute("d1", d[1].to_string())
-        .add_attribute("d2", d[2].to_string())
-        .add_attribute("d3", d[3].to_string()))
+        .add_attribute("balance", voice_credit_amount.to_string()))
 }
 
 pub fn execute_stop_voting_period(
