@@ -1137,8 +1137,7 @@ pub fn execute_pre_add_new_key(
 
     let mut input: [Uint256; 7] = [Uint256::zero(); 7];
 
-    let pre_deactivate_root = PRE_DEACTIVATE_ROOT.load(deps.storage)?;
-    input[0] = DNODES.load(deps.storage, pre_deactivate_root.to_be_bytes().to_vec())?;
+    input[0] = PRE_DEACTIVATE_ROOT.load(deps.storage)?;
     // input[1] = COORDINATORHASH.load(deps.storage)?;
     input[1] =
         uint256_from_hex_string("d53841ab0494365b341d519dcfaf0f69e375ffa406eb4484d38f55e9bdef10b");
