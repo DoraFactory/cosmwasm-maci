@@ -198,6 +198,19 @@
     {
       "type": "object",
       "required": [
+        "get_voice_credit_amount"
+      ],
+      "properties": {
+        "get_voice_credit_amount": {
+          "type": "object",
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
         "white_list"
       ],
       "properties": {
@@ -289,6 +302,19 @@
       ],
       "properties": {
         "query_cert_system": {
+          "type": "object",
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "query_pre_deactivate_root"
+      ],
+      "properties": {
+        "query_pre_deactivate_root": {
           "type": "object",
           "additionalProperties": false
         }

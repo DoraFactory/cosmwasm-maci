@@ -190,6 +190,9 @@ pub enum QueryMsg {
     #[returns(Uint256)]
     GetVoiceCreditBalance { index: Uint256 },
 
+    #[returns(Uint256)]
+    GetVoiceCreditAmount {},
+
     #[returns(Whitelist)]
     WhiteList {},
     /// Checks permissions of the caller on this proxy.
@@ -214,4 +217,7 @@ pub enum QueryMsg {
 
     #[returns(Uint256)]
     QueryCertSystem {},
+
+    #[returns(Uint256)]
+    QueryPreDeactivateRoot {},
 }

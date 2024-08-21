@@ -2054,6 +2054,11 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
                 .load(deps.storage, index.to_be_bytes().to_vec())
                 .unwrap(),
         ),
+        QueryMsg::GetVoiceCreditAmount {} => to_json_binary::<Uint256>(
+            &VOICE_CREDIT_AMOUNT
+                .may_load(deps.storage)?
+                .unwrap_or_default(),
+        ),
         QueryMsg::WhiteList {} => to_json_binary::<Whitelist>(&query_white_list(deps)?),
         QueryMsg::IsWhiteList { sender } => {
             to_json_binary::<bool>(&query_can_sign_up(deps, sender)?)
@@ -2076,6 +2081,11 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::QueryCertSystem {} => {
             to_json_binary::<Uint256>(&CERTSYSTEM.may_load(deps.storage)?.unwrap_or_default())
         }
+        QueryMsg::QueryPreDeactivateRoot {} => to_json_binary::<Uint256>(
+            &PRE_DEACTIVATE_ROOT
+                .may_load(deps.storage)?
+                .unwrap_or_default(),
+        ),
     }
 }
 

@@ -191,6 +191,8 @@ export type QueryMsg = {
     index: Uint256;
   };
 } | {
+  get_voice_credit_amount: {};
+} | {
   white_list: {};
 } | {
   is_white_list: {
@@ -206,6 +208,8 @@ export type QueryMsg = {
   query_circuit_type: {};
 } | {
   query_cert_system: {};
+} | {
+  query_pre_deactivate_root: {};
 };
 export type Addr = string;
 export type PeriodStatus = "pending" | "voting" | "processing" | "tallying" | "ended";

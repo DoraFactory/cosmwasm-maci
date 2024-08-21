@@ -34,6 +34,7 @@ export interface MaciReadOnlyInterface {
   }: {
     index: Uint256;
   }) => Promise<Uint256>;
+  getVoiceCreditAmount: () => Promise<Uint256>;
   whiteList: () => Promise<Whitelist>;
   isWhiteList: ({
     sender
@@ -45,6 +46,7 @@ export interface MaciReadOnlyInterface {
   queryTotalFeeGrant: () => Promise<Uint128>;
   queryCircuitType: () => Promise<Uint256>;
   queryCertSystem: () => Promise<Uint256>;
+  queryPreDeactivateRoot: () => Promise<Uint256>;
 }
 export class MaciQueryClient implements MaciReadOnlyInterface {
   client: CosmWasmClient;
@@ -66,6 +68,7 @@ export class MaciQueryClient implements MaciReadOnlyInterface {
     this.getAllResult = this.getAllResult.bind(this);
     this.getStateIdxInc = this.getStateIdxInc.bind(this);
     this.getVoiceCreditBalance = this.getVoiceCreditBalance.bind(this);
+    this.getVoiceCreditAmount = this.getVoiceCreditAmount.bind(this);
     this.whiteList = this.whiteList.bind(this);
     this.isWhiteList = this.isWhiteList.bind(this);
     this.voteOptionMap = this.voteOptionMap.bind(this);
@@ -73,6 +76,7 @@ export class MaciQueryClient implements MaciReadOnlyInterface {
     this.queryTotalFeeGrant = this.queryTotalFeeGrant.bind(this);
     this.queryCircuitType = this.queryCircuitType.bind(this);
     this.queryCertSystem = this.queryCertSystem.bind(this);
+    this.queryPreDeactivateRoot = this.queryPreDeactivateRoot.bind(this);
   }
 
   getRoundInfo = async (): Promise<RoundInfo> => {
@@ -158,6 +162,11 @@ export class MaciQueryClient implements MaciReadOnlyInterface {
       }
     });
   };
+  getVoiceCreditAmount = async (): Promise<Uint256> => {
+    return this.client.queryContractSmart(this.contractAddress, {
+      get_voice_credit_amount: {}
+    });
+  };
   whiteList = async (): Promise<Whitelist> => {
     return this.client.queryContractSmart(this.contractAddress, {
       white_list: {}
@@ -197,6 +206,11 @@ export class MaciQueryClient implements MaciReadOnlyInterface {
   queryCertSystem = async (): Promise<Uint256> => {
     return this.client.queryContractSmart(this.contractAddress, {
       query_cert_system: {}
+    });
+  };
+  queryPreDeactivateRoot = async (): Promise<Uint256> => {
+    return this.client.queryContractSmart(this.contractAddress, {
+      query_pre_deactivate_root: {}
     });
   };
 }
