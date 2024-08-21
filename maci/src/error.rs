@@ -77,4 +77,7 @@ pub enum ContractError {
 
     #[error("still have usertally left to process.")]
     UserTallyLeftProcess {},
+
+    #[error("this new key is already exist.")]
+    NewKeyExist,
 }

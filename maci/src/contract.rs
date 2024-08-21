@@ -975,9 +975,7 @@ pub fn execute_add_new_key(
 
     if NULLIFIERS.has(deps.storage, nullifier.to_be_bytes().to_vec()) {
         // Return an error response for invalid user or encrypted public key
-        return Ok(Response::new() // TODO: ERROR
-            .add_attribute("action", "add_new_key")
-            .add_attribute("event", "error user."));
+        return Err(ContractError::NewKeyExist {});
     }
 
     NULLIFIERS.save(deps.storage, nullifier.to_be_bytes().to_vec(), &true)?;
@@ -1048,7 +1046,7 @@ pub fn execute_add_new_key(
     // If the proof verification fails, return an error
     if !is_passed {
         return Err(ContractError::InvalidProof {
-            step: String::from("NewKey"),
+            step: String::from("AddNewKey"),
         });
     }
 
@@ -1113,9 +1111,7 @@ pub fn execute_pre_add_new_key(
 
     if NULLIFIERS.has(deps.storage, nullifier.to_be_bytes().to_vec()) {
         // Return an error response for invalid user or encrypted public key
-        return Ok(Response::new() // TODO: ERROR
-            .add_attribute("action", "pre_add_new_key")
-            .add_attribute("event", "error user."));
+        return Err(ContractError::NewKeyExist {});
     }
 
     NULLIFIERS.save(deps.storage, nullifier.to_be_bytes().to_vec(), &true)?;
@@ -1186,7 +1182,7 @@ pub fn execute_pre_add_new_key(
     // If the proof verification fails, return an error
     if !is_passed {
         return Err(ContractError::InvalidProof {
-            step: String::from("PreNewKey"),
+            step: String::from("PreAddNewKey"),
         });
     }
 
