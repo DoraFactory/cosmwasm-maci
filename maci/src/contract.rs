@@ -6,14 +6,16 @@ use crate::msg::{
 use crate::plonk_parser::{parse_plonk_proof, parse_plonk_vkey};
 use crate::state::{
     Admin, Groth16ProofStr, Groth16VkeyStr, MessageData, Period, PeriodStatus, PlonkProofStr,
-    PlonkVkeyStr, PubKey, RoundInfo, StateLeaf, VotingTime, WhitelistConfig, ADMIN, CERTSYSTEM,
-    CIRCUITTYPE, COORDINATORHASH, CURRENT_STATE_COMMITMENT, CURRENT_TALLY_COMMITMENT, FEEGRANTS,
-    GROTH16_PROCESS_VKEYS, GROTH16_TALLY_VKEYS, LEAF_IDX_0, MACIPARAMETERS, MAX_LEAVES_COUNT,
-    MAX_VOTE_OPTIONS, MAX_WHITELIST_NUM, MSG_CHAIN_LENGTH, MSG_HASHES, NODES, NUMSIGNUPS, PERIOD,
-    PLONK_PROCESS_VKEYS, PLONK_TALLY_VKEYS, PROCESSED_MSG_COUNT, PROCESSED_USER_COUNT, QTR_LIB,
-    RESULT, ROUNDINFO, STATEIDXINC, TOTAL_RESULT, VOICECREDITBALANCE, VOTEOPTIONMAP, VOTINGTIME,
-    WHITELIST, ZEROS,
+    PlonkVkeyStr, PubKey, RoundInfo, StateLeaf, VotingPowerConfig, VotingTime, WhitelistConfig,
+    ADMIN, CERTSYSTEM, CIRCUITTYPE, COORDINATORHASH, CURRENT_STATE_COMMITMENT,
+    CURRENT_TALLY_COMMITMENT, FEEGRANTS, GROTH16_PROCESS_VKEYS, GROTH16_TALLY_VKEYS, LEAF_IDX_0,
+    MACIPARAMETERS, MAX_LEAVES_COUNT, MAX_VOTE_OPTIONS, MAX_WHITELIST_NUM, MSG_CHAIN_LENGTH,
+    MSG_HASHES, NODES, NUMSIGNUPS, PERIOD, PLONK_PROCESS_VKEYS, PLONK_TALLY_VKEYS,
+    PROCESSED_MSG_COUNT, PROCESSED_USER_COUNT, QTR_LIB, RESULT, ROUNDINFO, STATEIDXINC,
+    TOTAL_RESULT, VOICECREDITBALANCE, VOTEOPTIONMAP, VOTINGTIME, VOTING_POWER_CONFIG, WHITELIST,
+    WHITELIST_BACKEND_PUBKEY, WHITELIST_ECOSYSTEM, WHITELIST_SNAPSHOT_HEIGHT, ZEROS,
 };
+use sha2::{Digest as ShaDigest, Sha256};
 
 use pairing_ce::bn256::Bn256;
 use pairing_ce::bn256::Bn256 as MBn256;
@@ -46,6 +48,8 @@ use bellman_ce_verifier::{prepare_verifying_key, verify_proof as groth16_verify}
 use ff_ce::PrimeField as Fr;
 
 use hex;
+
+use serde_json;
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
@@ -239,24 +243,7 @@ pub fn instantiate(
     VOTEOPTIONMAP.save(deps.storage, &vote_option_map)?;
     ROUNDINFO.save(deps.storage, &msg.round_info)?;
     CIRCUITTYPE.save(deps.storage, &msg.circuit_type)?;
-    match msg.whitelist {
-        Some(content) => {
-            for i in 0..content.users.len() {
-                let data = WhitelistConfig {
-                    balance: content.users[i].balance,
-                    is_register: false,
-                    fee_amount: Uint128::from(0u128),
-                    fee_grant: false,
-                };
-                let addr = &Addr::unchecked(&content.users[i].addr);
-                WHITELIST.save(deps.storage, addr, &data)?;
-                MAX_WHITELIST_NUM.save(deps.storage, &(content.users.len() as u128))?;
-            }
-        }
-        None => {
-            MAX_WHITELIST_NUM.save(deps.storage, &0u128)?;
-        }
-    }
+    MAX_WHITELIST_NUM.save(deps.storage, &0u128)?;
 
     FEEGRANTS.save(deps.storage, &Uint128::from(0u128))?;
 
@@ -274,6 +261,11 @@ pub fn instantiate(
         }
         None => {}
     }
+    let whitelist_backend_pubkey_binary = Binary::from_base64(&msg.whitelist_backend_pubkey)
+        .map_err(|_| ContractError::InvalidBase64 {})?;
+    WHITELIST_BACKEND_PUBKEY.save(deps.storage, &whitelist_backend_pubkey_binary)?;
+    WHITELIST_ECOSYSTEM.save(deps.storage, &msg.whitelist_ecosystem)?;
+    WHITELIST_SNAPSHOT_HEIGHT.save(deps.storage, &msg.whitelist_snapshot_height)?;
 
     // Create a period struct with the initial status set to Voting
     let period = Period {
@@ -282,6 +274,11 @@ pub fn instantiate(
 
     // Save the initial period to storage
     PERIOD.save(deps.storage, &period)?;
+
+    let voting_power_config = VotingPowerConfig {
+        slope: msg.whitelist_slope,
+    };
+    VOTING_POWER_CONFIG.save(deps.storage, &voting_power_config)?;
 
     Ok(Response::default().add_attribute("action", "instantiate"))
 }
@@ -311,14 +308,18 @@ pub fn execute(
         ExecuteMsg::SetRoundInfo { round_info } => {
             execute_set_round_info(deps, env, info, round_info)
         }
-        ExecuteMsg::SetWhitelists { whitelists } => {
-            execute_set_whitelists(deps, env, info, whitelists)
-        }
+        // ExecuteMsg::SetWhitelists { whitelists } => {
+        //     execute_set_whitelists(deps, env, info, whitelists)
+        // }
         ExecuteMsg::SetVoteOptionsMap { vote_option_map } => {
             execute_set_vote_options_map(deps, env, info, vote_option_map)
         }
         ExecuteMsg::StartVotingPeriod {} => execute_start_voting_period(deps, env, info),
-        ExecuteMsg::SignUp { pubkey } => execute_sign_up(deps, env, info, pubkey),
+        ExecuteMsg::SignUp {
+            pubkey,
+            amount,
+            certificate,
+        } => execute_sign_up(deps, env, info, pubkey, amount, certificate),
         ExecuteMsg::StopVotingPeriod {} => execute_stop_voting_period(deps, env, info),
         ExecuteMsg::PublishMessage {
             message,
@@ -494,65 +495,6 @@ pub fn execute_set_round_info(
 }
 
 // in pending
-pub fn execute_set_whitelists(
-    deps: DepsMut,
-    env: Env,
-    info: MessageInfo,
-    whitelists: Whitelist,
-) -> Result<Response, ContractError> {
-    let period = PERIOD.load(deps.storage)?;
-
-    // if FEEGRANTS.exists(deps.storage) {
-    //     return Err(ContractError::FeeGrantAlreadyExists);
-    // }
-
-    if VOTINGTIME.exists(deps.storage) {
-        let voting_time = VOTINGTIME.load(deps.storage)?;
-
-        if let Some(start_time) = voting_time.start_time {
-            if env.block.time >= start_time {
-                return Err(ContractError::PeriodError {});
-            }
-        } else {
-            return Err(ContractError::PeriodError {});
-        }
-    } else {
-        // Check if the period status is Pending
-        if period.status != PeriodStatus::Pending {
-            return Err(ContractError::PeriodError {});
-        }
-    }
-
-    // if WHITELIST.exists(deps.storage) {
-    //     return Err(ContractError::AlreadyHaveWhitelist {});
-    // }
-
-    if !can_execute(deps.as_ref(), info.sender.as_ref())? {
-        Err(ContractError::Unauthorized {})
-    } else {
-        for i in 0..whitelists.users.len() {
-            let data = WhitelistConfig {
-                balance: whitelists.users[i].balance,
-                is_register: false,
-                fee_amount: Uint128::from(0u128),
-                fee_grant: false,
-            };
-            let addr = &Addr::unchecked(&whitelists.users[i].addr);
-            WHITELIST.save(deps.storage, addr, &data)?
-        }
-
-        let max_whitelist_num = MAX_WHITELIST_NUM.load(deps.storage)?;
-        let update_max_num = max_whitelist_num + whitelists.users.len() as u128;
-        MAX_WHITELIST_NUM.save(deps.storage, &update_max_num)?;
-        let res = Response::new()
-            .add_attribute("action", "set_whitelists")
-            .add_attribute("max_whitelist_num", update_max_num.to_string())
-            .add_attribute("update_num", whitelists.users.len().to_string());
-        Ok(res)
-    }
-}
-
-// in pending
 pub fn execute_set_vote_options_map(
     deps: DepsMut,
     env: Env,
@@ -599,6 +541,8 @@ pub fn execute_sign_up(
     env: Env,
     info: MessageInfo,
     pubkey: PubKey,
+    amount: Uint256,
+    certificate: String,
 ) -> Result<Response, ContractError> {
     let period = PERIOD.load(deps.storage)?;
     if VOTINGTIME.exists(deps.storage) {
@@ -608,10 +552,41 @@ pub fn execute_sign_up(
         check_voting_time(env, None, period.status)?;
     }
 
-    let user_balance = user_balance_of(deps.as_ref(), info.sender.as_ref())?;
-    if user_balance == Uint256::from_u128(0u128) {
-        return Err(ContractError::Unauthorized {});
+    let whitelist_backend_pubkey = WHITELIST_BACKEND_PUBKEY.load(deps.storage)?;
+    let whitelist_ecosystem = WHITELIST_ECOSYSTEM.load(deps.storage)?;
+    let whitelist_snapshot_height = WHITELIST_SNAPSHOT_HEIGHT.load(deps.storage)?;
+    let payload = serde_json::json!({
+        "address": info.sender.to_string(),
+        "amount": amount.to_string(),
+        "height": whitelist_snapshot_height.to_string(),
+        "ecosystem": whitelist_ecosystem.to_string(),
+    });
+
+    let msg = payload.to_string().into_bytes();
+
+    let hash = Sha256::digest(&msg);
+
+    let certificate_binary =
+        Binary::from_base64(&certificate).map_err(|_| ContractError::InvalidBase64 {})?;
+    let verify_result = deps
+        .api
+        .secp256k1_verify(
+            hash.as_ref(),
+            certificate_binary.as_slice(), // 使用解码后的 binary 数据
+            whitelist_backend_pubkey.as_slice(),
+        )
+        .map_err(|_| ContractError::VerificationFailed {})?;
+    if !verify_result {
+        return Err(ContractError::InvalidSignature {});
     }
+
+    if WHITELIST.has(deps.storage, &info.sender) {
+        return Err(ContractError::AlreadySignedUp {});
+    }
+
+    let voting_power_config = VOTING_POWER_CONFIG.load(deps.storage)?;
+
+    let voting_power = amount / voting_power_config.slope;
 
     let mut num_sign_ups = NUMSIGNUPS.load(deps.storage)?;
 
@@ -635,29 +610,30 @@ pub fn execute_sign_up(
     // Create a state leaf with the provided pubkey and amount
     let state_leaf = StateLeaf {
         pub_key: pubkey.clone(),
-        voice_credit_balance: user_balance,
+        voice_credit_balance: voting_power,
         vote_option_tree_root: Uint256::from_u128(0),
         nonce: Uint256::from_u128(0),
     }
     .hash_state_leaf();
 
     let state_index = num_sign_ups;
-    // Enqueue the state leaf
     state_enqueue(&mut deps, state_leaf)?;
     num_sign_ups += Uint256::from_u128(1u128);
 
-    // Save the updated state index, voice credit balance, and number of sign-ups
-    // STATEIDXINC.save(deps.storage, &info.sender, &num_sign_ups)?;
     STATEIDXINC.save(deps.storage, &info.sender, &num_sign_ups)?;
     VOICECREDITBALANCE.save(
         deps.storage,
         state_index.to_be_bytes().to_vec(),
-        &user_balance,
+        &voting_power,
     )?;
     NUMSIGNUPS.save(deps.storage, &num_sign_ups)?;
 
-    let mut white_curr = WHITELIST.load(deps.storage, &info.sender)?;
-    white_curr.register();
+    let white_curr = WhitelistConfig {
+        balance: voting_power,
+        is_register: true,
+        fee_amount: Uint128::from(0u128),
+        fee_grant: false,
+    };
     WHITELIST.save(deps.storage, &info.sender, &white_curr)?;
 
     Ok(Response::new()
@@ -667,7 +643,7 @@ pub fn execute_sign_up(
             "pubkey",
             format!("{:?},{:?}", pubkey.x.to_string(), pubkey.y.to_string()),
         )
-        .add_attribute("balance", user_balance.to_string()))
+        .add_attribute("balance", voting_power.to_string()))
 }
 
 // in voting

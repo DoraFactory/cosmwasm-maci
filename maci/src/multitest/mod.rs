@@ -3,7 +3,7 @@ mod tests;
 
 use anyhow::Result as AnyResult;
 
-use crate::msg::{Groth16VKeyType, Whitelist};
+use crate::msg::Groth16VKeyType;
 use crate::state::{
     MaciParameters, MessageData, Period, PubKey, QuinaryTreeRoot, RoundInfo, VotingTime,
 };
@@ -12,9 +12,9 @@ use crate::{
     contract::{execute, instantiate, query},
     msg::*,
 };
-
 use cosmwasm_std::testing::{MockApi, MockStorage};
 use cosmwasm_std::{Addr, Coin, Empty, StdResult, Timestamp, Uint128, Uint256};
+use serde::{Deserialize, Serialize};
 // use cosmwasm_std::{Addr, Coin, StdResult, Timestamp, Uint128, Uint256};
 use cw_multi_test::{
     no_init, AppBuilder, AppResponse, BankKeeper, ContractWrapper, DistributionKeeper, Executor,
@@ -86,16 +86,7 @@ impl MaciCodeId {
             link: "".to_string(),
         };
         let circuit_type = Uint256::from_u128(0u128);
-        MaciContract::instantiate(
-            app,
-            self,
-            sender,
-            round_info,
-            None,
-            None,
-            circuit_type,
-            label,
-        )
+        MaciContract::instantiate(app, self, sender, round_info, None, circuit_type, label)
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -103,8 +94,6 @@ impl MaciCodeId {
         self,
         app: &mut App,
         sender: Addr,
-        user1: Addr,
-        user2: Addr,
         label: &str,
     ) -> AnyResult<MaciContract> {
         let round_info = RoundInfo {
@@ -112,18 +101,7 @@ impl MaciCodeId {
             description: String::from("Hack In Brelin"),
             link: String::from("https://baidu.com"),
         };
-        let whitelist = Some(Whitelist {
-            users: vec![
-                WhitelistBase {
-                    addr: user1.to_string(),
-                    balance: Uint256::from_u128(100u128),
-                },
-                WhitelistBase {
-                    addr: user2.to_string(),
-                    balance: Uint256::from_u128(80u128),
-                },
-            ],
-        });
+
         let voting_time = Some(VotingTime {
             start_time: Some(Timestamp::from_nanos(1571797424879000000)),
             end_time: Some(Timestamp::from_nanos(1571797429879300000)),
@@ -134,7 +112,6 @@ impl MaciCodeId {
             self,
             sender,
             round_info,
-            whitelist,
             voting_time,
             circuit_type,
             label,
@@ -146,8 +123,6 @@ impl MaciCodeId {
         self,
         app: &mut App,
         sender: Addr,
-        user1: Addr,
-        user2: Addr,
         label: &str,
     ) -> AnyResult<MaciContract> {
         let round_info = RoundInfo {
@@ -155,18 +130,7 @@ impl MaciCodeId {
             description: String::from("Hack In Brelin"),
             link: String::from("https://baidu.com"),
         };
-        let whitelist = Some(Whitelist {
-            users: vec![
-                WhitelistBase {
-                    addr: user1.to_string(),
-                    balance: Uint256::from_u128(100u128),
-                },
-                WhitelistBase {
-                    addr: user2.to_string(),
-                    balance: Uint256::from_u128(80u128),
-                },
-            ],
-        });
+
         let voting_time = Some(VotingTime {
             start_time: Some(Timestamp::from_nanos(1571797424879000000)),
             end_time: Some(Timestamp::from_nanos(1571797429879300000)),
@@ -177,7 +141,6 @@ impl MaciCodeId {
             self,
             sender,
             round_info,
-            whitelist,
             voting_time,
             circuit_type,
             label,
@@ -189,8 +152,6 @@ impl MaciCodeId {
         self,
         app: &mut App,
         sender: Addr,
-        user1: Addr,
-        user2: Addr,
         label: &str,
     ) -> AnyResult<MaciContract> {
         let round_info = RoundInfo {
@@ -198,18 +159,7 @@ impl MaciCodeId {
             description: String::from("Hack In Brelin"),
             link: String::from("https://baidu.com"),
         };
-        let whitelist = Some(Whitelist {
-            users: vec![
-                WhitelistBase {
-                    addr: user1.to_string(),
-                    balance: Uint256::from_u128(100u128),
-                },
-                WhitelistBase {
-                    addr: user2.to_string(),
-                    balance: Uint256::from_u128(80u128),
-                },
-            ],
-        });
+
         let voting_time = Some(VotingTime {
             start_time: Some(Timestamp::from_nanos(1571797429879300000)),
             end_time: Some(Timestamp::from_nanos(1571797424879000000)),
@@ -220,7 +170,6 @@ impl MaciCodeId {
             self,
             sender,
             round_info,
-            whitelist,
             voting_time,
             circuit_type,
             label,
@@ -232,8 +181,6 @@ impl MaciCodeId {
         self,
         app: &mut App,
         sender: Addr,
-        user1: Addr,
-        user2: Addr,
         label: &str,
     ) -> AnyResult<MaciContract> {
         let round_info = RoundInfo {
@@ -241,18 +188,7 @@ impl MaciCodeId {
             description: String::from("Hack In Brelin"),
             link: String::from("https://baidu.com"),
         };
-        let whitelist = Some(Whitelist {
-            users: vec![
-                WhitelistBase {
-                    addr: user1.to_string(),
-                    balance: Uint256::from_u128(100u128),
-                },
-                WhitelistBase {
-                    addr: user2.to_string(),
-                    balance: Uint256::from_u128(80u128),
-                },
-            ],
-        });
+
         let voting_time = Some(VotingTime {
             start_time: Some(Timestamp::from_nanos(1571797424879000000)),
             end_time: None,
@@ -264,7 +200,6 @@ impl MaciCodeId {
             self,
             sender,
             round_info,
-            whitelist,
             voting_time,
             circuit_type,
             label,
@@ -276,8 +211,6 @@ impl MaciCodeId {
         self,
         app: &mut App,
         sender: Addr,
-        user1: Addr,
-        user2: Addr,
         label: &str,
     ) -> AnyResult<MaciContract> {
         let round_info = RoundInfo {
@@ -285,18 +218,7 @@ impl MaciCodeId {
             description: String::from("Hack In Brelin"),
             link: String::from("https://baidu.com"),
         };
-        let whitelist = Some(Whitelist {
-            users: vec![
-                WhitelistBase {
-                    addr: user1.to_string(),
-                    balance: Uint256::from_u128(100u128),
-                },
-                WhitelistBase {
-                    addr: user2.to_string(),
-                    balance: Uint256::from_u128(80u128),
-                },
-            ],
-        });
+
         let voting_time = Some(VotingTime {
             start_time: None,
             end_time: Some(Timestamp::from_nanos(1571797429879300000)),
@@ -308,7 +230,6 @@ impl MaciCodeId {
             self,
             sender,
             round_info,
-            whitelist,
             voting_time,
             circuit_type,
             label,
@@ -338,7 +259,6 @@ impl MaciCodeId {
             self,
             sender,
             round_info,
-            None,
             voting_time,
             circuit_type,
             label,
@@ -350,8 +270,6 @@ impl MaciCodeId {
         self,
         app: &mut App,
         sender: Addr,
-        user1: Addr,
-        user2: Addr,
         label: &str,
     ) -> AnyResult<MaciContract> {
         let round_info = RoundInfo {
@@ -359,18 +277,6 @@ impl MaciCodeId {
             description: String::from("Hack In Brelin"),
             link: String::from("https://baidu.com"),
         };
-        let whitelist = Some(Whitelist {
-            users: vec![
-                WhitelistBase {
-                    addr: user1.to_string(),
-                    balance: Uint256::from_u128(100u128),
-                },
-                WhitelistBase {
-                    addr: user2.to_string(),
-                    balance: Uint256::from_u128(80u128),
-                },
-            ],
-        });
         let voting_time = Some(VotingTime {
             start_time: Some(Timestamp::from_nanos(1571797424879000000)),
             end_time: Some(Timestamp::from_nanos(1571797429879300000)),
@@ -381,7 +287,6 @@ impl MaciCodeId {
             self,
             sender,
             round_info,
-            whitelist,
             voting_time,
             circuit_type,
             label,
@@ -411,7 +316,6 @@ impl MaciContract {
         code_id: MaciCodeId,
         sender: Addr,
         round_info: RoundInfo,
-        whitelist: Option<Whitelist>,
         voting_time: Option<VotingTime>,
         circuit_type: Uint256,
         label: &str,
@@ -479,9 +383,12 @@ impl MaciContract {
                             certification_system: Uint256::from_u128(0u128),
                             max_vote_options: Uint256::from_u128(5u128),
                             round_info,
-                            whitelist,
                             voting_time,
-                            circuit_type
+                            circuit_type,
+                            whitelist_backend_pubkey: whitelist_pubkey(),
+                            whitelist_ecosystem: whitelist_ecosystem(),
+                            whitelist_snapshot_height: whitelist_snapshot_height(),
+                            whitelist_slope: whitelist_slope(),
         };
 
         app.instantiate_contract(
@@ -502,7 +409,6 @@ impl MaciContract {
         code_id: MaciCodeId,
         sender: Addr,
         round_info: RoundInfo,
-        whitelist: Option<Whitelist>,
         voting_time: Option<VotingTime>,
         circuit_type: Uint256,
         label: &str,
@@ -612,10 +518,13 @@ impl MaciContract {
                                 certification_system: Uint256::from_u128(1u128), // plonk system
                                 max_vote_options: Uint256::from_u128(5u128),
                                 round_info,
-                                whitelist,
                                 voting_time,
-                                circuit_type
-            };
+                                circuit_type,
+                                whitelist_backend_pubkey: whitelist_pubkey(),
+                                whitelist_ecosystem: whitelist_ecosystem(),
+                                whitelist_snapshot_height: whitelist_snapshot_height(),
+                                whitelist_slope: whitelist_slope(),
+        };
 
         app.instantiate_contract(
             code_id.0,
@@ -629,8 +538,24 @@ impl MaciContract {
     }
 
     #[track_caller]
-    pub fn sign_up(&self, app: &mut App, sender: Addr, pubkey: PubKey) -> AnyResult<AppResponse> {
-        app.execute_contract(sender, self.addr(), &ExecuteMsg::SignUp { pubkey }, &[])
+    pub fn sign_up(
+        &self,
+        app: &mut App,
+        sender: Addr,
+        pubkey: PubKey,
+        amount: Uint256,
+        certificate: String,
+    ) -> AnyResult<AppResponse> {
+        app.execute_contract(
+            sender,
+            self.addr(),
+            &ExecuteMsg::SignUp {
+                pubkey,
+                amount,
+                certificate,
+            },
+            &[],
+        )
     }
 
     #[track_caller]
@@ -684,28 +609,28 @@ impl MaciContract {
         )
     }
 
-    #[track_caller]
-    pub fn set_whitelist(&self, app: &mut App, sender: Addr) -> AnyResult<AppResponse> {
-        app.execute_contract(
-            sender,
-            self.addr(),
-            &ExecuteMsg::SetWhitelists {
-                whitelists: Whitelist {
-                    users: vec![
-                        WhitelistBase {
-                            addr: user1().to_string(),
-                            balance: Uint256::from_u128(100u128),
-                        },
-                        WhitelistBase {
-                            addr: user2().to_string(),
-                            balance: Uint256::from_u128(80u128),
-                        },
-                    ],
-                },
-            },
-            &[],
-        )
-    }
+    // #[track_caller]
+    // pub fn set_whitelist(&self, app: &mut App, sender: Addr) -> AnyResult<AppResponse> {
+    //     app.execute_contract(
+    //         sender,
+    //         self.addr(),
+    //         &ExecuteMsg::SetWhitelists {
+    //             whitelists: Whitelist {
+    //                 users: vec![
+    //                     WhitelistBase {
+    //                         addr: user1().to_string(),
+    //                         balance: Uint256::from_u128(100u128),
+    //                     },
+    //                     WhitelistBase {
+    //                         addr: user2().to_string(),
+    //                         balance: Uint256::from_u128(80u128),
+    //                     },
+    //                 ],
+    //             },
+    //         },
+    //         &[],
+    //     )
+    // }
 
     #[track_caller]
     pub fn set_vote_option_map(&self, app: &mut App, sender: Addr) -> AnyResult<AppResponse> {
@@ -948,6 +873,46 @@ pub fn owner() -> Addr {
     Addr::unchecked("dora1qdagdkg9me4253h9qyvx83sd4gpta6rzh2fa0j")
 }
 
-// pub fn parent() -> Addr {
-//     Addr::unchecked("inj1g9v8suckezwx93zypckd4xg03r26h6ejlmsptz")
-// }
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Certificate {
+    pub certificate: String,
+    pub amount: Uint256,
+}
+
+pub fn match_user_certificate(index: usize) -> Certificate {
+    match index {
+        0 => user1_certificate(),
+        1 => user2_certificate(),
+        _ => panic!("Invalid index"),
+    }
+}
+
+pub fn user1_certificate() -> Certificate {
+    Certificate {
+        certificate: "/3aY9IIFNNUtwLVHz1i+q+3Hc72yW1XYtFn1SnBZ6GsNUoZpdRTH7gUXz6cyKcJdHviA+pXmebNVXsw0xi1Gdg==".to_string(),
+        amount: Uint256::from_u128(100000000u128),
+    }
+}
+
+pub fn user2_certificate() -> Certificate {
+    Certificate {
+        certificate: "WX+mefbste0fmQZyxfuPjKjFmea7bTJALptAtrUlqwcKi780BtWN3vTENsvVUVmd5a0lYJXNJ5Cqyjigj6JzOQ==".to_string(),
+        amount: Uint256::from_u128(80000000u128),
+    }
+}
+
+pub fn whitelist_pubkey() -> String {
+    "AoYo/zENN/JquagPdG0/NMbWBBYxOM8BVN677mBXJKJQ".to_string()
+}
+
+pub fn whitelist_ecosystem() -> String {
+    String::from("cosmoshub")
+}
+
+pub fn whitelist_snapshot_height() -> Uint256 {
+    Uint256::from(7166000u128)
+}
+
+pub fn whitelist_slope() -> Uint256 {
+    Uint256::from_u128(1000000u128)
+}

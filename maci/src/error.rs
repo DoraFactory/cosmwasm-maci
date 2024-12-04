@@ -71,4 +71,19 @@ pub enum ContractError {
 
     #[error("SynthesisError of zk verify")]
     SynthesisError {},
+
+    #[error("Wrong whitelist mode")]
+    WrongWhitelistMode {},
+
+    #[error("Invalid signature")]
+    InvalidSignature {},
+
+    #[error("Verification failed")]
+    VerificationFailed {},
+
+    #[error("Invalid base64 string")]
+    InvalidBase64 {},
+
+    #[error("Already signed up")]
+    AlreadySignedUp {},
 }

@@ -3,7 +3,8 @@ mod test {
     use crate::error::ContractError;
     use crate::msg::{Groth16ProofType, PlonkProofType};
     use crate::multitest::{
-        create_app, owner, uint256_from_decimal_string, user1, user2, MaciCodeId,
+        create_app, match_user_certificate, owner, uint256_from_decimal_string, user1,
+        user1_certificate, user2, whitelist_slope, MaciCodeId,
     };
     use crate::state::{MessageData, Period, PeriodStatus, PubKey, RoundInfo};
     use cosmwasm_std::{Addr, Uint256};
@@ -93,7 +94,7 @@ mod test {
 
         _ = contract.set_vote_option_map(&mut app, owner());
         app.update_block(next_block);
-        _ = contract.set_whitelist(&mut app, owner());
+        // _ = contract.set_whitelist(&mut app, owner());
 
         let test_pubkey = PubKey {
             x: uint256_from_decimal_string(&data.current_state_leaves[0][0]),
@@ -104,6 +105,8 @@ mod test {
                 &mut app,
                 Addr::unchecked(0.to_string()),
                 test_pubkey.clone(),
+                user1_certificate().amount,
+                user1_certificate().certificate,
             )
             .unwrap_err();
         assert_eq!(
@@ -114,12 +117,12 @@ mod test {
         _ = contract.start_voting(&mut app, owner());
         app.update_block(next_block);
 
-        let set_whitelist_only_in_pending = contract.set_whitelist(&mut app, owner()).unwrap_err();
-        assert_eq!(
-            // 注册之后不能再进行注册
-            ContractError::PeriodError {},
-            set_whitelist_only_in_pending.downcast().unwrap()
-        );
+        // let set_whitelist_only_in_pending = contract.set_whitelist(&mut app, owner()).unwrap_err();
+        // assert_eq!(
+        //     // 注册之后不能再进行注册
+        //     ContractError::PeriodError {},
+        //     set_whitelist_only_in_pending.downcast().unwrap()
+        // );
         let msg_file_path = "./src/test/msg_test.json";
 
         let mut msg_file = fs::File::open(msg_file_path).expect("Failed to open file");
@@ -160,7 +163,13 @@ mod test {
                 };
 
                 println!("---------- signup ---------- {:?}", i);
-                _ = contract.sign_up(&mut app, Addr::unchecked(i.to_string()), pubkey);
+                _ = contract.sign_up(
+                    &mut app,
+                    Addr::unchecked(i.to_string()),
+                    pubkey,
+                    match_user_certificate(i).amount,
+                    match_user_certificate(i).certificate,
+                );
                 app.update_block(next_block);
             }
             let message = MessageData {
@@ -197,11 +206,13 @@ mod test {
                 &mut app,
                 Addr::unchecked(0.to_string()),
                 test_pubkey.clone(),
+                match_user_certificate(0).amount,
+                match_user_certificate(0).certificate,
             )
             .unwrap_err();
         assert_eq!(
             // 注册之后不能再进行注册
-            ContractError::Unauthorized {},
+            ContractError::AlreadySignedUp {},
             sign_up_after_voting_end_error.downcast().unwrap()
         );
 
@@ -213,6 +224,8 @@ mod test {
                 &mut app,
                 Addr::unchecked(3.to_string()),
                 test_pubkey.clone(),
+                match_user_certificate(0).amount,
+                match_user_certificate(0).certificate,
             )
             .unwrap_err();
         assert_eq!(
@@ -361,7 +374,7 @@ mod test {
         let code_id = MaciCodeId::store_code(&mut app);
         let label = "Group";
         let contract = code_id
-            .instantiate_with_voting_time(&mut app, owner(), user1(), user2(), label)
+            .instantiate_with_voting_time(&mut app, owner(), label)
             .unwrap();
 
         let start_voting_error = contract.start_voting(&mut app, owner()).unwrap_err();
@@ -403,6 +416,8 @@ mod test {
                 &mut app,
                 Addr::unchecked(0.to_string()),
                 test_pubkey.clone(),
+                match_user_certificate(0).amount,
+                match_user_certificate(0).certificate,
             )
             .unwrap_err();
         assert_eq!(
@@ -413,12 +428,12 @@ mod test {
         _ = contract.set_vote_option_map(&mut app, owner());
 
         app.update_block(next_block); // Start Voting
-        let set_whitelist_only_in_pending = contract.set_whitelist(&mut app, owner()).unwrap_err();
-        assert_eq!(
-            // 注册之后不能再进行注册
-            ContractError::PeriodError {},
-            set_whitelist_only_in_pending.downcast().unwrap()
-        );
+                                      // let set_whitelist_only_in_pending = contract.set_whitelist(&mut app, owner()).unwrap_err();
+                                      // assert_eq!(
+                                      //     // 注册之后不能再进行注册
+                                      //     ContractError::PeriodError {},
+                                      //     set_whitelist_only_in_pending.downcast().unwrap()
+                                      // );
         let set_vote_option_map_error =
             contract.set_vote_option_map(&mut app, owner()).unwrap_err();
         assert_eq!(
@@ -446,7 +461,13 @@ mod test {
                 };
 
                 println!("---------- signup ---------- {:?}", i);
-                let _ = contract.sign_up(&mut app, Addr::unchecked(i.to_string()), pubkey);
+                let _ = contract.sign_up(
+                    &mut app,
+                    Addr::unchecked(i.to_string()),
+                    pubkey,
+                    match_user_certificate(i).amount,
+                    match_user_certificate(i).certificate,
+                );
             }
             let message = MessageData {
                 data: [
@@ -472,11 +493,13 @@ mod test {
                 &mut app,
                 Addr::unchecked(0.to_string()),
                 test_pubkey.clone(),
+                match_user_certificate(0).amount,
+                match_user_certificate(0).certificate,
             )
             .unwrap_err();
         assert_eq!(
             // 注册之后不能再进行注册
-            ContractError::Unauthorized {},
+            ContractError::AlreadySignedUp {},
             sign_up_after_voting_end_error.downcast().unwrap()
         );
 
@@ -498,6 +521,8 @@ mod test {
                 &mut app,
                 Addr::unchecked(3.to_string()),
                 test_pubkey.clone(),
+                match_user_certificate(0).amount,
+                match_user_certificate(0).certificate,
             )
             .unwrap_err();
         assert_eq!(
@@ -645,7 +670,7 @@ mod test {
         let code_id = MaciCodeId::store_code(&mut app);
         let label = "Group";
         let contract = code_id
-            .instantiate_with_start_time(&mut app, owner(), user1(), user2(), label)
+            .instantiate_with_start_time(&mut app, owner(), label)
             .unwrap();
 
         let start_voting_error = contract.start_voting(&mut app, owner()).unwrap_err();
@@ -670,6 +695,8 @@ mod test {
                 &mut app,
                 Addr::unchecked(0.to_string()),
                 test_pubkey.clone(),
+                match_user_certificate(0).amount,
+                match_user_certificate(0).certificate,
             )
             .unwrap_err();
         assert_eq!(
@@ -702,7 +729,13 @@ mod test {
                 };
 
                 println!("---------- signup ---------- {:?}", i);
-                let _ = contract.sign_up(&mut app, Addr::unchecked(i.to_string()), pubkey);
+                let _ = contract.sign_up(
+                    &mut app,
+                    Addr::unchecked(i.to_string()),
+                    pubkey,
+                    match_user_certificate(i).amount,
+                    match_user_certificate(i).certificate,
+                );
             }
             let message = MessageData {
                 data: [
@@ -738,11 +771,13 @@ mod test {
                 &mut app,
                 Addr::unchecked(0.to_string()),
                 test_pubkey.clone(),
+                match_user_certificate(0).amount,
+                match_user_certificate(0).certificate,
             )
             .unwrap_err();
         assert_eq!(
             // 注册之后不能再进行注册
-            ContractError::Unauthorized {},
+            ContractError::AlreadySignedUp {},
             sign_up_after_voting_end_error.downcast().unwrap()
         );
 
@@ -755,6 +790,8 @@ mod test {
                 &mut app,
                 Addr::unchecked(3.to_string()),
                 test_pubkey.clone(),
+                match_user_certificate(0).amount,
+                match_user_certificate(0).certificate,
             )
             .unwrap_err();
         assert_eq!(
@@ -872,7 +909,7 @@ mod test {
         let code_id = MaciCodeId::store_code(&mut app);
         let label = "Group";
         let contract = code_id
-            .instantiate_with_end_time(&mut app, owner(), user1(), user2(), label)
+            .instantiate_with_end_time(&mut app, owner(), label)
             .unwrap();
 
         _ = contract.start_voting(&mut app, owner());
@@ -898,6 +935,8 @@ mod test {
                 &mut app,
                 Addr::unchecked(0.to_string()),
                 test_pubkey.clone(),
+                match_user_certificate(0).amount,
+                match_user_certificate(0).certificate,
             )
             .unwrap_err();
         assert_eq!(
@@ -932,7 +971,13 @@ mod test {
                 };
 
                 println!("---------- signup ---------- {:?}", i);
-                let _ = contract.sign_up(&mut app, Addr::unchecked(i.to_string()), pubkey);
+                let _ = contract.sign_up(
+                    &mut app,
+                    Addr::unchecked(i.to_string()),
+                    pubkey,
+                    match_user_certificate(i).amount,
+                    match_user_certificate(i).certificate,
+                );
             }
             let message = MessageData {
                 data: [
@@ -968,11 +1013,13 @@ mod test {
                 &mut app,
                 Addr::unchecked(0.to_string()),
                 test_pubkey.clone(),
+                match_user_certificate(0).amount,
+                match_user_certificate(0).certificate,
             )
             .unwrap_err();
         assert_eq!(
             // 注册之后不能再进行注册
-            ContractError::Unauthorized {},
+            ContractError::AlreadySignedUp {},
             sign_up_after_voting_end_error.downcast().unwrap()
         );
 
@@ -985,6 +1032,8 @@ mod test {
                 &mut app,
                 Addr::unchecked(3.to_string()),
                 test_pubkey.clone(),
+                match_user_certificate(0).amount,
+                match_user_certificate(0).certificate,
             )
             .unwrap_err();
         assert_eq!(
@@ -1070,7 +1119,7 @@ mod test {
         let code_id = MaciCodeId::store_code(&mut app);
         let label = "Group";
         let contract = code_id
-            .instantiate_with_wrong_voting_time(&mut app, owner(), user1(), user2(), label)
+            .instantiate_with_wrong_voting_time(&mut app, owner(), label)
             .unwrap_err();
 
         // let start_voting_error = contract.start_voting(&mut app, owner()).unwrap_err();
@@ -1116,7 +1165,7 @@ mod test {
         let code_id = MaciCodeId::store_code(&mut app);
         let label = "Group";
         let contract = code_id
-            .instantiate_with_voting_time_isqv(&mut app, owner(), user1(), user2(), label)
+            .instantiate_with_voting_time_isqv(&mut app, owner(), label)
             .unwrap();
 
         let start_voting_error = contract.start_voting(&mut app, owner()).unwrap_err();
@@ -1158,6 +1207,8 @@ mod test {
                 &mut app,
                 Addr::unchecked(0.to_string()),
                 test_pubkey.clone(),
+                match_user_certificate(0).amount,
+                match_user_certificate(0).certificate,
             )
             .unwrap_err();
         assert_eq!(
@@ -1168,12 +1219,12 @@ mod test {
         _ = contract.set_vote_option_map(&mut app, owner());
 
         app.update_block(next_block); // Start Voting
-        let set_whitelist_only_in_pending = contract.set_whitelist(&mut app, owner()).unwrap_err();
-        assert_eq!(
-            // 注册之后不能再进行注册
-            ContractError::PeriodError {},
-            set_whitelist_only_in_pending.downcast().unwrap()
-        );
+                                      // let set_whitelist_only_in_pending = contract.set_whitelist(&mut app, owner()).unwrap_err();
+                                      // assert_eq!(
+                                      //     // 注册之后不能再进行注册
+                                      //     ContractError::PeriodError {},
+                                      //     set_whitelist_only_in_pending.downcast().unwrap()
+                                      // );
         let set_vote_option_map_error =
             contract.set_vote_option_map(&mut app, owner()).unwrap_err();
         assert_eq!(
@@ -1201,7 +1252,13 @@ mod test {
                 };
 
                 println!("---------- signup ---------- {:?}", i);
-                let _ = contract.sign_up(&mut app, Addr::unchecked(i.to_string()), pubkey);
+                let _ = contract.sign_up(
+                    &mut app,
+                    Addr::unchecked(i.to_string()),
+                    pubkey,
+                    match_user_certificate(i).amount,
+                    match_user_certificate(i).certificate,
+                );
             }
             let message = MessageData {
                 data: [
@@ -1227,11 +1284,12 @@ mod test {
                 &mut app,
                 Addr::unchecked(0.to_string()),
                 test_pubkey.clone(),
+                match_user_certificate(0).amount,
+                match_user_certificate(0).certificate,
             )
             .unwrap_err();
         assert_eq!(
-            // 注册之后不能再进行注册
-            ContractError::Unauthorized {},
+            ContractError::AlreadySignedUp {},
             sign_up_after_voting_end_error.downcast().unwrap()
         );
 
@@ -1253,6 +1311,8 @@ mod test {
                 &mut app,
                 Addr::unchecked(3.to_string()),
                 test_pubkey.clone(),
+                match_user_certificate(0).amount,
+                match_user_certificate(0).certificate,
             )
             .unwrap_err();
         assert_eq!(
@@ -1400,7 +1460,7 @@ mod test {
         let code_id = MaciCodeId::store_code(&mut app);
         let label = "Group";
         let contract = code_id
-            .instantiate_with_voting_time_plonk(&mut app, owner(), user1(), user2(), label)
+            .instantiate_with_voting_time_plonk(&mut app, owner(), label)
             .unwrap();
 
         let start_voting_error = contract.start_voting(&mut app, owner()).unwrap_err();
@@ -1442,6 +1502,8 @@ mod test {
                 &mut app,
                 Addr::unchecked(0.to_string()),
                 test_pubkey.clone(),
+                match_user_certificate(0).amount,
+                match_user_certificate(0).certificate,
             )
             .unwrap_err();
         assert_eq!(
@@ -1452,12 +1514,12 @@ mod test {
         _ = contract.set_vote_option_map(&mut app, owner());
 
         app.update_block(next_block); // Start Voting
-        let set_whitelist_only_in_pending = contract.set_whitelist(&mut app, owner()).unwrap_err();
-        assert_eq!(
-            // 注册之后不能再进行注册
-            ContractError::PeriodError {},
-            set_whitelist_only_in_pending.downcast().unwrap()
-        );
+                                      // let set_whitelist_only_in_pending = contract.set_whitelist(&mut app, owner()).unwrap_err();
+                                      // assert_eq!(
+                                      //     // 注册之后不能再进行注册
+                                      //     ContractError::PeriodError {},
+                                      //     set_whitelist_only_in_pending.downcast().unwrap()
+                                      // );
         let set_vote_option_map_error =
             contract.set_vote_option_map(&mut app, owner()).unwrap_err();
         assert_eq!(
@@ -1485,7 +1547,13 @@ mod test {
                 };
 
                 println!("---------- signup ---------- {:?}", i);
-                let _ = contract.sign_up(&mut app, Addr::unchecked(i.to_string()), pubkey);
+                let _ = contract.sign_up(
+                    &mut app,
+                    Addr::unchecked(i.to_string()),
+                    pubkey,
+                    match_user_certificate(i).amount,
+                    match_user_certificate(i).certificate,
+                );
             }
             let message = MessageData {
                 data: [
@@ -1511,11 +1579,13 @@ mod test {
                 &mut app,
                 Addr::unchecked(0.to_string()),
                 test_pubkey.clone(),
+                match_user_certificate(0).amount,
+                match_user_certificate(0).certificate,
             )
             .unwrap_err();
         assert_eq!(
             // 注册之后不能再进行注册
-            ContractError::Unauthorized {},
+            ContractError::AlreadySignedUp {},
             sign_up_after_voting_end_error.downcast().unwrap()
         );
 
@@ -1537,6 +1607,8 @@ mod test {
                 &mut app,
                 Addr::unchecked(3.to_string()),
                 test_pubkey.clone(),
+                match_user_certificate(0).amount,
+                match_user_certificate(0).certificate,
             )
             .unwrap_err();
         assert_eq!(
@@ -1714,109 +1786,46 @@ mod test {
         );
     }
 
-    // #[test]
-    // fn instantiate_with_voting_time_and_test_grant_should_works() {
-    //     let admin_coin_amount = 50u128;
-    //     let bond_coin_amount = 10u128;
-    //     const DORA_DEMON: &str = "peaka";
+    #[test]
+    fn test_voting_power_calculation() {
+        let slope = whitelist_slope();
 
-    //     let msg_file_path = "./src/test/msg_test.json";
-
-    //     let mut msg_file = fs::File::open(msg_file_path).expect("Failed to open file");
-    //     let mut msg_content = String::new();
-
-    //     msg_file
-    //         .read_to_string(&mut msg_content)
-    //         .expect("Failed to read file");
-
-    //     let data: MsgData = serde_json::from_str(&msg_content).expect("Failed to parse JSON");
-
-    //     let mut app = AppBuilder::default()
-    //         .with_stargate(StargateAccepting)
-    //         .build(|router, _api, storage| {
-    //             router
-    //                 .bank
-    //                 .init_balance(storage, &owner(), coins(admin_coin_amount, DORA_DEMON))
-    //                 .unwrap();
-    //         });
-
-    //     let code_id = MaciCodeId::store_code(&mut app);
-    //     let label = "Group";
-    //     let contract = code_id
-    //         .instantiate_with_voting_time_and_no_whitelist(&mut app, owner(), label)
-    //         .unwrap();
-
-    //     _ = contract.set_vote_option_map(&mut app, owner());
-    //     let new_vote_option_map = contract.vote_option_map(&app).unwrap();
-    //     assert_eq!(
-    //         new_vote_option_map,
-    //         vec![
-    //             String::from("did_not_vote"),
-    //             String::from("yes"),
-    //             String::from("no"),
-    //             String::from("no_with_veto"),
-    //             String::from("abstain"),
-    //         ]
-    //     );
-    //     _ = contract.set_whitelist(&mut app, owner());
-
-    //     let error_grant_in_pending = contract
-    //         .grant(&mut app, owner(), &coins(bond_coin_amount, DORA_DEMON))
-    //         .unwrap_err();
-    //     assert_eq!(
-    //         ContractError::PeriodError {},
-    //         error_grant_in_pending.downcast().unwrap()
-    //     );
-
-    //     _ = contract.set_vote_option_map(&mut app, owner());
-
-    //     app.update_block(next_block); // Start Voting
-
-    //     let a = contract.grant(&mut app, owner(), &coins(bond_coin_amount, DORA_DEMON));
-    //     println!("grant res: {:?}", a);
-    //     let feegrant_amount = contract.query_total_feegrant(&app).unwrap();
-    //     assert_eq!(Uint128::from(10000000000000u128), feegrant_amount);
-
-    //     for i in 0..data.msgs.len() {
-    //         if i < Uint256::from_u128(2u128).to_string().parse().unwrap() {
-    //             let pubkey = PubKey {
-    //                 x: uint256_from_decimal_string(&data.current_state_leaves[i][0]),
-    //                 y: uint256_from_decimal_string(&data.current_state_leaves[i][1]),
-    //             };
-
-    //             println!("---------- signup ---------- {:?}", i);
-    //             let _ = contract.sign_up(&mut app, Addr::unchecked(i.to_string()), pubkey);
-    //         }
-    //         let message = MessageData {
-    //             data: [
-    //                 uint256_from_decimal_string(&data.msgs[i][0]),
-    //                 uint256_from_decimal_string(&data.msgs[i][1]),
-    //                 uint256_from_decimal_string(&data.msgs[i][2]),
-    //                 uint256_from_decimal_string(&data.msgs[i][3]),
-    //                 uint256_from_decimal_string(&data.msgs[i][4]),
-    //                 uint256_from_decimal_string(&data.msgs[i][5]),
-    //                 uint256_from_decimal_string(&data.msgs[i][6]),
-    //             ],
-    //         };
-
-    //         let enc_pub = PubKey {
-    //             x: uint256_from_decimal_string(&data.enc_pub_keys[i][0]),
-    //             y: uint256_from_decimal_string(&data.enc_pub_keys[i][1]),
-    //         };
-    //         _ = contract.publish_message(&mut app, user2(), message, enc_pub);
-    //     }
-
-    //     assert_eq!(
-    //         contract.num_sign_up(&app).unwrap(),
-    //         Uint256::from_u128(2u128)
-    //     );
-
-    //     assert_eq!(
-    //         contract.msg_length(&app).unwrap(),
-    //         Uint256::from_u128(3u128)
-    //     );
-
-    //     // Stop Voting Period
-    //     app.update_block(next_block);
-    // }
+        assert_eq!(slope, Uint256::from_u128(1000000u128));
+        // 1 ATOM = 1 VC
+        assert_eq!(
+            Uint256::from_u128(1000000u128) / slope,
+            Uint256::from_u128(1u128)
+        );
+        // 1.2 ATOM = 1 VC
+        assert_eq!(
+            Uint256::from_u128(1200000u128) / slope,
+            Uint256::from_u128(1u128)
+        );
+        // 3 ATOM = 3 VC
+        assert_eq!(
+            Uint256::from_u128(3000000u128) / slope,
+            Uint256::from_u128(3u128)
+        );
+        // 0.3 ATOM = 0 VC
+        assert_eq!(
+            Uint256::from_u128(300000u128) / slope,
+            Uint256::from_u128(0u128)
+        );
+        // 0.9 ATOM = 0 VC
+        assert_eq!(
+            Uint256::from_u128(900000u128) / slope,
+            Uint256::from_u128(0u128)
+        );
+        // 1.9 ATOM = 1 VC
+        assert_eq!(
+            Uint256::from_u128(1900000u128) / slope,
+            Uint256::from_u128(1u128)
+        );
+        // 19000000000000000.099000 ATOM = 19000000000000000 VC
+        assert_eq!(
+            Uint256::from_u128(19000000000000000099000u128) / slope,
+            Uint256::from_u128(19000000000000000u128)
+        );
+        assert_eq!(Uint256::from_u128(0u128) / slope, Uint256::from_u128(0u128));
+    }
 }

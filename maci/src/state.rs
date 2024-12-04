@@ -1,6 +1,6 @@
 use crate::utils::hash5;
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, Timestamp, Uint128, Uint256};
+use cosmwasm_std::{Addr, Binary, Timestamp, Uint128, Uint256};
 use cw_storage_plus::{Item, Map};
 
 #[cw_serde]
@@ -279,6 +279,18 @@ pub struct PlonkVkeyStr {
 
 pub const PLONK_PROCESS_VKEYS: Item<PlonkVkeyStr> = Item::new("plonk_process_vkeys");
 pub const PLONK_TALLY_VKEYS: Item<PlonkVkeyStr> = Item::new("plonk_tally_vkeys");
+
+pub const WHITELIST_BACKEND_PUBKEY: Item<Binary> = Item::new("whitelist_backend_pubkey");
+pub const WHITELIST_ECOSYSTEM: Item<String> = Item::new("whitelist_ecosystem");
+pub const WHITELIST_SNAPSHOT_HEIGHT: Item<Uint256> = Item::new("whitelist_snapshot_height");
+pub const WHITELIST_MODE: Item<Uint256> = Item::new("whitelist_mode");
+
+#[cw_serde]
+pub struct VotingPowerConfig {
+    pub slope: Uint256,
+}
+
+pub const VOTING_POWER_CONFIG: Item<VotingPowerConfig> = Item::new("voting_power_config");
 
 #[cfg(test)]
 mod tests {

@@ -29,9 +29,14 @@ pub struct InstantiateMsg {
 
     pub round_info: RoundInfo,
     pub voting_time: Option<VotingTime>,
-    pub whitelist: Option<Whitelist>,
+    // pub whitelist: Option<Whitelist>,
     pub circuit_type: Uint256,         // <0: 1p1v | 1: pv>
     pub certification_system: Uint256, // <0: groth16 | 1: plonk>
+
+    pub whitelist_backend_pubkey: String,
+    pub whitelist_ecosystem: String,
+    pub whitelist_snapshot_height: Uint256,
+    pub whitelist_slope: Uint256,
 }
 
 #[cw_serde]
@@ -91,15 +96,17 @@ pub enum ExecuteMsg {
     SetRoundInfo {
         round_info: RoundInfo,
     },
-    SetWhitelists {
-        whitelists: Whitelist,
-    },
+    // SetWhitelists {
+    //     whitelists: Whitelist,
+    // },
     SetVoteOptionsMap {
         vote_option_map: Vec<String>,
     },
     StartVotingPeriod {},
     SignUp {
         pubkey: PubKey, // user's pubkey
+        amount: Uint256,
+        certificate: String,
     },
     StartProcessPeriod {},
     StopVotingPeriod {},
