@@ -280,17 +280,20 @@ pub struct PlonkVkeyStr {
 pub const PLONK_PROCESS_VKEYS: Item<PlonkVkeyStr> = Item::new("plonk_process_vkeys");
 pub const PLONK_TALLY_VKEYS: Item<PlonkVkeyStr> = Item::new("plonk_tally_vkeys");
 
-pub const WHITELIST_BACKEND_PUBKEY: Item<Binary> = Item::new("whitelist_backend_pubkey");
-pub const WHITELIST_ECOSYSTEM: Item<String> = Item::new("whitelist_ecosystem");
-pub const WHITELIST_SNAPSHOT_HEIGHT: Item<Uint256> = Item::new("whitelist_snapshot_height");
-pub const WHITELIST_MODE: Item<Uint256> = Item::new("whitelist_mode");
+// pub const WHITELIST_BACKEND_PUBKEY: Item<Binary> = Item::new("whitelist_backend_pubkey");
+// pub const WHITELIST_ECOSYSTEM: Item<String> = Item::new("whitelist_ecosystem");
+// pub const WHITELIST_SNAPSHOT_HEIGHT: Item<Uint256> = Item::new("whitelist_snapshot_height");
 
 #[cw_serde]
-pub struct VotingPowerConfig {
+pub struct OracleWhitelistConfig {
+    pub backend_pubkey: Binary,
+    pub ecosystem: String,
+    pub snapshot_height: Uint256,
     pub slope: Uint256,
 }
 
-pub const VOTING_POWER_CONFIG: Item<VotingPowerConfig> = Item::new("voting_power_config");
+pub const ORACLE_WHITELIST_CONFIG: Item<OracleWhitelistConfig> =
+    Item::new("oracle_whitelist_config");
 
 #[cfg(test)]
 mod tests {

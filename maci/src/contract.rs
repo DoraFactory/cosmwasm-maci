@@ -5,15 +5,14 @@ use crate::msg::{
 };
 use crate::plonk_parser::{parse_plonk_proof, parse_plonk_vkey};
 use crate::state::{
-    Admin, Groth16ProofStr, Groth16VkeyStr, MessageData, Period, PeriodStatus, PlonkProofStr,
-    PlonkVkeyStr, PubKey, RoundInfo, StateLeaf, VotingPowerConfig, VotingTime, WhitelistConfig,
-    ADMIN, CERTSYSTEM, CIRCUITTYPE, COORDINATORHASH, CURRENT_STATE_COMMITMENT,
+    Admin, Groth16ProofStr, Groth16VkeyStr, MessageData, OracleWhitelistConfig, Period,
+    PeriodStatus, PlonkProofStr, PlonkVkeyStr, PubKey, RoundInfo, StateLeaf, VotingTime,
+    WhitelistConfig, ADMIN, CERTSYSTEM, CIRCUITTYPE, COORDINATORHASH, CURRENT_STATE_COMMITMENT,
     CURRENT_TALLY_COMMITMENT, FEEGRANTS, GROTH16_PROCESS_VKEYS, GROTH16_TALLY_VKEYS, LEAF_IDX_0,
     MACIPARAMETERS, MAX_LEAVES_COUNT, MAX_VOTE_OPTIONS, MAX_WHITELIST_NUM, MSG_CHAIN_LENGTH,
-    MSG_HASHES, NODES, NUMSIGNUPS, PERIOD, PLONK_PROCESS_VKEYS, PLONK_TALLY_VKEYS,
-    PROCESSED_MSG_COUNT, PROCESSED_USER_COUNT, QTR_LIB, RESULT, ROUNDINFO, STATEIDXINC,
-    TOTAL_RESULT, VOICECREDITBALANCE, VOTEOPTIONMAP, VOTINGTIME, VOTING_POWER_CONFIG, WHITELIST,
-    WHITELIST_BACKEND_PUBKEY, WHITELIST_ECOSYSTEM, WHITELIST_SNAPSHOT_HEIGHT, ZEROS,
+    MSG_HASHES, NODES, NUMSIGNUPS, ORACLE_WHITELIST_CONFIG, PERIOD, PLONK_PROCESS_VKEYS,
+    PLONK_TALLY_VKEYS, PROCESSED_MSG_COUNT, PROCESSED_USER_COUNT, QTR_LIB, RESULT, ROUNDINFO,
+    STATEIDXINC, TOTAL_RESULT, VOICECREDITBALANCE, VOTEOPTIONMAP, VOTINGTIME, WHITELIST, ZEROS,
 };
 use sha2::{Digest as ShaDigest, Sha256};
 
@@ -263,9 +262,14 @@ pub fn instantiate(
     }
     let whitelist_backend_pubkey_binary = Binary::from_base64(&msg.whitelist_backend_pubkey)
         .map_err(|_| ContractError::InvalidBase64 {})?;
-    WHITELIST_BACKEND_PUBKEY.save(deps.storage, &whitelist_backend_pubkey_binary)?;
-    WHITELIST_ECOSYSTEM.save(deps.storage, &msg.whitelist_ecosystem)?;
-    WHITELIST_SNAPSHOT_HEIGHT.save(deps.storage, &msg.whitelist_snapshot_height)?;
+
+    let oracle_whitelist_config = OracleWhitelistConfig {
+        backend_pubkey: whitelist_backend_pubkey_binary,
+        ecosystem: msg.whitelist_ecosystem,
+        snapshot_height: msg.whitelist_snapshot_height,
+        slope: msg.whitelist_slope,
+    };
+    ORACLE_WHITELIST_CONFIG.save(deps.storage, &oracle_whitelist_config)?;
 
     // Create a period struct with the initial status set to Voting
     let period = Period {
@@ -274,11 +278,6 @@ pub fn instantiate(
 
     // Save the initial period to storage
     PERIOD.save(deps.storage, &period)?;
-
-    let voting_power_config = VotingPowerConfig {
-        slope: msg.whitelist_slope,
-    };
-    VOTING_POWER_CONFIG.save(deps.storage, &voting_power_config)?;
 
     Ok(Response::default().add_attribute("action", "instantiate"))
 }
@@ -552,9 +551,11 @@ pub fn execute_sign_up(
         check_voting_time(env, None, period.status)?;
     }
 
-    let whitelist_backend_pubkey = WHITELIST_BACKEND_PUBKEY.load(deps.storage)?;
-    let whitelist_ecosystem = WHITELIST_ECOSYSTEM.load(deps.storage)?;
-    let whitelist_snapshot_height = WHITELIST_SNAPSHOT_HEIGHT.load(deps.storage)?;
+    let oracle_whitelist_config = ORACLE_WHITELIST_CONFIG.load(deps.storage)?;
+    let whitelist_snapshot_height = oracle_whitelist_config.snapshot_height;
+    let whitelist_ecosystem = oracle_whitelist_config.ecosystem;
+    let whitelist_slope = oracle_whitelist_config.slope;
+    let whitelist_backend_pubkey = oracle_whitelist_config.backend_pubkey;
     let payload = serde_json::json!({
         "address": info.sender.to_string(),
         "amount": amount.to_string(),
@@ -584,9 +585,7 @@ pub fn execute_sign_up(
         return Err(ContractError::AlreadySignedUp {});
     }
 
-    let voting_power_config = VOTING_POWER_CONFIG.load(deps.storage)?;
-
-    let voting_power = amount / voting_power_config.slope;
+    let voting_power = amount / whitelist_slope;
 
     let mut num_sign_ups = NUMSIGNUPS.load(deps.storage)?;
 
@@ -1740,6 +1739,9 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
         }
         QueryMsg::QueryCertSystem {} => {
             to_json_binary::<Uint256>(&CERTSYSTEM.may_load(deps.storage)?.unwrap_or_default())
+        }
+        QueryMsg::QueryOracleWhitelistConfig {} => {
+            to_json_binary::<OracleWhitelistConfig>(&ORACLE_WHITELIST_CONFIG.load(deps.storage)?)
         }
     }
 }

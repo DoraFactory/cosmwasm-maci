@@ -1,6 +1,6 @@
 use crate::state::{
-    MaciParameters, MessageData, PeriodStatus, PubKey, QuinaryTreeRoot, RoundInfo, VotingTime,
-    WhitelistConfig,
+    MaciParameters, MessageData, OracleWhitelistConfig, PeriodStatus, PubKey, QuinaryTreeRoot,
+    RoundInfo, VotingTime, WhitelistConfig,
 };
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Addr, Uint128, Uint256};
@@ -206,4 +206,7 @@ pub enum QueryMsg {
 
     #[returns(Uint256)]
     QueryCertSystem {},
+
+    #[returns(OracleWhitelistConfig)]
+    QueryOracleWhitelistConfig {},
 }
