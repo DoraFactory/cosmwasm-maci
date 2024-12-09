@@ -853,6 +853,23 @@ impl MaciContract {
         app.wrap()
             .query_wasm_smart(self.addr(), &QueryMsg::QueryTotalFeeGrant {})
     }
+
+    pub fn query_is_whitelist(
+        &self,
+        app: &App,
+        sender: String,
+        amount: Uint256,
+        certificate: String,
+    ) -> StdResult<bool> {
+        app.wrap().query_wasm_smart(
+            self.addr(),
+            &QueryMsg::IsWhiteList {
+                sender,
+                amount,
+                certificate,
+            },
+        )
+    }
 }
 
 impl From<Addr> for MaciContract {

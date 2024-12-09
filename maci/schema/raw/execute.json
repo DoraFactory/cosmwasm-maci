@@ -59,27 +59,6 @@
     {
       "type": "object",
       "required": [
-        "set_whitelists"
-      ],
-      "properties": {
-        "set_whitelists": {
-          "type": "object",
-          "required": [
-            "whitelists"
-          ],
-          "properties": {
-            "whitelists": {
-              "$ref": "#/definitions/Whitelist"
-            }
-          },
-          "additionalProperties": false
-        }
-      },
-      "additionalProperties": false
-    },
-    {
-      "type": "object",
-      "required": [
         "set_vote_options_map"
       ],
       "properties": {
@@ -123,9 +102,17 @@
         "sign_up": {
           "type": "object",
           "required": [
+            "amount",
+            "certificate",
             "pubkey"
           ],
           "properties": {
+            "amount": {
+              "$ref": "#/definitions/Uint256"
+            },
+            "certificate": {
+              "type": "string"
+            },
             "pubkey": {
               "$ref": "#/definitions/PubKey"
             }
@@ -318,11 +305,11 @@
         "grant": {
           "type": "object",
           "required": [
-            "max_amount",
+            "base_amount",
             "whitelists"
           ],
           "properties": {
-            "max_amount": {
+            "base_amount": {
               "$ref": "#/definitions/Uint128"
             },
             "whitelists": {

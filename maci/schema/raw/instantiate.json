@@ -9,7 +9,11 @@
     "max_vote_options",
     "parameters",
     "qtr_lib",
-    "round_info"
+    "round_info",
+    "whitelist_backend_pubkey",
+    "whitelist_ecosystem",
+    "whitelist_slope",
+    "whitelist_snapshot_height"
   ],
   "properties": {
     "certification_system": {
@@ -83,15 +87,17 @@
         }
       ]
     },
-    "whitelist": {
-      "anyOf": [
-        {
-          "$ref": "#/definitions/Whitelist"
-        },
-        {
-          "type": "null"
-        }
-      ]
+    "whitelist_backend_pubkey": {
+      "type": "string"
+    },
+    "whitelist_ecosystem": {
+      "type": "string"
+    },
+    "whitelist_slope": {
+      "$ref": "#/definitions/Uint256"
+    },
+    "whitelist_snapshot_height": {
+      "$ref": "#/definitions/Uint256"
     }
   },
   "additionalProperties": false,
@@ -298,37 +304,6 @@
               "type": "null"
             }
           ]
-        }
-      },
-      "additionalProperties": false
-    },
-    "Whitelist": {
-      "type": "object",
-      "required": [
-        "users"
-      ],
-      "properties": {
-        "users": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/WhitelistBase"
-          }
-        }
-      },
-      "additionalProperties": false
-    },
-    "WhitelistBase": {
-      "type": "object",
-      "required": [
-        "addr",
-        "balance"
-      ],
-      "properties": {
-        "addr": {
-          "type": "string"
-        },
-        "balance": {
-          "$ref": "#/definitions/Uint256"
         }
       },
       "additionalProperties": false

@@ -1244,12 +1244,48 @@ mod test {
             contract.get_period(&app).unwrap()
         );
 
+        let test1_pubkey = PubKey {
+            x: uint256_from_decimal_string(&pubkey_data.pubkeys[1][0]),
+            y: uint256_from_decimal_string(&pubkey_data.pubkeys[1][1]),
+        };
+        let wrong_signature_sign_up = contract
+            .sign_up(
+                &mut app,
+                Addr::unchecked('1'),
+                test1_pubkey,
+                match_user_certificate(0).amount,
+                match_user_certificate(0).certificate,
+            )
+            .unwrap_err();
+        assert_eq!(
+            ContractError::InvalidSignature {},
+            wrong_signature_sign_up.downcast().unwrap()
+        );
+        let not_whitelist = contract
+            .query_is_whitelist(
+                &app,
+                "0".to_string(),
+                match_user_certificate(1).amount,
+                match_user_certificate(1).certificate,
+            )
+            .unwrap();
+        assert_eq!(false, not_whitelist);
+
         for i in 0..data.msgs.len() {
             if i < Uint256::from_u128(2u128).to_string().parse().unwrap() {
                 let pubkey = PubKey {
                     x: uint256_from_decimal_string(&pubkey_data.pubkeys[i][0]),
                     y: uint256_from_decimal_string(&pubkey_data.pubkeys[i][1]),
                 };
+                let is_whitelist = contract
+                    .query_is_whitelist(
+                        &app,
+                        i.to_string(),
+                        match_user_certificate(i).amount,
+                        match_user_certificate(i).certificate,
+                    )
+                    .unwrap();
+                assert_eq!(true, is_whitelist);
 
                 println!("---------- signup ---------- {:?}", i);
                 let _ = contract.sign_up(

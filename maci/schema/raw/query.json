@@ -153,9 +153,17 @@
         "is_white_list": {
           "type": "object",
           "required": [
+            "amount",
+            "certificate",
             "sender"
           ],
           "properties": {
+            "amount": {
+              "$ref": "#/definitions/Uint256"
+            },
+            "certificate": {
+              "type": "string"
+            },
             "sender": {
               "type": "string"
             }
@@ -202,6 +210,19 @@
               "type": "string"
             }
           },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "max_whitelist_num"
+      ],
+      "properties": {
+        "max_whitelist_num": {
+          "type": "object",
           "additionalProperties": false
         }
       },
@@ -266,6 +287,19 @@
       ],
       "properties": {
         "query_cert_system": {
+          "type": "object",
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "query_oracle_whitelist_config"
+      ],
+      "properties": {
+        "query_oracle_whitelist_config": {
           "type": "object",
           "additionalProperties": false
         }

@@ -1510,9 +1510,30 @@ fn execute_withdraw(
         .add_attribute("amount", withdraw_amount.to_string()))
 }
 
-fn can_sign_up(deps: Deps, sender: &str) -> StdResult<bool> {
-    let addr = Addr::unchecked(sender);
-    Ok(WHITELIST.has(deps.storage, &addr))
+fn can_sign_up(deps: Deps, sender: &str, amount: Uint256, certificate: String) -> StdResult<bool> {
+    let oracle_whitelist_config = ORACLE_WHITELIST_CONFIG.load(deps.storage)?;
+    let whitelist_snapshot_height = oracle_whitelist_config.snapshot_height;
+    let whitelist_ecosystem = oracle_whitelist_config.ecosystem;
+    let whitelist_backend_pubkey = oracle_whitelist_config.backend_pubkey;
+    let payload = serde_json::json!({
+        "address": sender.to_string(),
+        "amount": amount.to_string(),
+        "height": whitelist_snapshot_height.to_string(),
+        "ecosystem": whitelist_ecosystem.to_string(),
+    });
+
+    let msg = payload.to_string().into_bytes();
+
+    let hash = Sha256::digest(&msg);
+
+    let certificate_binary = Binary::from_base64(&certificate)?;
+    let verify_result = deps.api.secp256k1_verify(
+        hash.as_ref(),
+        certificate_binary.as_slice(), // 使用解码后的 binary 数据
+        whitelist_backend_pubkey.as_slice(),
+    )?;
+
+    Ok(verify_result)
 }
 
 fn user_balance_of(deps: Deps, sender: &str) -> StdResult<Uint256> {
@@ -1709,9 +1730,11 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
                 .load(deps.storage, index.to_be_bytes().to_vec())
                 .unwrap(),
         ),
-        QueryMsg::IsWhiteList { sender } => {
-            to_json_binary::<bool>(&query_can_sign_up(deps, sender)?)
-        }
+        QueryMsg::IsWhiteList {
+            sender,
+            amount,
+            certificate,
+        } => to_json_binary::<bool>(&query_can_sign_up(deps, sender, amount, certificate)?),
         QueryMsg::WhiteBalanceOf { sender } => {
             to_json_binary::<Uint256>(&query_user_balance_of(deps, sender)?)
         }
@@ -1746,8 +1769,13 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     }
 }
 
-pub fn query_can_sign_up(deps: Deps, sender: String) -> StdResult<bool> {
-    Ok(can_sign_up(deps, &sender)?)
+pub fn query_can_sign_up(
+    deps: Deps,
+    sender: String,
+    amount: Uint256,
+    certificate: String,
+) -> StdResult<bool> {
+    Ok(can_sign_up(deps, &sender, amount, certificate)?)
 }
 
 pub fn query_user_balance_of(deps: Deps, sender: String) -> StdResult<Uint256> {
