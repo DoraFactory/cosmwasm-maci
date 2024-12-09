@@ -870,6 +870,23 @@ impl MaciContract {
             },
         )
     }
+
+    pub fn query_white_balance_of(
+        &self,
+        app: &App,
+        sender: String,
+        amount: Uint256,
+        certificate: String,
+    ) -> StdResult<Uint256> {
+        app.wrap().query_wasm_smart(
+            self.addr(),
+            &QueryMsg::WhiteBalanceOf {
+                sender,
+                amount,
+                certificate,
+            },
+        )
+    }
 }
 
 impl From<Addr> for MaciContract {
@@ -915,6 +932,13 @@ pub fn user2_certificate() -> Certificate {
     Certificate {
         certificate: "WX+mefbste0fmQZyxfuPjKjFmea7bTJALptAtrUlqwcKi780BtWN3vTENsvVUVmd5a0lYJXNJ5Cqyjigj6JzOQ==".to_string(),
         amount: Uint256::from_u128(80000000u128),
+    }
+}
+
+pub fn user2_certificate_before() -> Certificate {
+    Certificate {
+        certificate: "9N+0uBmu7b2Sr2ibC0ViOQ00z7LZwrTJDZmoGit8TScDDzbjXUmOkB4hLKSnLEORX7ITYbeG9409VL3OLCZdag==".to_string(),
+        amount: Uint256::from_u128(100000000u128),
     }
 }
 

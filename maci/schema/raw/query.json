@@ -182,9 +182,17 @@
         "white_balance_of": {
           "type": "object",
           "required": [
+            "amount",
+            "certificate",
             "sender"
           ],
           "properties": {
+            "amount": {
+              "$ref": "#/definitions/Uint256"
+            },
+            "certificate": {
+              "type": "string"
+            },
             "sender": {
               "type": "string"
             }

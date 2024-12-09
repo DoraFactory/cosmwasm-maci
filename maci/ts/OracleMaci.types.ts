@@ -195,6 +195,8 @@ export type QueryMsg = {
   };
 } | {
   white_balance_of: {
+    amount: Uint256;
+    certificate: string;
     sender: string;
   };
 } | {

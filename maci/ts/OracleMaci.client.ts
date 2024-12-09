@@ -40,8 +40,12 @@ export interface OracleMaciReadOnlyInterface {
     sender: string;
   }) => Promise<Boolean>;
   whiteBalanceOf: ({
+    amount,
+    certificate,
     sender
   }: {
+    amount: Uint256;
+    certificate: string;
     sender: string;
   }) => Promise<Uint256>;
   whiteInfo: ({
@@ -164,12 +168,18 @@ export class OracleMaciQueryClient implements OracleMaciReadOnlyInterface {
     });
   };
   whiteBalanceOf = async ({
+    amount,
+    certificate,
     sender
   }: {
+    amount: Uint256;
+    certificate: string;
     sender: string;
   }): Promise<Uint256> => {
     return this.client.queryContractSmart(this.contractAddress, {
       white_balance_of: {
+        amount,
+        certificate,
         sender
       }
     });

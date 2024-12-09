@@ -188,7 +188,11 @@ pub enum QueryMsg {
     },
 
     #[returns(Uint256)]
-    WhiteBalanceOf { sender: String },
+    WhiteBalanceOf {
+        sender: String,
+        amount: Uint256,
+        certificate: String,
+    },
 
     #[returns(WhitelistConfig)]
     WhiteInfo { sender: String },

@@ -4,7 +4,7 @@ mod test {
     use crate::msg::{Groth16ProofType, PlonkProofType};
     use crate::multitest::{
         create_app, match_user_certificate, owner, uint256_from_decimal_string, user1,
-        user1_certificate, user2, whitelist_slope, MaciCodeId,
+        user1_certificate, user2, user2_certificate_before, whitelist_slope, MaciCodeId,
     };
     use crate::state::{MessageData, Period, PeriodStatus, PubKey, RoundInfo};
     use cosmwasm_std::{Addr, Uint256};
@@ -1270,6 +1270,15 @@ mod test {
             )
             .unwrap();
         assert_eq!(false, not_whitelist);
+        let query_user_balance_before_sign_up = contract
+            .query_white_balance_of(
+                &app,
+                "1".to_string(),
+                user2_certificate_before().amount,
+                user2_certificate_before().certificate,
+            )
+            .unwrap();
+        assert_eq!(Uint256::from_u128(100), query_user_balance_before_sign_up);
 
         for i in 0..data.msgs.len() {
             if i < Uint256::from_u128(2u128).to_string().parse().unwrap() {
@@ -1314,6 +1323,16 @@ mod test {
             };
             _ = contract.publish_message(&mut app, user2(), message, enc_pub);
         }
+
+        let query_user_balance_after_sign_up = contract
+            .query_white_balance_of(
+                &app,
+                "1".to_string(),
+                match_user_certificate(1).amount,
+                match_user_certificate(1).certificate,
+            )
+            .unwrap();
+        assert_eq!(Uint256::from_u128(80), query_user_balance_after_sign_up);
 
         let sign_up_after_voting_end_error = contract
             .sign_up(

@@ -1536,14 +1536,46 @@ fn can_sign_up(deps: Deps, sender: &str, amount: Uint256, certificate: String) -
     Ok(verify_result)
 }
 
-fn user_balance_of(deps: Deps, sender: &str) -> StdResult<Uint256> {
+fn user_balance_of(
+    deps: Deps,
+    sender: &str,
+    amount: Uint256,
+    certificate: String,
+) -> StdResult<Uint256> {
     let addr = Addr::unchecked(sender);
-    let mut balance = Uint256::from_u128(0u128);
     if WHITELIST.has(deps.storage, &addr) {
         let cfg = WHITELIST.load(deps.storage, &addr)?;
-        balance = cfg.balance_of();
+        return Ok(cfg.balance_of());
     }
-    Ok(balance)
+
+    let oracle_whitelist_config = ORACLE_WHITELIST_CONFIG.load(deps.storage)?;
+    let whitelist_snapshot_height = oracle_whitelist_config.snapshot_height;
+    let whitelist_ecosystem = oracle_whitelist_config.ecosystem;
+    let whitelist_backend_pubkey = oracle_whitelist_config.backend_pubkey;
+    let whitelist_slope = oracle_whitelist_config.slope;
+    let payload = serde_json::json!({
+        "address": sender.to_string(),
+        "amount": amount.to_string(),
+        "height": whitelist_snapshot_height.to_string(),
+        "ecosystem": whitelist_ecosystem.to_string(),
+    });
+
+    let msg = payload.to_string().into_bytes();
+
+    let hash = Sha256::digest(&msg);
+
+    let certificate_binary = Binary::from_base64(&certificate)?;
+    let verify_result = deps.api.secp256k1_verify(
+        hash.as_ref(),
+        certificate_binary.as_slice(),
+        whitelist_backend_pubkey.as_slice(),
+    )?;
+    if verify_result {
+        let voting_power = amount / whitelist_slope;
+
+        return Ok(voting_power);
+    }
+    Ok(Uint256::zero())
 }
 
 // Load the root node of the state tree
@@ -1735,9 +1767,11 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
             amount,
             certificate,
         } => to_json_binary::<bool>(&query_can_sign_up(deps, sender, amount, certificate)?),
-        QueryMsg::WhiteBalanceOf { sender } => {
-            to_json_binary::<Uint256>(&query_user_balance_of(deps, sender)?)
-        }
+        QueryMsg::WhiteBalanceOf {
+            sender,
+            amount,
+            certificate,
+        } => to_json_binary::<Uint256>(&query_user_balance_of(deps, sender, amount, certificate)?),
         QueryMsg::WhiteInfo { sender } => to_json_binary::<WhitelistConfig>(
             &WHITELIST
                 .load(deps.storage, &Addr::unchecked(sender))
@@ -1778,8 +1812,13 @@ pub fn query_can_sign_up(
     Ok(can_sign_up(deps, &sender, amount, certificate)?)
 }
 
-pub fn query_user_balance_of(deps: Deps, sender: String) -> StdResult<Uint256> {
-    Ok(user_balance_of(deps, &sender)?)
+pub fn query_user_balance_of(
+    deps: Deps,
+    sender: String,
+    amount: Uint256,
+    certificate: String,
+) -> StdResult<Uint256> {
+    Ok(user_balance_of(deps, &sender, amount, certificate)?)
 }
 
 #[cfg(test)]
