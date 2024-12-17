@@ -1,6 +1,6 @@
 use crate::state::{
     MaciParameters, MessageData, OracleWhitelistConfig, PeriodStatus, PubKey, QuinaryTreeRoot,
-    RoundInfo, VotingTime, WhitelistConfig,
+    RoundInfo, VotingPowerMode, VotingTime, WhitelistConfig,
 };
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Addr, Uint128, Uint256};
@@ -14,6 +14,13 @@ pub struct WhitelistBase {
 #[cw_serde]
 pub struct Whitelist {
     pub users: Vec<WhitelistBase>,
+}
+
+#[cw_serde]
+pub struct VotingPowerArgs {
+    pub mode: VotingPowerMode,
+    pub slope: Uint256,
+    pub threshold: Uint256,
 }
 
 #[cw_serde]
@@ -36,7 +43,7 @@ pub struct InstantiateMsg {
     pub whitelist_backend_pubkey: String,
     pub whitelist_ecosystem: String,
     pub whitelist_snapshot_height: Uint256,
-    pub whitelist_slope: Uint256,
+    pub whitelist_voting_power_args: VotingPowerArgs,
 }
 
 #[cw_serde]
@@ -131,10 +138,10 @@ pub enum ExecuteMsg {
     },
     Grant {
         base_amount: Uint128,
-        whitelists: Whitelist,
+        grantee: Addr,
     },
     Revoke {
-        whitelists: Whitelist,
+        grantee: Addr,
     },
     Bond {},
     Withdraw {

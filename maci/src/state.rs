@@ -285,11 +285,26 @@ pub const PLONK_TALLY_VKEYS: Item<PlonkVkeyStr> = Item::new("plonk_tally_vkeys")
 // pub const WHITELIST_SNAPSHOT_HEIGHT: Item<Uint256> = Item::new("whitelist_snapshot_height");
 
 #[cw_serde]
+pub enum VotingPowerMode {
+    Slope, // amount/slope
+    Threshold,
+}
+
+#[cw_serde]
+pub struct VotingPowerConfig {
+    pub mode: VotingPowerMode,
+    pub slope: Uint256,
+    pub threshold: Uint256,
+}
+
+#[cw_serde]
 pub struct OracleWhitelistConfig {
     pub backend_pubkey: Binary,
     pub ecosystem: String,
     pub snapshot_height: Uint256,
     pub slope: Uint256,
+    pub voting_power_mode: VotingPowerMode,
+    pub threshold: Uint256,
 }
 
 pub const ORACLE_WHITELIST_CONFIG: Item<OracleWhitelistConfig> =

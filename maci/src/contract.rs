@@ -1,18 +1,17 @@
 use crate::error::ContractError;
 use crate::groth16_parser::{parse_groth16_proof, parse_groth16_vkey};
-use crate::msg::{
-    ExecuteMsg, Groth16ProofType, InstantiateMsg, PlonkProofType, QueryMsg, Whitelist,
-};
+use crate::msg::{ExecuteMsg, Groth16ProofType, InstantiateMsg, PlonkProofType, QueryMsg};
 use crate::plonk_parser::{parse_plonk_proof, parse_plonk_vkey};
 use crate::state::{
     Admin, Groth16ProofStr, Groth16VkeyStr, MessageData, OracleWhitelistConfig, Period,
-    PeriodStatus, PlonkProofStr, PlonkVkeyStr, PubKey, RoundInfo, StateLeaf, VotingTime,
-    WhitelistConfig, ADMIN, CERTSYSTEM, CIRCUITTYPE, COORDINATORHASH, CURRENT_STATE_COMMITMENT,
-    CURRENT_TALLY_COMMITMENT, FEEGRANTS, GROTH16_PROCESS_VKEYS, GROTH16_TALLY_VKEYS, LEAF_IDX_0,
-    MACIPARAMETERS, MAX_LEAVES_COUNT, MAX_VOTE_OPTIONS, MAX_WHITELIST_NUM, MSG_CHAIN_LENGTH,
-    MSG_HASHES, NODES, NUMSIGNUPS, ORACLE_WHITELIST_CONFIG, PERIOD, PLONK_PROCESS_VKEYS,
-    PLONK_TALLY_VKEYS, PROCESSED_MSG_COUNT, PROCESSED_USER_COUNT, QTR_LIB, RESULT, ROUNDINFO,
-    STATEIDXINC, TOTAL_RESULT, VOICECREDITBALANCE, VOTEOPTIONMAP, VOTINGTIME, WHITELIST, ZEROS,
+    PeriodStatus, PlonkProofStr, PlonkVkeyStr, PubKey, RoundInfo, StateLeaf, VotingPowerConfig,
+    VotingPowerMode, VotingTime, WhitelistConfig, ADMIN, CERTSYSTEM, CIRCUITTYPE, COORDINATORHASH,
+    CURRENT_STATE_COMMITMENT, CURRENT_TALLY_COMMITMENT, FEEGRANTS, GROTH16_PROCESS_VKEYS,
+    GROTH16_TALLY_VKEYS, LEAF_IDX_0, MACIPARAMETERS, MAX_LEAVES_COUNT, MAX_VOTE_OPTIONS,
+    MAX_WHITELIST_NUM, MSG_CHAIN_LENGTH, MSG_HASHES, NODES, NUMSIGNUPS, ORACLE_WHITELIST_CONFIG,
+    PERIOD, PLONK_PROCESS_VKEYS, PLONK_TALLY_VKEYS, PROCESSED_MSG_COUNT, PROCESSED_USER_COUNT,
+    QTR_LIB, RESULT, ROUNDINFO, STATEIDXINC, TOTAL_RESULT, VOICECREDITBALANCE, VOTEOPTIONMAP,
+    VOTINGTIME, WHITELIST, ZEROS,
 };
 use sha2::{Digest as ShaDigest, Sha256};
 
@@ -267,7 +266,9 @@ pub fn instantiate(
         backend_pubkey: whitelist_backend_pubkey_binary,
         ecosystem: msg.whitelist_ecosystem,
         snapshot_height: msg.whitelist_snapshot_height,
-        slope: msg.whitelist_slope,
+        voting_power_mode: msg.whitelist_voting_power_args.mode,
+        slope: msg.whitelist_voting_power_args.slope,
+        threshold: msg.whitelist_voting_power_args.threshold,
     };
     ORACLE_WHITELIST_CONFIG.save(deps.storage, &oracle_whitelist_config)?;
 
@@ -355,9 +356,9 @@ pub fn execute(
         }
         ExecuteMsg::Grant {
             base_amount,
-            whitelists,
-        } => execute_grant(deps, env, info, base_amount, whitelists),
-        ExecuteMsg::Revoke { whitelists } => execute_revoke(deps, env, info, whitelists),
+            grantee,
+        } => execute_grant(deps, env, info, base_amount, grantee),
+        ExecuteMsg::Revoke { grantee } => execute_revoke(deps, env, info, grantee),
         ExecuteMsg::Bond {} => execute_bond(deps, env, info),
         ExecuteMsg::Withdraw { amount } => execute_withdraw(deps, env, info, amount),
     }
@@ -554,7 +555,6 @@ pub fn execute_sign_up(
     let oracle_whitelist_config = ORACLE_WHITELIST_CONFIG.load(deps.storage)?;
     let whitelist_snapshot_height = oracle_whitelist_config.snapshot_height;
     let whitelist_ecosystem = oracle_whitelist_config.ecosystem;
-    let whitelist_slope = oracle_whitelist_config.slope;
     let whitelist_backend_pubkey = oracle_whitelist_config.backend_pubkey;
     let payload = serde_json::json!({
         "address": info.sender.to_string(),
@@ -585,7 +585,14 @@ pub fn execute_sign_up(
         return Err(ContractError::AlreadySignedUp {});
     }
 
-    let voting_power = amount / whitelist_slope;
+    let voting_power = calculate_voting_power(
+        amount,
+        &VotingPowerConfig {
+            mode: oracle_whitelist_config.voting_power_mode,
+            slope: oracle_whitelist_config.slope,
+            threshold: oracle_whitelist_config.threshold,
+        },
+    );
 
     let mut num_sign_ups = NUMSIGNUPS.load(deps.storage)?;
 
@@ -1316,7 +1323,7 @@ fn execute_grant(
     env: Env,
     info: MessageInfo,
     base_amount: Uint128,
-    whitelists: Whitelist,
+    grantee: Addr,
 ) -> Result<Response, ContractError> {
     // Check if the sender is authorized to execute the function
     if !can_execute(deps.as_ref(), info.sender.as_ref())? {
@@ -1382,42 +1389,43 @@ fn execute_grant(
     };
 
     let mut messages = vec![];
-    let mut update_amount = Uint128::from(0u128);
-    for i in 0..whitelists.users.len() {
-        let addr_str = whitelists.users[i].addr.to_string();
-        let addr = &Addr::unchecked(&addr_str);
-        let mut curr = WHITELIST.load(deps.storage, addr)?;
-        if curr.fee_grant == false {
-            let grant_msg = MsgGrantAllowance {
-                granter: env.contract.address.to_string(),
-                grantee: addr_str.to_string(),
-                allowance: Some(Any {
-                    type_url: AllowedMsgAllowance::TYPE_URL.to_string(),
-                    value: allowed_allowance.encode_to_vec(),
-                }),
-            };
-
-            let message = CosmosMsg::Stargate {
-                type_url: MsgGrantAllowance::TYPE_URL.to_string(),
-                value: grant_msg.encode_to_vec().into(),
-            };
-            messages.push(message);
-
-            update_amount += base_amount;
-            curr.grant(base_amount);
-            WHITELIST.save(deps.storage, addr, &curr)?;
-        }
+    // for i in 0..whitelists.users.len() {
+    // let addr_str = whitelists.users[i].addr.to_string();
+    // let addr = &Addr::unchecked(&addr_str);
+    let mut curr = WHITELIST.load(deps.storage, &grantee)?;
+    if curr.fee_grant == true {
+        return Err(ContractError::AlreadySetFeeGrant {
+            grantee: grantee.to_string(),
+        });
     }
+    let grant_msg = MsgGrantAllowance {
+        granter: env.contract.address.to_string(),
+        grantee: grantee.to_string(),
+        allowance: Some(Any {
+            type_url: AllowedMsgAllowance::TYPE_URL.to_string(),
+            value: allowed_allowance.encode_to_vec(),
+        }),
+    };
 
-    let total_feegrant_amount = feegrants + update_amount;
+    let message = CosmosMsg::Stargate {
+        type_url: MsgGrantAllowance::TYPE_URL.to_string(),
+        value: grant_msg.encode_to_vec().into(),
+    };
+    messages.push(message);
+
+    curr.grant(base_amount);
+    WHITELIST.save(deps.storage, &grantee, &curr)?;
+
+    let total_feegrant_amount = feegrants + base_amount;
     FEEGRANTS.save(deps.storage, &total_feegrant_amount)?;
 
     Ok(Response::default().add_messages(messages).add_attributes([
         ("action", "grant"),
         ("total_amount", total_feegrant_amount.to_string().as_str()),
-        ("update_amount", update_amount.to_string().as_str()),
+        ("update_amount", base_amount.to_string().as_str()),
         ("base_amount", base_amount.to_string().as_str()),
         ("bond_amount", amount.to_string().as_str()),
+        ("grantee", grantee.to_string().as_str()),
     ]))
 }
 
@@ -1425,7 +1433,7 @@ fn execute_revoke(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
-    whitelists: Whitelist,
+    grantee: Addr,
 ) -> Result<Response, ContractError> {
     // Check if the sender is authorized to execute the function
     if !can_execute(deps.as_ref(), info.sender.as_ref())? {
@@ -1433,28 +1441,20 @@ fn execute_revoke(
     }
 
     let mut messages = vec![];
-    // let mut update_amount = Uint128::from(0u128);
-    for i in 0..whitelists.users.len() {
-        let addr_str = whitelists.users[i].addr.to_string();
-        let addr = &Addr::unchecked(&addr_str);
-        let mut curr = WHITELIST.load(deps.storage, addr)?;
-        if curr.fee_grant == true {
-            let revoke_msg = MsgRevokeAllowance {
-                granter: env.contract.address.to_string(),
-                grantee: whitelists.users[i].addr.to_string(),
-            };
-            let message = CosmosMsg::Stargate {
-                type_url: MsgRevokeAllowance::TYPE_URL.to_string(),
-                value: revoke_msg.encode_to_vec().into(),
-            };
-            messages.push(message);
-        }
-        curr.revoke();
-        WHITELIST.save(deps.storage, addr, &curr)?;
+    let mut curr = WHITELIST.load(deps.storage, &grantee)?;
+    if curr.fee_grant == true {
+        let revoke_msg = MsgRevokeAllowance {
+            granter: env.contract.address.to_string(),
+            grantee: grantee.to_string(),
+        };
+        let message = CosmosMsg::Stargate {
+            type_url: MsgRevokeAllowance::TYPE_URL.to_string(),
+            value: revoke_msg.encode_to_vec().into(),
+        };
+        messages.push(message);
     }
-
-    // let total_feegrant_amount = feegrants + update_amount;
-    // FEEGRANTS.save(deps.storage, &total_feegrant_amount)?;
+    curr.revoke();
+    WHITELIST.save(deps.storage, &grantee, &curr)?;
 
     Ok(Response::default()
         .add_messages(messages)
@@ -1552,7 +1552,6 @@ fn user_balance_of(
     let whitelist_snapshot_height = oracle_whitelist_config.snapshot_height;
     let whitelist_ecosystem = oracle_whitelist_config.ecosystem;
     let whitelist_backend_pubkey = oracle_whitelist_config.backend_pubkey;
-    let whitelist_slope = oracle_whitelist_config.slope;
     let payload = serde_json::json!({
         "address": sender.to_string(),
         "amount": amount.to_string(),
@@ -1571,8 +1570,14 @@ fn user_balance_of(
         whitelist_backend_pubkey.as_slice(),
     )?;
     if verify_result {
-        let voting_power = amount / whitelist_slope;
-
+        let voting_power = calculate_voting_power(
+            amount,
+            &VotingPowerConfig {
+                mode: oracle_whitelist_config.voting_power_mode,
+                slope: oracle_whitelist_config.slope,
+                threshold: oracle_whitelist_config.threshold,
+            },
+        );
         return Ok(voting_power);
     }
     Ok(Uint256::zero())
@@ -1663,6 +1668,19 @@ fn state_update_at(deps: &mut DepsMut, index: Uint256, full: bool) -> Result<boo
     }
 
     Ok(true)
+}
+
+fn calculate_voting_power(amount: Uint256, config: &VotingPowerConfig) -> Uint256 {
+    match config.mode {
+        VotingPowerMode::Slope => amount / config.slope,
+        VotingPowerMode::Threshold => {
+            if amount >= config.threshold {
+                Uint256::from(1u128)
+            } else {
+                Uint256::zero()
+            }
+        }
+    }
 }
 
 fn check_voting_time(

@@ -86,4 +86,7 @@ pub enum ContractError {
 
     #[error("Already signed up")]
     AlreadySignedUp {},
+
+    #[error("This account({grantee}) already set fee grant")]
+    AlreadySetFeeGrant { grantee: String },
 }

@@ -5,7 +5,8 @@ use anyhow::Result as AnyResult;
 
 use crate::msg::Groth16VKeyType;
 use crate::state::{
-    MaciParameters, MessageData, Period, PubKey, QuinaryTreeRoot, RoundInfo, VotingTime,
+    MaciParameters, MessageData, Period, PubKey, QuinaryTreeRoot, RoundInfo, VotingPowerMode,
+    VotingTime,
 };
 use crate::utils::uint256_from_hex_string;
 use crate::{
@@ -388,7 +389,11 @@ impl MaciContract {
                             whitelist_backend_pubkey: whitelist_pubkey(),
                             whitelist_ecosystem: whitelist_ecosystem(),
                             whitelist_snapshot_height: whitelist_snapshot_height(),
-                            whitelist_slope: whitelist_slope(),
+                            whitelist_voting_power_args: VotingPowerArgs {
+                                mode: whitelist_voting_power_mode(),
+                                slope: whitelist_slope(),
+                                threshold: whitelist_threshold()
+                            },
         };
 
         app.instantiate_contract(
@@ -523,7 +528,11 @@ impl MaciContract {
                                 whitelist_backend_pubkey: whitelist_pubkey(),
                                 whitelist_ecosystem: whitelist_ecosystem(),
                                 whitelist_snapshot_height: whitelist_snapshot_height(),
-                                whitelist_slope: whitelist_slope(),
+                                whitelist_voting_power_args: VotingPowerArgs {
+                                    mode: whitelist_voting_power_mode(),
+                                    slope: whitelist_slope(),
+                                    threshold: whitelist_threshold()
+                                },
         };
 
         app.instantiate_contract(
@@ -956,4 +965,12 @@ pub fn whitelist_snapshot_height() -> Uint256 {
 
 pub fn whitelist_slope() -> Uint256 {
     Uint256::from_u128(1000000u128)
+}
+
+pub fn whitelist_threshold() -> Uint256 {
+    Uint256::from_u128(1000000u128)
+}
+
+pub fn whitelist_voting_power_mode() -> VotingPowerMode {
+    VotingPowerMode::Slope
 }
