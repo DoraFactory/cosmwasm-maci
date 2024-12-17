@@ -7,6 +7,7 @@
 export type Uint256 = string;
 export type Timestamp = Uint64;
 export type Uint64 = string;
+export type VotingPowerMode = "slope" | "threshold";
 export interface InstantiateMsg {
   certification_system: Uint256;
   circuit_type: Uint256;
@@ -22,8 +23,8 @@ export interface InstantiateMsg {
   voting_time?: VotingTime | null;
   whitelist_backend_pubkey: string;
   whitelist_ecosystem: string;
-  whitelist_slope: Uint256;
   whitelist_snapshot_height: Uint256;
+  whitelist_voting_power_args: VotingPowerArgs;
 }
 export interface PubKey {
   x: Uint256;
@@ -63,6 +64,11 @@ export interface RoundInfo {
 export interface VotingTime {
   end_time?: Timestamp | null;
   start_time?: Timestamp | null;
+}
+export interface VotingPowerArgs {
+  mode: VotingPowerMode;
+  slope: Uint256;
+  threshold: Uint256;
 }
 export type ExecuteMsg = {
   set_params: {
@@ -118,11 +124,11 @@ export type ExecuteMsg = {
 } | {
   grant: {
     base_amount: Uint128;
-    whitelists: Whitelist;
+    grantee: Addr;
   };
 } | {
   revoke: {
-    whitelists: Whitelist;
+    grantee: Addr;
   };
 } | {
   bond: {};
@@ -132,6 +138,7 @@ export type ExecuteMsg = {
   };
 };
 export type Uint128 = string;
+export type Addr = string;
 export interface MessageData {
   data: [Uint256, Uint256, Uint256, Uint256, Uint256, Uint256, Uint256];
 }
@@ -155,13 +162,6 @@ export interface PlonkProofType {
   wire_commitments: string[];
   wire_values_at_z: string[];
   wire_values_at_z_omega: string[];
-}
-export interface Whitelist {
-  users: WhitelistBase[];
-}
-export interface WhitelistBase {
-  addr: string;
-  balance: Uint256;
 }
 export type QueryMsg = {
   get_round_info: {};
@@ -218,7 +218,6 @@ export type QueryMsg = {
 } | {
   query_oracle_whitelist_config: {};
 };
-export type Addr = string;
 export type PeriodStatus = "pending" | "voting" | "processing" | "tallying" | "ended";
 export interface Period {
   status: PeriodStatus;
@@ -230,6 +229,8 @@ export interface OracleWhitelistConfig {
   ecosystem: string;
   slope: Uint256;
   snapshot_height: Uint256;
+  threshold: Uint256;
+  voting_power_mode: VotingPowerMode;
 }
 export type ArrayOfString = string[];
 export interface WhitelistConfig {

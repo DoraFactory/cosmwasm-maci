@@ -6,7 +6,7 @@
 
 import { CosmWasmClient, SigningCosmWasmClient, ExecuteResult } from "@cosmjs/cosmwasm-stargate";
 import { Coin, StdFee } from "@cosmjs/amino";
-import { Uint256, Timestamp, Uint64, InstantiateMsg, PubKey, Groth16VKeyType, MaciParameters, PlonkVKeyType, QuinaryTreeRoot, RoundInfo, VotingTime, ExecuteMsg, Uint128, MessageData, Groth16ProofType, PlonkProofType, Whitelist, WhitelistBase, QueryMsg, Addr, PeriodStatus, Period, Boolean, Binary, OracleWhitelistConfig, ArrayOfString, WhitelistConfig } from "./OracleMaci.types";
+import { Uint256, Timestamp, Uint64, VotingPowerMode, InstantiateMsg, PubKey, Groth16VKeyType, MaciParameters, PlonkVKeyType, QuinaryTreeRoot, RoundInfo, VotingTime, VotingPowerArgs, ExecuteMsg, Uint128, Addr, MessageData, Groth16ProofType, PlonkProofType, QueryMsg, PeriodStatus, Period, Boolean, Binary, OracleWhitelistConfig, ArrayOfString, WhitelistConfig } from "./OracleMaci.types";
 export interface OracleMaciReadOnlyInterface {
   contractAddress: string;
   getRoundInfo: () => Promise<RoundInfo>;
@@ -302,15 +302,15 @@ export interface OracleMaciInterface extends OracleMaciReadOnlyInterface {
   }, fee?: number | StdFee | "auto", memo?: string, _funds?: Coin[]) => Promise<ExecuteResult>;
   grant: ({
     baseAmount,
-    whitelists
+    grantee
   }: {
     baseAmount: Uint128;
-    whitelists: Whitelist;
+    grantee: Addr;
   }, fee?: number | StdFee | "auto", memo?: string, _funds?: Coin[]) => Promise<ExecuteResult>;
   revoke: ({
-    whitelists
+    grantee
   }: {
-    whitelists: Whitelist;
+    grantee: Addr;
   }, fee?: number | StdFee | "auto", memo?: string, _funds?: Coin[]) => Promise<ExecuteResult>;
   bond: (fee?: number | StdFee | "auto", memo?: string, _funds?: Coin[]) => Promise<ExecuteResult>;
   withdraw: ({
@@ -488,26 +488,26 @@ export class OracleMaciClient extends OracleMaciQueryClient implements OracleMac
   };
   grant = async ({
     baseAmount,
-    whitelists
+    grantee
   }: {
     baseAmount: Uint128;
-    whitelists: Whitelist;
+    grantee: Addr;
   }, fee: number | StdFee | "auto" = "auto", memo?: string, _funds?: Coin[]): Promise<ExecuteResult> => {
     return await this.client.execute(this.sender, this.contractAddress, {
       grant: {
         base_amount: baseAmount,
-        whitelists
+        grantee
       }
     }, fee, memo, _funds);
   };
   revoke = async ({
-    whitelists
+    grantee
   }: {
-    whitelists: Whitelist;
+    grantee: Addr;
   }, fee: number | StdFee | "auto" = "auto", memo?: string, _funds?: Coin[]): Promise<ExecuteResult> => {
     return await this.client.execute(this.sender, this.contractAddress, {
       revoke: {
-        whitelists
+        grantee
       }
     }, fee, memo, _funds);
   };
