@@ -5,6 +5,7 @@
 */
 
 export type Uint256 = string;
+export type Addr = string;
 export type Timestamp = Uint64;
 export type Uint64 = string;
 export type VotingPowerMode = "slope" | "threshold";
@@ -12,6 +13,7 @@ export interface InstantiateMsg {
   certification_system: Uint256;
   circuit_type: Uint256;
   coordinator: PubKey;
+  feegrant_operator: Addr;
   groth16_process_vkey?: Groth16VKeyType | null;
   groth16_tally_vkey?: Groth16VKeyType | null;
   max_vote_options: Uint256;
@@ -138,7 +140,6 @@ export type ExecuteMsg = {
   };
 };
 export type Uint128 = string;
-export type Addr = string;
 export interface MessageData {
   data: [Uint256, Uint256, Uint256, Uint256, Uint256, Uint256, Uint256];
 }
@@ -204,6 +205,10 @@ export type QueryMsg = {
     sender: string;
   };
 } | {
+  grant_info: {
+    grantee: string;
+  };
+} | {
   max_whitelist_num: {};
 } | {
   vote_option_map: {};
@@ -221,6 +226,10 @@ export type QueryMsg = {
 export type PeriodStatus = "pending" | "voting" | "processing" | "tallying" | "ended";
 export interface Period {
   status: PeriodStatus;
+}
+export interface GrantConfig {
+  fee_amount: Uint128;
+  fee_grant: boolean;
 }
 export type Boolean = boolean;
 export type Binary = string;

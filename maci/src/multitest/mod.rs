@@ -394,6 +394,7 @@ impl MaciContract {
                                 slope: whitelist_slope(),
                                 threshold: whitelist_threshold()
                             },
+                            feegrant_operator: owner()
         };
 
         app.instantiate_contract(
@@ -533,6 +534,7 @@ impl MaciContract {
                                     slope: whitelist_slope(),
                                     threshold: whitelist_threshold()
                                 },
+                                feegrant_operator: owner()
         };
 
         app.instantiate_contract(

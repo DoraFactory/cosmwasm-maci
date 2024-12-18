@@ -226,6 +226,27 @@
     {
       "type": "object",
       "required": [
+        "grant_info"
+      ],
+      "properties": {
+        "grant_info": {
+          "type": "object",
+          "required": [
+            "grantee"
+          ],
+          "properties": {
+            "grantee": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
         "max_whitelist_num"
       ],
       "properties": {

@@ -6,7 +6,7 @@
 
 import { CosmWasmClient, SigningCosmWasmClient, ExecuteResult } from "@cosmjs/cosmwasm-stargate";
 import { Coin, StdFee } from "@cosmjs/amino";
-import { Uint256, Timestamp, Uint64, VotingPowerMode, InstantiateMsg, PubKey, Groth16VKeyType, MaciParameters, PlonkVKeyType, QuinaryTreeRoot, RoundInfo, VotingTime, VotingPowerArgs, ExecuteMsg, Uint128, Addr, MessageData, Groth16ProofType, PlonkProofType, QueryMsg, PeriodStatus, Period, Boolean, Binary, OracleWhitelistConfig, ArrayOfString, WhitelistConfig } from "./OracleMaci.types";
+import { Uint256, Addr, Timestamp, Uint64, VotingPowerMode, InstantiateMsg, PubKey, Groth16VKeyType, MaciParameters, PlonkVKeyType, QuinaryTreeRoot, RoundInfo, VotingTime, VotingPowerArgs, ExecuteMsg, Uint128, MessageData, Groth16ProofType, PlonkProofType, QueryMsg, PeriodStatus, Period, GrantConfig, Boolean, Binary, OracleWhitelistConfig, ArrayOfString, WhitelistConfig } from "./OracleMaci.types";
 export interface OracleMaciReadOnlyInterface {
   contractAddress: string;
   getRoundInfo: () => Promise<RoundInfo>;
@@ -53,6 +53,11 @@ export interface OracleMaciReadOnlyInterface {
   }: {
     sender: string;
   }) => Promise<WhitelistConfig>;
+  grantInfo: ({
+    grantee
+  }: {
+    grantee: string;
+  }) => Promise<GrantConfig>;
   maxWhitelistNum: () => Promise<Uint128>;
   voteOptionMap: () => Promise<ArrayOfString>;
   maxVoteOptions: () => Promise<Uint256>;
@@ -79,6 +84,7 @@ export class OracleMaciQueryClient implements OracleMaciReadOnlyInterface {
     this.isWhiteList = this.isWhiteList.bind(this);
     this.whiteBalanceOf = this.whiteBalanceOf.bind(this);
     this.whiteInfo = this.whiteInfo.bind(this);
+    this.grantInfo = this.grantInfo.bind(this);
     this.maxWhitelistNum = this.maxWhitelistNum.bind(this);
     this.voteOptionMap = this.voteOptionMap.bind(this);
     this.maxVoteOptions = this.maxVoteOptions.bind(this);
@@ -192,6 +198,17 @@ export class OracleMaciQueryClient implements OracleMaciReadOnlyInterface {
     return this.client.queryContractSmart(this.contractAddress, {
       white_info: {
         sender
+      }
+    });
+  };
+  grantInfo = async ({
+    grantee
+  }: {
+    grantee: string;
+  }): Promise<GrantConfig> => {
+    return this.client.queryContractSmart(this.contractAddress, {
+      grant_info: {
+        grantee
       }
     });
   };

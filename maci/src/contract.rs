@@ -3,15 +3,15 @@ use crate::groth16_parser::{parse_groth16_proof, parse_groth16_vkey};
 use crate::msg::{ExecuteMsg, Groth16ProofType, InstantiateMsg, PlonkProofType, QueryMsg};
 use crate::plonk_parser::{parse_plonk_proof, parse_plonk_vkey};
 use crate::state::{
-    Admin, Groth16ProofStr, Groth16VkeyStr, MessageData, OracleWhitelistConfig, Period,
-    PeriodStatus, PlonkProofStr, PlonkVkeyStr, PubKey, RoundInfo, StateLeaf, VotingPowerConfig,
-    VotingPowerMode, VotingTime, WhitelistConfig, ADMIN, CERTSYSTEM, CIRCUITTYPE, COORDINATORHASH,
-    CURRENT_STATE_COMMITMENT, CURRENT_TALLY_COMMITMENT, FEEGRANTS, GROTH16_PROCESS_VKEYS,
-    GROTH16_TALLY_VKEYS, LEAF_IDX_0, MACIPARAMETERS, MAX_LEAVES_COUNT, MAX_VOTE_OPTIONS,
-    MAX_WHITELIST_NUM, MSG_CHAIN_LENGTH, MSG_HASHES, NODES, NUMSIGNUPS, ORACLE_WHITELIST_CONFIG,
-    PERIOD, PLONK_PROCESS_VKEYS, PLONK_TALLY_VKEYS, PROCESSED_MSG_COUNT, PROCESSED_USER_COUNT,
-    QTR_LIB, RESULT, ROUNDINFO, STATEIDXINC, TOTAL_RESULT, VOICECREDITBALANCE, VOTEOPTIONMAP,
-    VOTINGTIME, WHITELIST, ZEROS,
+    Admin, FeeGrantOperator, GrantConfig, Groth16ProofStr, Groth16VkeyStr, MessageData,
+    OracleWhitelistConfig, Period, PeriodStatus, PlonkProofStr, PlonkVkeyStr, PubKey, RoundInfo,
+    StateLeaf, VotingPowerConfig, VotingPowerMode, VotingTime, WhitelistConfig, ADMIN, CERTSYSTEM,
+    CIRCUITTYPE, COORDINATORHASH, CURRENT_STATE_COMMITMENT, CURRENT_TALLY_COMMITMENT,
+    FEEGRANTOPERATOR, FEEGRANTS, GRANTLIST, GROTH16_PROCESS_VKEYS, GROTH16_TALLY_VKEYS, LEAF_IDX_0,
+    MACIPARAMETERS, MAX_LEAVES_COUNT, MAX_VOTE_OPTIONS, MAX_WHITELIST_NUM, MSG_CHAIN_LENGTH,
+    MSG_HASHES, NODES, NUMSIGNUPS, ORACLE_WHITELIST_CONFIG, PERIOD, PLONK_PROCESS_VKEYS,
+    PLONK_TALLY_VKEYS, PROCESSED_MSG_COUNT, PROCESSED_USER_COUNT, QTR_LIB, RESULT, ROUNDINFO,
+    STATEIDXINC, TOTAL_RESULT, VOICECREDITBALANCE, VOTEOPTIONMAP, VOTINGTIME, WHITELIST, ZEROS,
 };
 use sha2::{Digest as ShaDigest, Sha256};
 
@@ -271,6 +271,12 @@ pub fn instantiate(
         threshold: msg.whitelist_voting_power_args.threshold,
     };
     ORACLE_WHITELIST_CONFIG.save(deps.storage, &oracle_whitelist_config)?;
+    FEEGRANTOPERATOR.save(
+        deps.storage,
+        &FeeGrantOperator {
+            operator: msg.feegrant_operator,
+        },
+    )?;
 
     // Create a period struct with the initial status set to Voting
     let period = Period {
@@ -1326,7 +1332,7 @@ fn execute_grant(
     grantee: Addr,
 ) -> Result<Response, ContractError> {
     // Check if the sender is authorized to execute the function
-    if !can_execute(deps.as_ref(), info.sender.as_ref())? {
+    if !is_operator(deps.as_ref(), info.sender.as_ref())? {
         return Err(ContractError::Unauthorized {});
     }
 
@@ -1388,11 +1394,20 @@ fn execute_grant(
         allowed_messages: vec!["/cosmwasm.wasm.v1.MsgExecuteContract".to_string()],
     };
 
-    let mut messages = vec![];
     // for i in 0..whitelists.users.len() {
     // let addr_str = whitelists.users[i].addr.to_string();
     // let addr = &Addr::unchecked(&addr_str);
-    let mut curr = WHITELIST.load(deps.storage, &grantee)?;
+
+    let mut curr;
+    if GRANTLIST.has(deps.storage, &grantee) {
+        curr = GRANTLIST.load(deps.storage, &grantee)?;
+    } else {
+        curr = GrantConfig {
+            fee_amount: Uint128::from(0u128),
+            fee_grant: false,
+        }
+    }
+
     if curr.fee_grant == true {
         return Err(ContractError::AlreadySetFeeGrant {
             grantee: grantee.to_string(),
@@ -1407,6 +1422,7 @@ fn execute_grant(
         }),
     };
 
+    let mut messages = vec![];
     let message = CosmosMsg::Stargate {
         type_url: MsgGrantAllowance::TYPE_URL.to_string(),
         value: grant_msg.encode_to_vec().into(),
@@ -1414,7 +1430,7 @@ fn execute_grant(
     messages.push(message);
 
     curr.grant(base_amount);
-    WHITELIST.save(deps.storage, &grantee, &curr)?;
+    GRANTLIST.save(deps.storage, &grantee, &curr)?;
 
     let total_feegrant_amount = feegrants + base_amount;
     FEEGRANTS.save(deps.storage, &total_feegrant_amount)?;
@@ -1746,6 +1762,18 @@ fn can_execute(deps: Deps, sender: &str) -> StdResult<bool> {
     Ok(can)
 }
 
+// Only operator/admin can execute
+fn is_operator(deps: Deps, sender: &str) -> StdResult<bool> {
+    let admin = ADMIN.load(deps.storage)?;
+    let can_admin = admin.is_admin(&sender);
+
+    let operator = FEEGRANTOPERATOR.load(deps.storage)?;
+    let can_operator = operator.is_operator(&sender);
+
+    let can = can_admin || can_operator;
+    Ok(can)
+}
+
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
@@ -1793,6 +1821,11 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::WhiteInfo { sender } => to_json_binary::<WhitelistConfig>(
             &WHITELIST
                 .load(deps.storage, &Addr::unchecked(sender))
+                .unwrap(),
+        ),
+        QueryMsg::GrantInfo { grantee } => to_json_binary::<GrantConfig>(
+            &GRANTLIST
+                .load(deps.storage, &Addr::unchecked(grantee))
                 .unwrap(),
         ),
         QueryMsg::MaxWhitelistNum {} => to_json_binary::<u128>(

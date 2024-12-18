@@ -35,6 +35,18 @@ impl Admin {
 }
 
 #[cw_serde]
+pub struct FeeGrantOperator {
+    pub operator: Addr,
+}
+
+impl FeeGrantOperator {
+    pub fn is_operator(&self, addr: impl AsRef<str>) -> bool {
+        let addr = addr.as_ref();
+        self.operator.as_ref() == addr
+    }
+}
+
+#[cw_serde]
 pub enum PeriodStatus {
     Pending,
     Voting,
@@ -59,6 +71,7 @@ pub struct MaciParameters {
 pub const STATEIDXINC: Map<&Addr, Uint256> = Map::new("state_idx_inc");
 
 pub const ADMIN: Item<Admin> = Item::new("admin");
+pub const FEEGRANTOPERATOR: Item<FeeGrantOperator> = Item::new("feegrant_operator");
 pub const PERIOD: Item<Period> = Item::new("period");
 pub const MACIPARAMETERS: Item<MaciParameters> = Item::new("maci_param");
 
@@ -309,6 +322,26 @@ pub struct OracleWhitelistConfig {
 
 pub const ORACLE_WHITELIST_CONFIG: Item<OracleWhitelistConfig> =
     Item::new("oracle_whitelist_config");
+
+#[cw_serde]
+pub struct GrantConfig {
+    pub fee_amount: Uint128,
+    pub fee_grant: bool,
+}
+
+impl GrantConfig {
+    pub fn grant(&mut self, amount: Uint128) {
+        self.fee_grant = true;
+        self.fee_amount = amount;
+    }
+
+    pub fn revoke(&mut self) {
+        self.fee_grant = false;
+        self.fee_amount = Uint128::from(0u128);
+    }
+}
+
+pub const GRANTLIST: Map<&Addr, GrantConfig> = Map::new("grantlist");
 
 #[cfg(test)]
 mod tests {
