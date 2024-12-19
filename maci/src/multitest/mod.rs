@@ -914,6 +914,10 @@ pub fn user2() -> Addr {
     Addr::unchecked("1")
 }
 
+pub fn user3() -> Addr {
+    Addr::unchecked("2")
+}
+
 pub fn owner() -> Addr {
     Addr::unchecked("dora1qdagdkg9me4253h9qyvx83sd4gpta6rzh2fa0j")
 }
@@ -950,6 +954,13 @@ pub fn user2_certificate_before() -> Certificate {
     Certificate {
         certificate: "9N+0uBmu7b2Sr2ibC0ViOQ00z7LZwrTJDZmoGit8TScDDzbjXUmOkB4hLKSnLEORX7ITYbeG9409VL3OLCZdag==".to_string(),
         amount: Uint256::from_u128(100000000u128),
+    }
+}
+
+pub fn user3_certificate_before() -> Certificate {
+    Certificate {
+        certificate: "9N+0uBmu7b2Sr2ibC0ViOQ00z7LZwrTJDZmoGit8TScDDzbjXUmOkB4hLKSnLEORX7ITYbeG9409VL3OLCZdag==".to_string(),
+        amount: Uint256::from_u128(0u128),
     }
 }
 

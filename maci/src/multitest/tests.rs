@@ -4,7 +4,8 @@ mod test {
     use crate::msg::{Groth16ProofType, PlonkProofType};
     use crate::multitest::{
         create_app, match_user_certificate, owner, uint256_from_decimal_string, user1,
-        user1_certificate, user2, user2_certificate_before, whitelist_slope, MaciCodeId,
+        user1_certificate, user2, user2_certificate_before, user3, user3_certificate_before,
+        whitelist_slope, MaciCodeId,
     };
     use crate::state::{MessageData, Period, PeriodStatus, PubKey, RoundInfo};
     use cosmwasm_std::{Addr, Uint256};
@@ -1305,6 +1306,26 @@ mod test {
                     match_user_certificate(i).certificate,
                 );
             }
+
+            let test3_pubkey = PubKey {
+                x: uint256_from_decimal_string(&pubkey_data.pubkeys[1][0]),
+                y: uint256_from_decimal_string(&pubkey_data.pubkeys[1][1]),
+            };
+
+            let user3_sign_up_with_zero_amount = contract
+                .sign_up(
+                    &mut app,
+                    user3(),
+                    test3_pubkey,
+                    user3_certificate_before().amount,
+                    user3_certificate_before().certificate,
+                )
+                .unwrap_err();
+
+            assert_eq!(
+                ContractError::AmountIsZero {},
+                user3_sign_up_with_zero_amount.downcast().unwrap()
+            );
             let message = MessageData {
                 data: [
                     uint256_from_decimal_string(&data.msgs[i][0]),

@@ -89,4 +89,10 @@ pub enum ContractError {
 
     #[error("This account({grantee}) already set fee grant")]
     AlreadySetFeeGrant { grantee: String },
+
+    #[error("Amount is zero")]
+    AmountIsZero {},
+
+    #[error("Voting power is zero")]
+    VotingPowerIsZero {},
 }

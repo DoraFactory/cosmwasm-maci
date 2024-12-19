@@ -558,6 +558,10 @@ pub fn execute_sign_up(
         check_voting_time(env, None, period.status)?;
     }
 
+    if amount == Uint256::from_u128(0u128) {
+        return Err(ContractError::AmountIsZero {});
+    }
+
     let oracle_whitelist_config = ORACLE_WHITELIST_CONFIG.load(deps.storage)?;
     let whitelist_snapshot_height = oracle_whitelist_config.snapshot_height;
     let whitelist_ecosystem = oracle_whitelist_config.ecosystem;
@@ -579,7 +583,7 @@ pub fn execute_sign_up(
         .api
         .secp256k1_verify(
             hash.as_ref(),
-            certificate_binary.as_slice(), // 使用解码后的 binary 数据
+            certificate_binary.as_slice(),
             whitelist_backend_pubkey.as_slice(),
         )
         .map_err(|_| ContractError::VerificationFailed {})?;
@@ -599,6 +603,10 @@ pub fn execute_sign_up(
             threshold: oracle_whitelist_config.threshold,
         },
     );
+
+    if voting_power == Uint256::from_u128(0u128) {
+        return Err(ContractError::VotingPowerIsZero {});
+    }
 
     let mut num_sign_ups = NUMSIGNUPS.load(deps.storage)?;
 
