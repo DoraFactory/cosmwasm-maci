@@ -1904,4 +1904,151 @@ mod test {
         );
         assert_eq!(Uint256::from_u128(0u128) / slope, Uint256::from_u128(0u128));
     }
+
+    #[test]
+    fn instantiate_with_voting_time_isqv_with_no_signup_vote_should_works() {
+        let msg_file_path = "./src/test/qv_test/msg.json";
+
+        let mut msg_file = fs::File::open(msg_file_path).expect("Failed to open file");
+        let mut msg_content = String::new();
+
+        msg_file
+            .read_to_string(&mut msg_content)
+            .expect("Failed to read file");
+
+        let data: MsgData = serde_json::from_str(&msg_content).expect("Failed to parse JSON");
+
+        let result_file_path = "./src/test/qv_test/result.json";
+        let mut result_file = fs::File::open(result_file_path).expect("Failed to open file");
+        let mut result_content = String::new();
+        result_file
+            .read_to_string(&mut result_content)
+            .expect("Failed to read file");
+
+        let tally_path = "./src/test/qv_test/tally.json";
+        let mut tally_file = fs::File::open(tally_path).expect("Failed to open file");
+        let mut tally_content = String::new();
+        tally_file
+            .read_to_string(&mut tally_content)
+            .expect("Failed to read file");
+
+        let tally_data: TallyData =
+            serde_json::from_str(&tally_content).expect("Failed to parse JSON");
+
+        let pubkey_file_path = "./src/test/user_pubkey.json";
+
+        let mut pubkey_file = fs::File::open(pubkey_file_path).expect("Failed to open file");
+        let mut pubkey_content = String::new();
+
+        pubkey_file
+            .read_to_string(&mut pubkey_content)
+            .expect("Failed to read file");
+
+        let mut app = create_app();
+        let code_id = MaciCodeId::store_code(&mut app);
+        let label = "Group";
+        let contract = code_id
+            .instantiate_with_voting_time_isqv(&mut app, owner(), label)
+            .unwrap();
+
+        let start_voting_error = contract.start_voting(&mut app, owner()).unwrap_err();
+
+        assert_eq!(
+            ContractError::AlreadySetVotingTime {
+                time_name: String::from("start_time")
+            },
+            start_voting_error.downcast().unwrap()
+        );
+
+        let num_sign_up = contract.num_sign_up(&app).unwrap();
+        assert_eq!(num_sign_up, Uint256::from_u128(0u128));
+
+        let vote_option_map = contract.vote_option_map(&app).unwrap();
+        let max_vote_options = contract.max_vote_options(&app).unwrap();
+        assert_eq!(vote_option_map, vec!["", "", "", "", ""]);
+        assert_eq!(max_vote_options, Uint256::from_u128(5u128));
+        _ = contract.set_vote_option_map(&mut app, owner());
+        let new_vote_option_map = contract.vote_option_map(&app).unwrap();
+        assert_eq!(
+            new_vote_option_map,
+            vec![
+                String::from("did_not_vote"),
+                String::from("yes"),
+                String::from("no"),
+                String::from("no_with_veto"),
+                String::from("abstain"),
+            ]
+        );
+        // assert_eq!(num_sign_up, Uint256::from_u128(0u128));
+
+        let test_pubkey = PubKey {
+            x: uint256_from_decimal_string(&data.current_state_leaves[0][0]),
+            y: uint256_from_decimal_string(&data.current_state_leaves[0][1]),
+        };
+        let sign_up_error = contract
+            .sign_up(
+                &mut app,
+                Addr::unchecked(0.to_string()),
+                test_pubkey.clone(),
+                match_user_certificate(0).amount,
+                match_user_certificate(0).certificate,
+            )
+            .unwrap_err();
+        assert_eq!(
+            ContractError::PeriodError {},
+            sign_up_error.downcast().unwrap()
+        ); // 不能在voting环节之前进行signup
+
+        _ = contract.set_vote_option_map(&mut app, owner());
+
+        app.update_block(next_block); // Start Voting
+        let set_vote_option_map_error =
+            contract.set_vote_option_map(&mut app, owner()).unwrap_err();
+        assert_eq!(
+            ContractError::PeriodError {},
+            set_vote_option_map_error.downcast().unwrap()
+        );
+
+        let error_start_process_in_voting = contract.start_process(&mut app, owner()).unwrap_err();
+        assert_eq!(
+            ContractError::PeriodError {},
+            error_start_process_in_voting.downcast().unwrap()
+        );
+        assert_eq!(
+            Period {
+                status: PeriodStatus::Pending
+            },
+            contract.get_period(&app).unwrap()
+        );
+
+        // Stop Voting Period
+        app.update_block(next_block);
+        let results = vec![
+            Uint256::from_u128(0u128),
+            Uint256::from_u128(0u128),
+            Uint256::from_u128(0u128),
+            Uint256::from_u128(0u128),
+            Uint256::from_u128(0u128),
+        ];
+        let salt = uint256_from_decimal_string(&tally_data.new_results_root_salt);
+        _ = contract.start_process(&mut app, owner());
+        _ = contract.stop_processing(&mut app, owner());
+        _ = contract.stop_tallying(&mut app, owner(), results, salt);
+        let all_result = contract.get_all_result(&app);
+        println!("all_result: {:?}", all_result);
+        let end_period = contract.get_period(&app).unwrap();
+        println!("end_period: {:?}", end_period);
+        // let error_start_process = contract.start_process(&mut app, owner()).unwrap_err();
+        // assert_eq!(
+        //     ContractError::PeriodError {},
+        //     error_start_process.downcast().unwrap()
+        // );
+
+        assert_eq!(
+            Period {
+                status: PeriodStatus::Ended
+            },
+            contract.get_period(&app).unwrap()
+        );
+    }
 }
