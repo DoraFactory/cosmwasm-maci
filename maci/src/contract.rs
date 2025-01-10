@@ -190,6 +190,12 @@ pub fn instantiate(
     let leaf_idx0 = (max_leaves_count - Uint256::from_u128(1u128)) / Uint256::from_u128(4u128);
     LEAF_IDX_0.save(deps.storage, &leaf_idx0)?;
 
+    NODES.save(
+        deps.storage,
+        Uint256::from_u128(0u128).to_be_bytes().to_vec(),
+        &Uint256::from_u128(0u128),
+    )?;
+
     // Define an array of zero values
     let zeros: [Uint256; 8] = [
         uint256_from_hex_string("2066be41bebe6caf7e079360abe14fbf9118c62eabc42e2fe75e342b160a95bc"),
@@ -1237,7 +1243,42 @@ fn execute_stop_tallying_period(
 
     // Load the current tally commitment
     let current_tally_commitment = CURRENT_TALLY_COMMITMENT.load(deps.storage)?;
+    if current_tally_commitment == Uint256::from_u128(0u128) {
+        let mut sum = Uint256::zero();
 
+        // Save the results and calculate the sum
+        for i in 0..results.len() {
+            RESULT.save(
+                deps.storage,
+                Uint256::from_u128(i as u128).to_be_bytes().to_vec(),
+                &results[i],
+            )?;
+            sum += results[i];
+        }
+
+        // Save the total result
+        TOTAL_RESULT.save(deps.storage, &sum)?;
+
+        // Update the period status to Ended
+        let period = Period {
+            status: PeriodStatus::Ended,
+        };
+        PERIOD.save(deps.storage, &period)?;
+
+        return Ok(Response::new()
+            .add_attribute("action", "stop_tallying_period")
+            .add_attribute(
+                "results",
+                format!(
+                    "{:?}",
+                    results
+                        .iter()
+                        .map(|x| x.to_string())
+                        .collect::<Vec<String>>()
+                ),
+            )
+            .add_attribute("all_result", sum.to_string()));
+    }
     // Check that the tally commitment matches the current tally commitment
     assert_eq!(tally_commitment, current_tally_commitment);
 
