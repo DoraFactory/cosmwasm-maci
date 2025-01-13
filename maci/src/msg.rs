@@ -145,6 +145,12 @@ pub enum QueryMsg {
     GetMsgChainLength {},
 
     #[returns(Uint256)]
+    GetProcessedMsgCount {},
+
+    #[returns(Uint256)]
+    GetProcessedUserCount {},
+
+    #[returns(Uint256)]
     GetResult { index: Uint256 },
 
     #[returns(Uint256)]
