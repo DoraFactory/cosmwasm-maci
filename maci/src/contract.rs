@@ -1839,6 +1839,16 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::GetMsgChainLength {} => {
             to_json_binary::<Uint256>(&MSG_CHAIN_LENGTH.may_load(deps.storage)?.unwrap_or_default())
         }
+        QueryMsg::GetProcessedMsgCount {} => to_json_binary::<Uint256>(
+            &PROCESSED_MSG_COUNT
+                .may_load(deps.storage)?
+                .unwrap_or_default(),
+        ),
+        QueryMsg::GetProcessedUserCount {} => to_json_binary::<Uint256>(
+            &PROCESSED_USER_COUNT
+                .may_load(deps.storage)?
+                .unwrap_or_default(),
+        ),
         QueryMsg::GetResult { index } => to_json_binary::<Uint256>(
             &RESULT
                 .may_load(deps.storage, index.to_be_bytes().to_vec())?
