@@ -70,6 +70,32 @@
     {
       "type": "object",
       "required": [
+        "get_processed_msg_count"
+      ],
+      "properties": {
+        "get_processed_msg_count": {
+          "type": "object",
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "get_processed_user_count"
+      ],
+      "properties": {
+        "get_processed_user_count": {
+          "type": "object",
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
         "get_result"
       ],
       "properties": {

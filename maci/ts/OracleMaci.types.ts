@@ -175,6 +175,10 @@ export type QueryMsg = {
 } | {
   get_msg_chain_length: {};
 } | {
+  get_processed_msg_count: {};
+} | {
+  get_processed_user_count: {};
+} | {
   get_result: {
     index: Uint256;
   };
