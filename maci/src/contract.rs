@@ -8,10 +8,11 @@ use crate::state::{
     StateLeaf, VotingPowerConfig, VotingPowerMode, VotingTime, WhitelistConfig, ADMIN, CERTSYSTEM,
     CIRCUITTYPE, COORDINATORHASH, CURRENT_STATE_COMMITMENT, CURRENT_TALLY_COMMITMENT,
     FEEGRANTOPERATOR, FEEGRANTS, GRANTLIST, GROTH16_PROCESS_VKEYS, GROTH16_TALLY_VKEYS, LEAF_IDX_0,
-    MACIPARAMETERS, MAX_LEAVES_COUNT, MAX_VOTE_OPTIONS, MAX_WHITELIST_NUM, MSG_CHAIN_LENGTH,
-    MSG_HASHES, NODES, NUMSIGNUPS, ORACLE_WHITELIST_CONFIG, PERIOD, PLONK_PROCESS_VKEYS,
-    PLONK_TALLY_VKEYS, PROCESSED_MSG_COUNT, PROCESSED_USER_COUNT, QTR_LIB, RESULT, ROUNDINFO,
-    STATEIDXINC, TOTAL_RESULT, VOICECREDITBALANCE, VOTEOPTIONMAP, VOTINGTIME, WHITELIST, ZEROS,
+    MACIPARAMETERS, MACI_OPERATOR, MAX_LEAVES_COUNT, MAX_VOTE_OPTIONS, MAX_WHITELIST_NUM,
+    MSG_CHAIN_LENGTH, MSG_HASHES, NODES, NUMSIGNUPS, ORACLE_WHITELIST_CONFIG, PERIOD,
+    PLONK_PROCESS_VKEYS, PLONK_TALLY_VKEYS, PROCESSED_MSG_COUNT, PROCESSED_USER_COUNT, QTR_LIB,
+    RESULT, ROUNDINFO, STATEIDXINC, TOTAL_RESULT, VOICECREDITBALANCE, VOTEOPTIONMAP, VOTINGTIME,
+    WHITELIST, ZEROS,
 };
 use sha2::{Digest as ShaDigest, Sha256};
 
@@ -805,7 +806,7 @@ pub fn execute_stop_voting_period(
 pub fn execute_start_process_period(
     mut deps: DepsMut,
     env: Env,
-    info: MessageInfo,
+    _info: MessageInfo,
 ) -> Result<Response, ContractError> {
     let period = PERIOD.load(deps.storage)?;
     let voting_time = VOTINGTIME.may_load(deps.storage)?;
@@ -829,36 +830,31 @@ pub fn execute_start_process_period(
         return Err(ContractError::PeriodError {});
     }
 
-    // Check if the sender is authorized to execute the function
-    if !can_execute(deps.as_ref(), info.sender.as_ref())? {
-        Err(ContractError::Unauthorized {})
-    } else {
-        let leaf_idx_0 = LEAF_IDX_0.load(deps.storage)?;
-        let num_sign_ups = NUMSIGNUPS.load(deps.storage)?;
+    let leaf_idx_0 = LEAF_IDX_0.load(deps.storage)?;
+    let num_sign_ups = NUMSIGNUPS.load(deps.storage)?;
 
-        let _ = state_update_at(
-            &mut deps,
-            leaf_idx_0 + num_sign_ups - Uint256::from_u128(1u128),
-            true,
-        );
+    let _ = state_update_at(
+        &mut deps,
+        leaf_idx_0 + num_sign_ups - Uint256::from_u128(1u128),
+        true,
+    );
 
-        // Update the period status to Processing
-        let period = Period {
-            status: PeriodStatus::Processing,
-        };
-        PERIOD.save(deps.storage, &period)?;
-        // Compute the state root
-        let state_root = state_root(deps.as_ref());
+    // Update the period status to Processing
+    let period = Period {
+        status: PeriodStatus::Processing,
+    };
+    PERIOD.save(deps.storage, &period)?;
+    // Compute the state root
+    let state_root = state_root(deps.as_ref());
 
-        // Compute the current state commitment as the hash of the state root and 0
-        CURRENT_STATE_COMMITMENT.save(
-            deps.storage,
-            &hash2([state_root, Uint256::from_u128(0u128)]),
-        )?;
+    // Compute the current state commitment as the hash of the state root and 0
+    CURRENT_STATE_COMMITMENT.save(
+        deps.storage,
+        &hash2([state_root, Uint256::from_u128(0u128)]),
+    )?;
 
-        // Return a success response
-        Ok(Response::new().add_attribute("action", "start_process_period"))
-    }
+    // Return a success response
+    Ok(Response::new().add_attribute("action", "start_process_period"))
 }
 
 pub fn execute_process_message(
@@ -1061,7 +1057,7 @@ pub fn execute_process_message(
 pub fn execute_stop_processing_period(
     deps: DepsMut,
     _env: Env,
-    info: MessageInfo,
+    _info: MessageInfo,
 ) -> Result<Response, ContractError> {
     let period = PERIOD.load(deps.storage)?;
     // Check if the period status is Processing
@@ -1069,20 +1065,22 @@ pub fn execute_stop_processing_period(
         return Err(ContractError::PeriodError {});
     }
 
-    // Check if the sender is authorized to execute the function
-    if !can_execute(deps.as_ref(), info.sender.as_ref())? {
-        Err(ContractError::Unauthorized {})
-    } else {
-        // Update the period status to Tallying
-        let period = Period {
-            status: PeriodStatus::Tallying,
-        };
-        PERIOD.save(deps.storage, &period)?;
+    // Check that all users have not been processed yet
+    let processed_msg_count = PROCESSED_MSG_COUNT.load(deps.storage)?;
+    let msg_chain_length = MSG_CHAIN_LENGTH.load(deps.storage)?;
 
-        Ok(Response::new()
-            .add_attribute("action", "stop_processing_period")
-            .add_attribute("period", "Tallying"))
+    if processed_msg_count != msg_chain_length {
+        return Err(ContractError::MsgLeftProcess {});
     }
+    // Update the period status to Tallying
+    let period = Period {
+        status: PeriodStatus::Tallying,
+    };
+    PERIOD.save(deps.storage, &period)?;
+
+    Ok(Response::new()
+        .add_attribute("action", "stop_processing_period")
+        .add_attribute("period", "Tallying"))
 }
 
 pub fn execute_process_tally(
@@ -1381,7 +1379,7 @@ fn execute_grant(
     grantee: Addr,
 ) -> Result<Response, ContractError> {
     // Check if the sender is authorized to execute the function
-    if !is_operator(deps.as_ref(), info.sender.as_ref())? {
+    if !is_feegrant_operator(deps.as_ref(), info.sender.as_ref())? {
         return Err(ContractError::Unauthorized {});
     }
 
@@ -1811,8 +1809,8 @@ fn can_execute(deps: Deps, sender: &str) -> StdResult<bool> {
     Ok(can)
 }
 
-// Only operator/admin can execute
-fn is_operator(deps: Deps, sender: &str) -> StdResult<bool> {
+// Only feegrant_operator/admin can execute
+fn is_feegrant_operator(deps: Deps, sender: &str) -> StdResult<bool> {
     let admin = ADMIN.load(deps.storage)?;
     let can_admin = admin.is_admin(&sender);
 

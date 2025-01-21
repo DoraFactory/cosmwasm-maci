@@ -15,6 +15,9 @@ pub enum ContractError {
     #[error("PeriodError")]
     PeriodError {},
 
+    #[error("still have messages left to process.")]
+    MsgLeftProcess {},
+
     #[error("Must update from height 0")]
     MustUpdate {},
 

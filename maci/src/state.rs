@@ -75,6 +75,8 @@ pub const FEEGRANTOPERATOR: Item<FeeGrantOperator> = Item::new("feegrant_operato
 pub const PERIOD: Item<Period> = Item::new("period");
 pub const MACIPARAMETERS: Item<MaciParameters> = Item::new("maci_param");
 
+pub const MACI_OPERATOR: Item<Addr> = Item::new("maci_operator");
+
 // the num of signup, the state_key is signupnums.
 pub const NUMSIGNUPS: Item<Uint256> = Item::new("num_sign_ups");
 
