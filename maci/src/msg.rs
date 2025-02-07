@@ -25,18 +25,14 @@ pub struct VotingPowerArgs {
 
 #[cw_serde]
 pub struct InstantiateMsg {
-    pub parameters: MaciParameters,
+    // pub parameters: MaciParameters,
     pub coordinator: PubKey,
-    pub qtr_lib: QuinaryTreeRoot,
-    pub groth16_process_vkey: Option<Groth16VKeyType>,
-    pub groth16_tally_vkey: Option<Groth16VKeyType>,
-    pub plonk_process_vkey: Option<PlonkVKeyType>,
-    pub plonk_tally_vkey: Option<PlonkVKeyType>,
-    pub max_vote_options: Uint256,
+    // pub qtr_lib: QuinaryTreeRoot,
+    // pub max_vote_options: Uint256,
+    pub vote_option_map: Vec<String>,
 
     pub round_info: RoundInfo,
     pub voting_time: Option<VotingTime>,
-    // pub whitelist: Option<Whitelist>,
     pub circuit_type: Uint256,         // <0: 1p1v | 1: pv>
     pub certification_system: Uint256, // <0: groth16 | 1: plonk>
 

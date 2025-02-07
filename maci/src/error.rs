@@ -98,4 +98,13 @@ pub enum ContractError {
 
     #[error("Voting power is zero")]
     VotingPowerIsZero {},
+
+    #[error("Unsupported circuit type")]
+    UnsupportedCircuitType {},
+
+    #[error("Unsupported certification system.")]
+    UnsupportedCertificationSystem {},
+
+    #[error("Invalid vkey")]
+    InvalidVKeyError {},
 }

@@ -1,18 +1,19 @@
+use crate::circuit_params::match_vkeys;
 use crate::error::ContractError;
 use crate::groth16_parser::{parse_groth16_proof, parse_groth16_vkey};
 use crate::msg::{ExecuteMsg, Groth16ProofType, InstantiateMsg, PlonkProofType, QueryMsg};
 use crate::plonk_parser::{parse_plonk_proof, parse_plonk_vkey};
 use crate::state::{
-    Admin, FeeGrantOperator, GrantConfig, Groth16ProofStr, Groth16VkeyStr, MessageData,
-    OracleWhitelistConfig, Period, PeriodStatus, PlonkProofStr, PlonkVkeyStr, PubKey, RoundInfo,
-    StateLeaf, VotingPowerConfig, VotingPowerMode, VotingTime, WhitelistConfig, ADMIN, CERTSYSTEM,
-    CIRCUITTYPE, COORDINATORHASH, CURRENT_STATE_COMMITMENT, CURRENT_TALLY_COMMITMENT,
-    FEEGRANTOPERATOR, FEEGRANTS, GRANTLIST, GROTH16_PROCESS_VKEYS, GROTH16_TALLY_VKEYS, LEAF_IDX_0,
-    MACIPARAMETERS, MACI_OPERATOR, MAX_LEAVES_COUNT, MAX_VOTE_OPTIONS, MAX_WHITELIST_NUM,
-    MSG_CHAIN_LENGTH, MSG_HASHES, NODES, NUMSIGNUPS, ORACLE_WHITELIST_CONFIG, PERIOD,
-    PLONK_PROCESS_VKEYS, PLONK_TALLY_VKEYS, PROCESSED_MSG_COUNT, PROCESSED_USER_COUNT, QTR_LIB,
-    RESULT, ROUNDINFO, STATEIDXINC, TOTAL_RESULT, VOICECREDITBALANCE, VOTEOPTIONMAP, VOTINGTIME,
-    WHITELIST, ZEROS,
+    Admin, FeeGrantOperator, GrantConfig, Groth16ProofStr, Groth16VkeyStr, MaciParameters,
+    MessageData, OracleWhitelistConfig, Period, PeriodStatus, PlonkProofStr, PlonkVkeyStr, PubKey,
+    QuinaryTreeRoot, RoundInfo, StateLeaf, VotingPowerConfig, VotingPowerMode, VotingTime,
+    WhitelistConfig, ADMIN, CERTSYSTEM, CIRCUITTYPE, COORDINATORHASH, CURRENT_STATE_COMMITMENT,
+    CURRENT_TALLY_COMMITMENT, FEEGRANTOPERATOR, FEEGRANTS, GRANTLIST, GROTH16_PROCESS_VKEYS,
+    GROTH16_TALLY_VKEYS, LEAF_IDX_0, MACIPARAMETERS, MACI_OPERATOR, MAX_LEAVES_COUNT,
+    MAX_VOTE_OPTIONS, MAX_WHITELIST_NUM, MSG_CHAIN_LENGTH, MSG_HASHES, NODES, NUMSIGNUPS,
+    ORACLE_WHITELIST_CONFIG, PERIOD, PLONK_PROCESS_VKEYS, PLONK_TALLY_VKEYS, PROCESSED_MSG_COUNT,
+    PROCESSED_USER_COUNT, QTR_LIB, RESULT, ROUNDINFO, STATEIDXINC, TOTAL_RESULT,
+    VOICECREDITBALANCE, VOTEOPTIONMAP, VOTINGTIME, WHITELIST, ZEROS,
 };
 use sha2::{Digest as ShaDigest, Sha256};
 
@@ -61,127 +62,59 @@ pub fn instantiate(
     let admin = Admin { admin: info.sender };
     ADMIN.save(deps.storage, &admin)?;
 
+    let parameters = MaciParameters {
+        state_tree_depth: Uint256::from_u128(9u128),
+        int_state_tree_depth: Uint256::from_u128(4u128),
+        vote_option_tree_depth: Uint256::from_u128(3u128),
+        message_batch_size: Uint256::from_u128(625u128),
+    };
     // Save the MACI parameters to storage
-    MACIPARAMETERS.save(deps.storage, &msg.parameters)?;
+    MACIPARAMETERS.save(deps.storage, &parameters)?;
 
     // Save the qtr_lib value to storage
-    QTR_LIB.save(deps.storage, &msg.qtr_lib)?;
-    CERTSYSTEM.save(deps.storage, &msg.certification_system)?;
+    let qtr_lab = QuinaryTreeRoot {
+        zeros: [
+            Uint256::from_u128(0u128),
+            uint256_from_hex_string(
+                "2066be41bebe6caf7e079360abe14fbf9118c62eabc42e2fe75e342b160a95bc",
+            ),
+            uint256_from_hex_string(
+                "2a956d37d8e73692877b104630a08cc6840036f235f2134b0606769a369d85c1",
+            ),
+            uint256_from_hex_string(
+                "2f9791ba036a4148ff026c074e713a4824415530dec0f0b16c5115aa00e4b825",
+            ),
+            uint256_from_hex_string(
+                "2c41a7294c7ef5c9c5950dc627c55a00adb6712548bcbd6cd8569b1f2e5acc2a",
+            ),
+            uint256_from_hex_string(
+                "2594ba68eb0f314eabbeea1d847374cc2be7965944dec513746606a1f2fadf2e",
+            ),
+            uint256_from_hex_string(
+                "5c697158c9032bfd7041223a7dba696396388129118ae8f867266eb64fe7636",
+            ),
+            uint256_from_hex_string(
+                "272b3425fcc3b2c45015559b9941fde27527aab5226045bf9b0a6c1fe902d601",
+            ),
+            uint256_from_hex_string(
+                "268d82cc07023a1d5e7c987cbd0328b34762c9ea21369bea418f08b71b16846a",
+            ),
+        ],
+    };
+    // Save the qtr_lib value to storage
+    QTR_LIB.save(deps.storage, &qtr_lab)?;
+
+    let vkey = match_vkeys(&msg.circuit_type)?;
 
     if msg.certification_system == Uint256::from_u128(0u128) {
         // groth16
-        if let Some(groth16_process_vkey) = msg.groth16_process_vkey {
-            // Create a process_vkeys struct from the process_vkey in the message
-            let groth16_process_vkeys = Groth16VkeyStr {
-                alpha_1: hex::decode(groth16_process_vkey.vk_alpha1)
-                    .map_err(|_| ContractError::HexDecodingError {})?,
-                beta_2: hex::decode(groth16_process_vkey.vk_beta_2)
-                    .map_err(|_| ContractError::HexDecodingError {})?,
-                gamma_2: hex::decode(groth16_process_vkey.vk_gamma_2)
-                    .map_err(|_| ContractError::HexDecodingError {})?,
-                delta_2: hex::decode(groth16_process_vkey.vk_delta_2)
-                    .map_err(|_| ContractError::HexDecodingError {})?,
-                ic0: hex::decode(groth16_process_vkey.vk_ic0)
-                    .map_err(|_| ContractError::HexDecodingError {})?,
-                ic1: hex::decode(groth16_process_vkey.vk_ic1)
-                    .map_err(|_| ContractError::HexDecodingError {})?,
-            };
-            let _ = parse_groth16_vkey::<Bn256>(groth16_process_vkeys.clone())?;
-            GROTH16_PROCESS_VKEYS.save(deps.storage, &groth16_process_vkeys)?;
-        }
-
-        // Create a tally_vkeys struct from the tally_vkey in the message
-        if let Some(groth16_tally_vkey) = msg.groth16_tally_vkey {
-            // Create a process_vkeys struct from the process_vkey in the message
-            let groth16_tally_vkeys = Groth16VkeyStr {
-                alpha_1: hex::decode(groth16_tally_vkey.vk_alpha1)
-                    .map_err(|_| ContractError::HexDecodingError {})?,
-                beta_2: hex::decode(groth16_tally_vkey.vk_beta_2)
-                    .map_err(|_| ContractError::HexDecodingError {})?,
-                gamma_2: hex::decode(groth16_tally_vkey.vk_gamma_2)
-                    .map_err(|_| ContractError::HexDecodingError {})?,
-                delta_2: hex::decode(groth16_tally_vkey.vk_delta_2)
-                    .map_err(|_| ContractError::HexDecodingError {})?,
-                ic0: hex::decode(groth16_tally_vkey.vk_ic0)
-                    .map_err(|_| ContractError::HexDecodingError {})?,
-                ic1: hex::decode(groth16_tally_vkey.vk_ic1)
-                    .map_err(|_| ContractError::HexDecodingError {})?,
-            };
-            let _ = parse_groth16_vkey::<Bn256>(groth16_tally_vkeys.clone())?;
-            GROTH16_TALLY_VKEYS.save(deps.storage, &groth16_tally_vkeys)?;
-        }
+        GROTH16_PROCESS_VKEYS.save(deps.storage, &vkey.process_vkey)?;
+        GROTH16_TALLY_VKEYS.save(deps.storage, &vkey.tally_vkey)?;
     } else {
-        // plonk
-        if let Some(plonk_process_vkey) = msg.plonk_process_vkey {
-            // Create a process_vkeys struct from the process_vkey in the message
-            let plonk_process_vkeys = PlonkVkeyStr {
-                n: plonk_process_vkey.n,
-                num_inputs: plonk_process_vkey.num_inputs,
-                selector_commitments: plonk_process_vkey
-                    .selector_commitments
-                    .into_iter()
-                    .map(|x| hex::decode(x).unwrap())
-                    .collect(),
-                next_step_selector_commitments: plonk_process_vkey
-                    .next_step_selector_commitments
-                    .into_iter()
-                    .map(|x| hex::decode(x).unwrap())
-                    .collect(),
-                permutation_commitments: plonk_process_vkey
-                    .permutation_commitments
-                    .into_iter()
-                    .map(|x| hex::decode(x).unwrap())
-                    .collect(),
-                non_residues: plonk_process_vkey.non_residues,
-                g2_elements: plonk_process_vkey
-                    .g2_elements
-                    .into_iter()
-                    .map(|x| hex::decode(x).unwrap())
-                    .collect(),
-            };
+        return Err(ContractError::UnsupportedCertificationSystem {});
+    };
 
-            // jsut check the vkey is valid
-            let _ = parse_plonk_vkey::<MBn256, PlonkCsWidth4WithNextStepParams>(
-                plonk_process_vkeys.clone(),
-            )?;
-            PLONK_PROCESS_VKEYS.save(deps.storage, &plonk_process_vkeys)?;
-        }
-
-        if let Some(plonk_tally_vkey) = msg.plonk_tally_vkey {
-            // Create a tally_vkeys struct from the tally_vkey in the message
-            let plonk_tally_vkeys = PlonkVkeyStr {
-                n: plonk_tally_vkey.n,
-                num_inputs: plonk_tally_vkey.num_inputs,
-                selector_commitments: plonk_tally_vkey
-                    .selector_commitments
-                    .into_iter()
-                    .map(|x| hex::decode(x).unwrap())
-                    .collect(),
-                next_step_selector_commitments: plonk_tally_vkey
-                    .next_step_selector_commitments
-                    .into_iter()
-                    .map(|x| hex::decode(x).unwrap())
-                    .collect(),
-                permutation_commitments: plonk_tally_vkey
-                    .permutation_commitments
-                    .into_iter()
-                    .map(|x| hex::decode(x).unwrap())
-                    .collect(),
-                non_residues: plonk_tally_vkey.non_residues,
-                g2_elements: plonk_tally_vkey
-                    .g2_elements
-                    .into_iter()
-                    .map(|x| hex::decode(x).unwrap())
-                    .collect(),
-            };
-
-            // jsut check the vkey is valid
-            let _ = parse_plonk_vkey::<MBn256, PlonkCsWidth4WithNextStepParams>(
-                plonk_tally_vkeys.clone(),
-            )?;
-            PLONK_TALLY_VKEYS.save(deps.storage, &plonk_tally_vkeys)?;
-        }
-    }
+    CERTSYSTEM.save(deps.storage, &msg.certification_system)?;
 
     // Compute the coordinator hash from the coordinator values in the message
     let coordinator_hash = hash2([msg.coordinator.x, msg.coordinator.y]);
@@ -189,7 +122,7 @@ pub fn instantiate(
 
     // Compute the maximum number of leaves based on the state tree depth
     let max_leaves_count =
-        Uint256::from_u128(5u128.pow(msg.parameters.state_tree_depth.to_string().parse().unwrap()));
+        Uint256::from_u128(5u128.pow(parameters.state_tree_depth.to_string().parse().unwrap()));
     MAX_LEAVES_COUNT.save(deps.storage, &max_leaves_count)?;
 
     // Calculate the index of the first leaf in the tree
@@ -239,13 +172,23 @@ pub fn instantiate(
     CURRENT_TALLY_COMMITMENT.save(deps.storage, &Uint256::from_u128(0u128))?;
     PROCESSED_USER_COUNT.save(deps.storage, &Uint256::from_u128(0u128))?;
     NUMSIGNUPS.save(deps.storage, &Uint256::from_u128(0u128))?;
-    MAX_VOTE_OPTIONS.save(deps.storage, &msg.max_vote_options)?;
+    // MAX_VOTE_OPTIONS.save(deps.storage, &msg.max_vote_options)?;
 
-    let mut vote_option_map: Vec<String> = Vec::new();
-    for _ in 0..msg.max_vote_options.to_string().parse().unwrap() {
-        vote_option_map.push(String::new());
-    }
-    VOTEOPTIONMAP.save(deps.storage, &vote_option_map)?;
+    // let mut vote_option_map: Vec<String> = Vec::new();
+    // for _ in 0..msg.max_vote_options.to_string().parse().unwrap() {
+    //     vote_option_map.push(String::new());
+    // }
+
+    let max_vote_options = msg.vote_option_map.len() as u128;
+    VOTEOPTIONMAP.save(deps.storage, &msg.vote_option_map)?;
+    // Save the maximum vote options
+    MAX_VOTE_OPTIONS.save(deps.storage, &Uint256::from_u128(max_vote_options))?;
+    // let res = Response::new()
+    //     .add_attribute("action", "set_vote_option")
+    //     .add_attribute("vote_option_map", format!("{:?}", vote_option_map))
+    //     .add_attribute("max_vote_options", max_vote_options.to_string());
+
+    // VOTEOPTIONMAP.save(deps.storage, &vote_option_map)?;
     ROUNDINFO.save(deps.storage, &msg.round_info)?;
     CIRCUITTYPE.save(deps.storage, &msg.circuit_type)?;
     MAX_WHITELIST_NUM.save(deps.storage, &0u128)?;
