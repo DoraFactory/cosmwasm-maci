@@ -247,20 +247,6 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
-        ExecuteMsg::SetParams {
-            state_tree_depth,
-            int_state_tree_depth,
-            message_batch_size,
-            vote_option_tree_depth,
-        } => execute_set_parameters(
-            deps,
-            env,
-            info,
-            state_tree_depth,
-            int_state_tree_depth,
-            message_batch_size,
-            vote_option_tree_depth,
-        ),
         ExecuteMsg::SetRoundInfo { round_info } => {
             execute_set_round_info(deps, env, info, round_info)
         }
@@ -393,30 +379,6 @@ pub fn execute_start_voting_period(
         Ok(Response::new()
             .add_attribute("action", "start_voting_period")
             .add_attribute("start_time", start_time.nanos().to_string()))
-    }
-}
-
-pub fn execute_set_parameters(
-    deps: DepsMut,
-    _env: Env,
-    info: MessageInfo,
-    state_tree_depth: Uint256,
-    int_state_tree_depth: Uint256,
-    message_batch_size: Uint256,
-    vote_option_tree_depth: Uint256,
-) -> Result<Response, ContractError> {
-    if !can_execute(deps.as_ref(), info.sender.as_ref())? {
-        Err(ContractError::Unauthorized {})
-    } else {
-        let mut cfg = MACIPARAMETERS.load(deps.storage)?;
-        cfg.state_tree_depth = state_tree_depth;
-        cfg.int_state_tree_depth = int_state_tree_depth;
-        cfg.message_batch_size = message_batch_size;
-        cfg.vote_option_tree_depth = vote_option_tree_depth;
-
-        MACIPARAMETERS.save(deps.storage, &cfg)?;
-        let res = Response::new().add_attribute("action", "set_parameters");
-        Ok(res)
     }
 }
 

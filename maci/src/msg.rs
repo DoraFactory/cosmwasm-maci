@@ -92,12 +92,6 @@ pub struct PlonkProofType {
 
 #[cw_serde]
 pub enum ExecuteMsg {
-    SetParams {
-        state_tree_depth: Uint256,
-        int_state_tree_depth: Uint256,
-        message_batch_size: Uint256,
-        vote_option_tree_depth: Uint256,
-    },
     SetRoundInfo {
         round_info: RoundInfo,
     },
