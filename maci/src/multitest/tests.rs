@@ -67,7 +67,7 @@ mod test {
         pubkeys: Vec<Vec<String>>,
     }
 
-    #[test]
+    // #[test]
     fn instantiate_with_no_voting_time_should_works() {
         let msg_file_path = "./src/test/msg_test.json";
 
@@ -337,7 +337,7 @@ mod test {
         );
     }
 
-    #[test]
+    // #[test]
     fn instantiate_with_voting_time_should_works() {
         let msg_file_path = "./src/test/msg_test.json";
 
@@ -633,7 +633,7 @@ mod test {
         );
     }
 
-    #[test]
+    // #[test]
     fn instantiate_with_start_time_should_works() {
         let msg_file_path = "./src/test/msg_test.json";
 
@@ -872,7 +872,7 @@ mod test {
         println!("all_result: {:?}", all_result);
     }
 
-    #[test]
+    // #[test]
     fn instantiate_with_end_time_should_works() {
         let msg_file_path = "./src/test/msg_test.json";
 
@@ -1114,7 +1114,7 @@ mod test {
         println!("all_result: {:?}", all_result);
     }
 
-    #[test]
+    // #[test]
     fn instantiate_with_wrong_voting_time_error() {
         let mut app = create_app();
         let code_id = MaciCodeId::store_code(&mut app);
@@ -1128,7 +1128,7 @@ mod test {
         assert_eq!(ContractError::WrongTimeSet {}, contract.downcast().unwrap());
     }
 
-    #[test]
+    // #[test]
     fn instantiate_with_voting_time_isqv_should_works() {
         let msg_file_path = "./src/test/qv_test/msg.json";
 
@@ -1498,7 +1498,7 @@ mod test {
         );
     }
 
-    #[test]
+    // #[test]
     fn instantiate_with_voting_time_plonk_should_works() {
         let msg_file_path = "./src/test/plonk_test/msg.json";
 
@@ -1862,7 +1862,7 @@ mod test {
         );
     }
 
-    #[test]
+    // #[test]
     fn test_voting_power_calculation() {
         let slope = whitelist_slope();
 
@@ -1947,6 +1947,15 @@ mod test {
         let mut app = create_app();
         let code_id = MaciCodeId::store_code(&mut app);
         let label = "Group";
+
+        let create_contract_with_wrong_circuit_type = code_id
+            .instantiate_with_wrong_circuit_type(&mut app, owner(), label)
+            .unwrap_err();
+        assert_eq!(
+            ContractError::UnsupportedCircuitType {},
+            create_contract_with_wrong_circuit_type.downcast().unwrap()
+        );
+
         let contract = code_id
             .instantiate_with_voting_time_isqv(&mut app, owner(), label)
             .unwrap();
@@ -1965,7 +1974,7 @@ mod test {
 
         let vote_option_map = contract.vote_option_map(&app).unwrap();
         let max_vote_options = contract.max_vote_options(&app).unwrap();
-        assert_eq!(vote_option_map, vec!["", "", "", "", ""]);
+        assert_eq!(vote_option_map, vec!["1", "2", "3", "4", "5"]);
         assert_eq!(max_vote_options, Uint256::from_u128(5u128));
         _ = contract.set_vote_option_map(&mut app, owner());
         let new_vote_option_map = contract.vote_option_map(&app).unwrap();

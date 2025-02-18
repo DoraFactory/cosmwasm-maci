@@ -63,10 +63,10 @@ pub fn instantiate(
     ADMIN.save(deps.storage, &admin)?;
 
     let parameters = MaciParameters {
-        state_tree_depth: Uint256::from_u128(9u128),
-        int_state_tree_depth: Uint256::from_u128(4u128),
+        state_tree_depth: Uint256::from_u128(6u128),
+        int_state_tree_depth: Uint256::from_u128(3u128),
         vote_option_tree_depth: Uint256::from_u128(3u128),
-        message_batch_size: Uint256::from_u128(625u128),
+        message_batch_size: Uint256::from_u128(125u128),
     };
     // Save the MACI parameters to storage
     MACIPARAMETERS.save(deps.storage, &parameters)?;
@@ -104,7 +104,17 @@ pub fn instantiate(
     // Save the qtr_lib value to storage
     QTR_LIB.save(deps.storage, &qtr_lab)?;
 
-    let vkey = match_vkeys(&msg.circuit_type)?;
+    let vkey = match_vkeys()?;
+
+    const CIRCUIT_TYPE_1P1V: u128 = 0;  // one person one vote
+    const CIRCUIT_TYPE_QV: u128 = 1;    // quadratic voting
+
+    if msg.circuit_type == Uint256::from_u128(CIRCUIT_TYPE_1P1V) || 
+       msg.circuit_type == Uint256::from_u128(CIRCUIT_TYPE_QV) {
+        CIRCUITTYPE.save(deps.storage, &msg.circuit_type)?;
+    } else {
+        return Err(ContractError::UnsupportedCircuitType {});
+    }
 
     if msg.certification_system == Uint256::from_u128(0u128) {
         // groth16
@@ -190,7 +200,6 @@ pub fn instantiate(
 
     // VOTEOPTIONMAP.save(deps.storage, &vote_option_map)?;
     ROUNDINFO.save(deps.storage, &msg.round_info)?;
-    CIRCUITTYPE.save(deps.storage, &msg.circuit_type)?;
     MAX_WHITELIST_NUM.save(deps.storage, &0u128)?;
 
     FEEGRANTS.save(deps.storage, &Uint128::from(0u128))?;
@@ -236,7 +245,21 @@ pub fn instantiate(
     // Save the initial period to storage
     PERIOD.save(deps.storage, &period)?;
 
-    Ok(Response::default().add_attribute("action", "instantiate"))
+    Ok(Response::default()
+        .add_attribute("action", "instantiate")
+        .add_attribute("state_tree_depth", parameters.state_tree_depth.to_string())
+        .add_attribute(
+            "int_state_tree_depth",
+            parameters.int_state_tree_depth.to_string(),
+        )
+        .add_attribute(
+            "vote_option_tree_depth",
+            parameters.vote_option_tree_depth.to_string(),
+        )
+        .add_attribute(
+            "message_batch_size",
+            parameters.message_batch_size.to_string(),
+        ))
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -1424,9 +1447,10 @@ fn execute_revoke(
     curr.revoke();
     WHITELIST.save(deps.storage, &grantee, &curr)?;
 
-    Ok(Response::default()
-        .add_messages(messages)
-        .add_attributes([("action", "revoke")]))
+    Ok(Response::default().add_messages(messages).add_attributes([
+        ("action", "revoke"),
+        ("grantee", grantee.to_string().as_str()),
+    ]))
 }
 
 fn execute_bond(deps: DepsMut, _env: Env, info: MessageInfo) -> Result<Response, ContractError> {

@@ -293,6 +293,34 @@ impl MaciCodeId {
             label,
         )
     }
+
+    #[allow(clippy::too_many_arguments)]
+    pub fn instantiate_with_wrong_circuit_type(
+        self,
+        app: &mut App,
+        sender: Addr,
+        label: &str,
+    ) -> AnyResult<MaciContract> {
+        let round_info = RoundInfo {
+            title: String::from("HackWasm Berlin"),
+            description: String::from("Hack In Brelin"),
+            link: String::from("https://baidu.com"),
+        };
+        let voting_time = Some(VotingTime {
+            start_time: Some(Timestamp::from_nanos(1571797424879000000)),
+            end_time: Some(Timestamp::from_nanos(1571797429879300000)),
+        });
+        let circuit_type = Uint256::from_u128(2u128);
+        MaciContract::instantiate(
+            app,
+            self,
+            sender,
+            round_info,
+            voting_time,
+            circuit_type,
+            label,
+        )
+    }
 }
 
 impl From<MaciCodeId> for u64 {
@@ -332,7 +360,13 @@ impl MaciContract {
             },
             certification_system: Uint256::from_u128(0u128),
             // max_vote_options: Uint256::from_u128(5u128),
-            vote_option_map: vec!["1".to_string(), "2".to_string(), "3".to_string(), "4".to_string(), "5".to_string()],
+            vote_option_map: vec![
+                "1".to_string(),
+                "2".to_string(),
+                "3".to_string(),
+                "4".to_string(),
+                "5".to_string(),
+            ],
             round_info,
             voting_time,
             circuit_type,
@@ -377,11 +411,21 @@ impl MaciContract {
         };
         let init_msg = InstantiateMsg {
             coordinator: PubKey {
-                x: uint256_from_decimal_string("3557592161792765812904087712812111121909518311142005886657252371904276697771"),
-                y: uint256_from_decimal_string("4363822302427519764561660537570341277214758164895027920046745209970137856681")
+                x: uint256_from_decimal_string(
+                    "3557592161792765812904087712812111121909518311142005886657252371904276697771",
+                ),
+                y: uint256_from_decimal_string(
+                    "4363822302427519764561660537570341277214758164895027920046745209970137856681",
+                ),
             },
             certification_system: Uint256::from_u128(1u128), // plonk system
-            vote_option_map: vec!["1".to_string(), "2".to_string(), "3".to_string(), "4".to_string(), "5".to_string()],
+            vote_option_map: vec![
+                "1".to_string(),
+                "2".to_string(),
+                "3".to_string(),
+                "4".to_string(),
+                "5".to_string(),
+            ],
             round_info,
             voting_time,
             circuit_type,
