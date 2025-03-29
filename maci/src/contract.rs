@@ -190,6 +190,9 @@ pub fn instantiate(
     // }
 
     let max_vote_options = msg.vote_option_map.len() as u128;
+    if max_vote_options > 125 { // 6-3-3-125, 5^3 options max
+        return Err(ContractError::VoteOptionsExceedLimit { max_options: 125 });
+    }
     VOTEOPTIONMAP.save(deps.storage, &msg.vote_option_map)?;
     // Save the maximum vote options
     MAX_VOTE_OPTIONS.save(deps.storage, &Uint256::from_u128(max_vote_options))?;
@@ -465,6 +468,9 @@ pub fn execute_set_vote_options_map(
         Err(ContractError::Unauthorized {})
     } else {
         let max_vote_options = vote_option_map.len() as u128;
+        if max_vote_options > 125 { // 6-3-3-125, 5^3 options max
+            return Err(ContractError::VoteOptionsExceedLimit { max_options: 125 });
+        }
         VOTEOPTIONMAP.save(deps.storage, &vote_option_map)?;
         // Save the maximum vote options
         MAX_VOTE_OPTIONS.save(deps.storage, &Uint256::from_u128(max_vote_options))?;
@@ -544,6 +550,9 @@ pub fn execute_sign_up(
     }
 
     let mut num_sign_ups = NUMSIGNUPS.load(deps.storage)?;
+    if num_sign_ups + Uint256::from_u128(1u128) > Uint256::from_u128(15625u128) { // 6-3-3-125, 5^6 voters max
+        return Err(ContractError::MaxVotersReached { max_voters: 15625 });
+    }
 
     let max_leaves_count = MAX_LEAVES_COUNT.load(deps.storage)?;
 

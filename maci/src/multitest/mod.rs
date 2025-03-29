@@ -564,6 +564,20 @@ impl MaciContract {
         )
     }
 
+
+    #[track_caller]
+    pub fn set_vote_option_map_with_list(&self, app: &mut App, sender: Addr, vote_option_map: Vec<String>) -> AnyResult<AppResponse> {
+        app.execute_contract(
+            sender,
+            self.addr(),
+            &ExecuteMsg::SetVoteOptionsMap {
+                vote_option_map,
+            },
+            &[],
+        )
+    }
+
+
     #[track_caller]
     pub fn start_voting(&self, app: &mut App, sender: Addr) -> AnyResult<AppResponse> {
         app.execute_contract(sender, self.addr(), &ExecuteMsg::StartVotingPeriod {}, &[])

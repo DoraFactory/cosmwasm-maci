@@ -107,4 +107,10 @@ pub enum ContractError {
 
     #[error("Invalid vkey")]
     InvalidVKeyError {},
+
+    #[error("Vote options cannot exceed {max_options}")]
+    VoteOptionsExceedLimit { max_options: u8 },
+
+    #[error("Maximum number of voters ({max_voters}) has been reached")]
+    MaxVotersReached { max_voters: u128 },
 }

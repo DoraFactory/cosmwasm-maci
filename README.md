@@ -4,8 +4,8 @@ CosmWasm MACI
 **ZK Size**
 `6-3-3-125`
 
-**Testnet CodeId**
-`115`
+**Current Testnet CodeId**
+`123`
 
-**Mainnet CodeId**
-`117`
+**Current Mainnet CodeId**
+`119`

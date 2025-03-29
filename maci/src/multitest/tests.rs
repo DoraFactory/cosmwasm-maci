@@ -1112,6 +1112,18 @@ mod test {
 
         let all_result = contract.get_all_result(&app);
         println!("all_result: {:?}", all_result);
+        let error_start_process = contract.start_process(&mut app, owner()).unwrap_err();
+        assert_eq!(
+            ContractError::PeriodError {},
+            error_start_process.downcast().unwrap()
+        );
+
+        assert_eq!(
+            Period {
+                status: PeriodStatus::Ended
+            },
+            contract.get_period(&app).unwrap()
+        );
     }
 
     // #[test]
@@ -2060,4 +2072,56 @@ mod test {
             contract.get_period(&app).unwrap()
         );
     }
+
+
+    // #[test]
+    // fn test_voting_limits() {
+    //     let mut app = create_app();
+    //     let code_id = MaciCodeId::store_code(&mut app);
+    //     let label = "Group";
+    //     let contract = code_id
+    //         .instantiate_with_voting_time(&mut app, owner(), label)
+    //         .unwrap();
+
+    //     // 测试 VoteOptionsExceedLimit 错误
+    //     let vote_options = vec![String::new(); 126]; // 超过125的限制
+    //     let err = contract.set_vote_option_map_with_list(&mut app, owner(), vote_options).unwrap_err();
+    //     assert_eq!(
+    //         ContractError::VoteOptionsExceedLimit { max_options: 125 },
+    //         err.downcast().unwrap()
+    //     );
+
+    //     // 测试 MaxVotersReached 错误
+    //     let pubkey = PubKey {
+    //         x: uint256_from_decimal_string("1"),
+    //         y: uint256_from_decimal_string("1"),
+    //     };
+    //     app.update_block(next_block);
+
+    //     // 先注册9个用户
+    //     for i in 0..9 {
+    //         let _ = contract.sign_up(
+    //             &mut app,
+    //             Addr::unchecked(i.to_string()),
+    //             pubkey.clone(),
+    //             match_user_certificate(0).amount,
+    //             match_user_certificate(0).certificate,
+    //         );
+    //     }
+
+    //     // 尝试注册第10个用户，应该失败
+    //     let err = contract.sign_up(
+    //         &mut app,
+    //         Addr::unchecked("9"),
+    //         pubkey,
+    //         match_user_certificate(0).amount,
+    //         match_user_certificate(0).certificate,
+    //     ).unwrap_err();
+        
+    //     assert_eq!(
+    //         ContractError::MaxVotersReached { max_voters: 15625 },
+    //         err.downcast().unwrap()
+    //     );
+    // }
+
 }
